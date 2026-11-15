@@ -1,0 +1,47 @@
+.freight-board { margin: 10px 0; padding: 11px; border: 1px solid #7c7152; border-radius: 6px; background: #283428; }
+.freight-board header { display: flex; gap: 7px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.freight-board h3 { color: #f2e8cd; font: bold 1.16rem var(--serif); }
+.freight-board header p, .freight-board > p { font-size: .81rem; color: var(--subtle); }
+.freight-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(165px, 100%), 1fr)); gap: 6px; padding: 0; margin: 8px 0; list-style: none; }
+.freight-results li { display: grid; gap: 6px; align-content: space-between; min-width: 0; padding: 7px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-dark); }
+.freight-results li[data-freight-player="true"] { border-color: var(--sector-accent); }
+.freight-results li[data-freight-inland] { border-inline-start: 3px solid #9bb6a6; }
+.freight-results li > div { display: grid; gap: 3px; }
+.freight-results strong { font-size: .83rem; }
+.freight-results span { font-size: .75rem; color: var(--subtle); }
+.freight-results b { color: var(--sector-accent); font-size: .83rem; }
+.freight-results progress { width: 100%; height: 7px; accent-color: var(--sector-accent); }
+.freight-contract { border-inline-start: 3px solid var(--sector-accent); }
+.freight-contract-deadline, .freight-contract-result {
+  display: grid;
+  gap: 3px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-dark);
+}
+.freight-contract-deadline strong, .freight-contract-result[data-contract-player="true"] strong { color: var(--sector-accent); }
+.freight-contract-deadline span, .freight-contract-result span, .freight-contract-result p { color: var(--subtle); font-size: .81rem; }
+.freight-contract-capacity {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(135px, 100%), 1fr));
+  gap: 6px;
+  margin: 8px 0;
+}
+.freight-contract-capacity > div {
+  display: grid;
+  gap: 4px;
+  align-content: space-between;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.freight-contract-capacity dt { color: var(--subtle); font-size: .78rem; }
+.freight-contract-capacity dd { display: grid; gap: 4px; margin: 0; color: var(--sector-accent); font-size: 1.1rem; }
+.freight-contract-capacity progress { width: 100%; height: 6px; accent-color: var(--sector-accent); }
+.freight-contract-rules { margin-top: 6px; color: var(--subtle); font-size: .81rem; }
+.freight-contract-rules summary { cursor: pointer; }
+.freight-contract-rules p { margin-top: 4px; }
+.freight-contract button { margin-top: 8px; color: var(--sector-accent); font-size: .83rem; }

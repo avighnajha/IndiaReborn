@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#151e1c">
+  <title>India: Alternate Futures</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <p id="launch-note" hidden>Open <strong>Play India.cmd</strong> in the project folder to start the game.</p>
+  <header class="topbar">
+    <div class="brand"><span aria-hidden="true">◈</span><div><strong>India: Alternate Futures</strong><small>Regional strategy</small></div></div>
+    <div class="top-actions"><span id="save-status" role="status"></span><button type="button" id="regions">Campaign atlas</button><button type="button" id="chronicle" hidden>Chronicle</button><button type="button" id="neighbors" hidden>Neighbors</button><button type="button" id="finance">Budget office</button><button type="button" id="help">How to play</button><button type="button" id="new-game">New campaign</button></div>
+  </header>
+  <main>
+    <section class="overview" aria-labelledby="title">
+      <div><p id="campaign-edition" class="kicker"></p><h1 id="title"></h1></div>
+      <p id="campaign-line"></p>
+      <div class="timeline"><div><span>Planning year</span><strong id="year"></strong></div><progress id="progress" max="20" value="0" aria-label="Campaign progress"></progress></div>
+    </section>
+    <section id="indicators" class="indicators" aria-label="Regional indicators"></section>
+    <section id="pending-decision" class="pending-decision" aria-label="Pending decision" hidden>
+      <div><p class="kicker" id="pending-year"></p><strong id="pending-title"></strong></div>
+      <button type="button" class="primary" id="review-decision">Review decision →</button>
+    </section>
+    <div class="board">
+      <section class="atlas panel" aria-labelledby="atlas-title">
+        <header class="atlas-header">
+          <div><h2 id="atlas-title">Regional map</h2><p id="map-subtitle"></p></div>
+          <div class="segmented" role="group" aria-label="Map layer">
+            <button type="button" data-layer="terrain" aria-pressed="true">Relief</button>
+            <button type="button" data-layer="access" aria-pressed="false">Trade</button>
+            <button type="button" data-layer="jurisdiction" aria-pressed="false">Borders</button>
+            <button type="button" data-layer="weather" aria-pressed="false">Monsoon</button>
+            <button type="button" data-layer="works" aria-pressed="false">Works</button>
+          </div>
+        </header>
+        <div class="map-frame">
+          <div id="map" tabindex="0" role="group" aria-label="Relief map" aria-describedby="map-help"></div><div id="map-conditions" class="map-conditions" aria-live="polite" hidden><div><strong id="season-name"></strong><span id="season-detail"></span></div><button type="button" id="skip-season">See report</button></div>
+          <div class="map-caption" aria-hidden="true"><b>↑ N</b><span id="zoom-level">100%</span></div>
+          <div id="map-site-peek" class="map-site-peek" hidden>
+            <div><strong id="map-site-name"></strong><small id="map-site-summary"></small></div>
+            <button type="button" id="inspect-site">Details</button>
+          </div>
+          <div class="zoom-controls" role="group" aria-label="Map zoom"><button type="button" id="zoom-in" aria-label="Zoom in">+</button><button type="button" id="zoom-out" aria-label="Zoom out">−</button><button type="button" id="reset-map" aria-label="Reset map view">↺</button></div>
+        </div>
+        <footer class="atlas-footer"><div id="legend" class="legend" aria-label="Map key"></div><div class="map-footer-row"><p id="map-help">Scroll to zoom, drag to pan. Select a site to see its works.</p><a id="bengal-map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors</a><button type="button" class="map-sources" id="map-sources">Map sources</button></div></footer>
+      </section>
+      <div class="sidebar">
+      <aside class="command panel" aria-label="Regional planning">
+        <section id="cabinet-guide" class="cabinet-guide" aria-label="First turns" hidden></section>
+        <div class="command-head"><div><p class="kicker">Cabinet agenda</p><h2>Regional programmes</h2></div><span id="programme-state"></span></div>
+        <button type="button" id="development-trees" class="development-launch" hidden><span>Development trees</span><small aria-hidden="true">→</small></button>
+        <div id="programme-list" class="programme-list" aria-label="Review a programme"></div>
+        <div id="programme-details" class="programme-details"></div>
+        <div class="command-section trade"><div><label for="trade-policy">Food policy</label><small id="trade-note"></small></div><select id="trade-policy"></select><button type="button" id="relief" hidden>Emergency food plan</button></div>
+        <div class="command-footer"><button type="button" id="reports">Reports</button><button type="button" id="advance" class="primary">Advance year <span aria-hidden="true">→</span></button></div>
+        <p id="feedback" class="sr-only" role="status"></p>
+      </aside>
+      <div id="training-charter"></div>
+      <section class="lower panel" aria-labelledby="ledger-title"><div><p class="kicker">Regional works</p><h2 id="ledger-title">Delivery schedule</h2></div><div id="queue"></div></section>
+      <details class="lower panel site-inspector" id="site-inspector"><summary>Map inspector · <strong id="site-title"></strong></summary><label class="sr-only" for="jump">Jump to settlement</label><select id="jump"><option value="">Jump to town</option></select><div id="site-details"></div></details>
+      <section class="lower panel" aria-labelledby="goals-title"><div><p class="kicker" id="goals-year">Final scorecard</p><h2 id="goals-title">Campaign goals</h2></div><div id="goals"></div></section>
+      </div>
+    </div>
+    <p class="footnote">Relief, period borders and scenario decisions are simplified for play. The Budget office links to fiscal references.</p>
+  </main>
+  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-inner"><p id="modal-kicker" class="kicker"></p><h2 id="modal-title" tabindex="-1"></h2><div id="modal-content"></div><div id="modal-actions" class="modal-actions"></div></div></dialog>
+  <script>if (location.protocol === 'file:') document.getElementById('launch-note').hidden = false;</script>
+  <script type="module" src="/src/game.js"></script>
+</body>
+</html>

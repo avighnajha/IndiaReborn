@@ -1,0 +1,101 @@
+[data-sector="education"] { --sector-accent: #8acbd5; }
+[data-sector="food"] { --sector-accent: #b9cc79; }
+[data-sector="trade"] { --sector-accent: #f0bf78; }
+
+.department-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--sector-accent, var(--gold));
+  font-size: .74rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.department-badge svg, .cabinet-programme-mark svg {
+  display: block;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cabinet-department-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.programme-list .cabinet-department-picker button {
+  justify-content: center;
+  min-height: 42px;
+  padding: 5px 3px;
+  text-align: center;
+}
+
+.cabinet-department-picker .department-badge { flex-wrap: wrap; justify-content: center; gap: 2px 4px; font-size: .71rem; }
+.programme-list .cabinet-department-picker button[aria-pressed="true"], .department-picker button[data-sector][aria-pressed="true"] {
+  border-color: var(--sector-accent);
+  background: color-mix(in srgb, var(--sector-accent) 17%, #203128);
+}
+
+.cabinet-programme-cards { display: grid; gap: 4px; }
+.programme-list .cabinet-programme {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  min-height: 41px;
+  padding: 5px 6px;
+  border-inline-start: 2px solid color-mix(in srgb, var(--sector-accent) 55%, var(--line));
+  background: #243129;
+}
+.programme-list .cabinet-programme:hover { background: #344438; }
+.programme-list .cabinet-programme[aria-pressed="true"] {
+  border-color: var(--sector-accent);
+  background: color-mix(in srgb, var(--sector-accent) 13%, #203128);
+}
+.cabinet-programme-mark { color: var(--sector-accent); }
+.cabinet-programme-copy { display: grid; min-width: 0; gap: 2px; line-height: 1.18; }
+.cabinet-programme-copy strong { color: #f3ead0; font-size: .77rem; font-weight: 650; overflow-wrap: anywhere; }
+.cabinet-programme-context { color: var(--sector-accent); font-size: .67rem; }
+.cabinet-empty { padding: 4px 2px; color: var(--subtle); font-size: .73rem; }
+
+.cabinet-archive { color: var(--subtle); font-size: .73rem; }
+.cabinet-archive summary { padding: 5px 2px; cursor: pointer; }
+.cabinet-archive summary span { float: inline-end; color: var(--subtle); font-variant-numeric: tabular-nums; }
+.cabinet-archive summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.programme-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; }
+.programme-tier { color: var(--subtle); font-size: .69rem; line-height: 1.22; }
+.programme-identity .programme-tier:empty { display: none; }
+.programme-details[data-sector], .opening-path[data-sector] { border-color: color-mix(in srgb, var(--sector-accent) 48%, var(--line)); }
+.programme-details .programme-tree-link {
+  padding-inline: 0;
+  min-height: 30px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--sector-accent);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.programme-details .programme-tree-link:hover { background: transparent; color: #fff1ca; }
+.opening-path .department-badge svg {
+  width: 17px;
+  height: 17px;
+  aspect-ratio: 1;
+  border: 0;
+  background: transparent;
+}
+.opening-path[data-sector] > button { border-color: color-mix(in srgb, var(--sector-accent) 48%, var(--line)); color: var(--sector-accent); }
+
+.department-tree-panel[data-sector] .department-tree-progress progress { accent-color: var(--sector-accent); }
+.department-tree-panel[data-sector] .department-facility-icon { color: var(--sector-accent); }
+.department-tree-panel[data-sector] .department-tier-index b { color: var(--sector-accent); }
+.department-tree-description { margin-bottom: 4px; color: #dce5d2; font-size: .76rem; }

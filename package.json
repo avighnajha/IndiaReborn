@@ -1,0 +1,19 @@
+{
+  "name": "india-alternate-futures",
+  "version": "0.5.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "test": "node --test check-campaign.cjs check-bengal.cjs check-bombay.cjs check-punjab.cjs check-madras.cjs check-assam.cjs check-central.cjs check-mayurbhanj.cjs"
+  },
+  "dependencies": {
+    "pixi.js": "^8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^6.4.0"
+  }
+}

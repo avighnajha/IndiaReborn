@@ -1,0 +1,15 @@
+# Mayurbhanj Campaign Sources
+
+The 1946 start represents the princely state governed from Baripada. The Dominion Government took over administration on 9 November 1948 under the merger agreement. Orissa assumed administration on 1 January 1949. The compact is a counterfactual agreement that retains a local works office. [Government of India White Paper, merger agreement](https://en.wikisource.org/wiki/Page:White_Paper_on_Indian_States_(1950).pdf/190), [Mayurbhanj district history](https://mayurbhanj.odisha.gov.in/en/about-district/history).
+
+## Outline and settlements
+
+The active state line comes from the 1941 `Mayurbhanj` princely-state feature digitized from the Census of India Administrative Atlas. It uses the same camera and terrain as Orissa. In the campaign, ten existing sites represent the territory. These are gameplay points at regional scale. The Orissa campaign's initial exclusion is the nine existing Orissa programme-area sites within that set. The full Orissa line appears when merger is chosen. The archive and redistribution limitations are described in the [production map notes](map-production.md). [India State Stories](https://www.indiastatestory.in/datadownloads), [archive mirror](https://github.com/ramSeraph/indian_admin_boundaries/releases/tag/historical).
+
+The local town overrides use approximate centres for Jashipur (86.065°E, 21.956°N), Karanjia (85.973°E, 21.765°N) and Udala (86.567°E, 21.576°N). Elevation is copied from the nearest sampled point in the existing Orissa map. The administrative sources confirm the towns' names and roles. Baripada retains its existing coordinates and becomes the local market hub. [Mayurbhanj administrative divisions](https://mayurbhanj.odisha.gov.in/en/about-district/administrative-setup/subdivision-blocks).
+
+## Budget and works
+
+The game uses ₹49 lakh as a provisional contemporary revenue scale. The published reference is S. H. Steinberg's *Statesman's Year-Book* for 1947, p. 168. The original page is access restricted and the figure was located through a secondary transcription. The account year is unspecified. Opening cash of ₹8 lakh and the annual ₹5 lakh development allocation are modeled shares for this campaign. The provincial finance series and opening balances for Bihar and Orissa use their separate sources. [Yearbook, Asia chapter](https://link.springer.com/chapter/10.1057/9780230270763_5), [transcribed table and source note](https://en.wikipedia.org/wiki/Princely_state#:~:text=42%20princely%20states%20forming%20the%20Eastern%20States%20Agency).
+
+The smaller works packages draw on the documented history of local tank and bund improvements. The Central Water Commission cites the Mayurbhanj 1940–41 administration report on three earlier irrigation schemes costing ₹6 lakh combined. The programme contracts, benefits and delivery schedules in the game are modeled. [Central Water Commission, *History of Irrigation Development in Orissa*, p. 61](https://cwc.adgstaging.in/sites/default/files/18-history-irrigation-development-orissa.pdf).

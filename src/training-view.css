@@ -1,0 +1,95 @@
+.training-status {
+  margin-block-start: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-dark);
+}
+
+.training-status[data-training-status="ready"] { border-color: #918059; }
+.training-status[data-training-status="operating"] { border-color: #5c795b; }
+.training-status-head { display: flex; align-items: center; gap: 9px; }
+.training-status-head h3 { color: #f3ead0; font: bold 1rem var(--serif); }
+.training-eyebrow { color: var(--gold); font-size: .65rem; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+.training-emblem {
+  display: grid;
+  flex: 0 0 33px;
+  place-items: center;
+  align-self: stretch;
+  border: 1px solid #5c6047;
+  border-radius: 5px;
+  background: #2c372a;
+  color: var(--gold);
+}
+
+.training-emblem svg, .training-option-art svg {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.training-emblem svg { width: 28px; }
+.training-status-meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 7px; margin-top: 7px; color: var(--subtle); font-size: .72rem; }
+.training-status-meta b { color: #e8d9b2; }
+.training-status[data-training-status="operating"] .training-status-meta b { color: #b8d2a3; }
+.training-status[data-training-status="paused"] .training-status-meta b { color: #f0be9e; }
+.training-current { margin-top: 3px; font-size: .82rem; font-weight: 700; }
+.training-message { margin-top: 4px; color: var(--subtle); font-size: .76rem; }
+.training-status button { width: 100%; margin-top: 7px; font-size: .76rem; }
+
+dialog:has(.training-comparison) { width: min(760px, calc(100% - 28px)); }
+.training-intro { max-width: 63ch; color: var(--subtle); font-size: .89rem; }
+.training-comparison-status { margin-top: 11px; padding: 7px 10px; border-left: 2px solid #a89262; border-radius: 2px 5px 5px 2px; background: #2a362c; }
+.training-comparison-status p:first-child { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 9px; color: #f3e4bd; font-size: .83rem; }
+.training-comparison-status span { color: var(--subtle); font-size: .74rem; }
+#modal-content .training-comparison-status p + p { margin-top: 2px; color: var(--subtle); font-size: .79rem; }
+.training-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.training-option {
+  --training-accent: #e7c982;
+  min-width: 0;
+  padding: 11px;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto auto;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--training-accent);
+  border-radius: 6px;
+  background: linear-gradient(140deg, #29362b, var(--panel-dark) 67%);
+}
+
+@supports (grid-template-rows: subgrid) {
+  .training-option { grid-row: span 6; grid-template-rows: subgrid; }
+}
+
+.training-option[data-training-option="extension"] { --training-accent: #a9c594; }
+.training-option[data-adopted="true"] { border-inline-color: var(--training-accent); border-bottom-color: var(--training-accent); }
+.training-option-head { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; align-items: center; }
+.training-option-head .training-eyebrow { color: var(--training-accent); }
+.training-option-head h3 { color: #f3ead0; font: bold clamp(1.05rem, 2.2vw, 1.25rem) / 1.1 var(--serif); }
+.training-option-art { display: grid; place-items: center; width: 48px; height: 48px; color: var(--training-accent); background: #1f2d23; border: 1px solid #4f5e49; border-radius: 6px; }
+.training-option-art svg { width: 45px; }
+.training-art-detail { opacity: .6; }
+.training-footprint .training-eyebrow { color: var(--subtle); }
+.training-footprint ul { display: flex; flex-wrap: wrap; gap: 4px; padding: 0; margin: 4px 0 0; list-style: none; }
+.training-footprint li { padding: 2px 6px; border: 1px solid #4c5b48; border-radius: 4px; background: #2b392d; color: #e4e6d4; font-size: .73rem; overflow-wrap: anywhere; }
+#modal-content .training-footprint .training-empty { margin-top: 3px; color: var(--subtle); font-size: .78rem; }
+.training-effects { margin: 0; padding-inline-start: 17px; color: #e4e8da; font-size: .82rem; line-height: 1.35; }
+.training-effects li + li { margin-top: 4px; }
+.training-effects li::marker { color: var(--training-accent); }
+.training-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; align-items: stretch; overflow: hidden; border: 1px solid #465641; border-radius: 5px; background: #465641; }
+.training-prices > div { min-width: 0; padding: 5px 7px; background: #27362a; }
+.training-prices dt { color: var(--subtle); font-size: .69rem; }
+.training-prices dd { color: #f3dfac; font-weight: 750; font-variant-numeric: tabular-nums; font-size: .87rem; }
+.training-option-note { align-self: center; color: #efd3ac; font-size: .75rem; }
+.training-adopted { color: #b9d1a9; font-weight: 750; }
+.training-option-actions { display: flex; flex-wrap: wrap; gap: 5px; align-items: start; }
+.training-option-actions button { flex: 1 1 auto; min-height: 34px; padding-inline: 7px; font-size: .76rem; }
+
+@media (max-width: 530px) {
+  .training-options { grid-template-columns: minmax(0, 1fr); }
+  .training-option { grid-row: auto; grid-template-rows: auto; }
+  .training-option-note:empty { display: none; }
+}
