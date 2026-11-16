@@ -8,6 +8,87 @@ const schedule = { 1946: "food", 1948: "trade", 1950: "skills", 1952: "industry"
 const choices = ["roads", "centralReceiveFamilies", "centralDistrictSchool", "district", "centralNagpurCorridor", "centralBhilaiSuppliers",
   "centralMaharashtra", "extension", "ration"];
 
+test("the 1956 technical intake matches retained schools and delivers timed workshop output", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { briefContent } = await import("./src/annual-brief.js");
+  const { approveProgramme } = await import("./src/programmes.js");
+  const { siteResults } = await import("./src/site-economy.js");
+  const programmes = { 1946: "skills", 1948: "applied", 1951: "food", 1953: "trade" };
+  let game = Campaign.newGame(1946, { end: 1965, preset: "standard" });
+  while (game.year < 1956) {
+    if (game.year === 1950) {
+      assert.equal(Campaign.technicalIntake(game).status, "notice");
+      assert.equal(Campaign.acceptTechnicalIntake(game, 1), game);
+    }
+    while (Campaign.nextDecision(game)) {
+      const decision = Campaign.nextDecision(game);
+      const next = Campaign.decide(game, choices.find((id) => decision.choices[id]));
+      assert.notEqual(next, game, decision.title);
+      game = next;
+    }
+    if (programmes[game.year]) {
+      const approved = approveProgramme(game, programmes[game.year]);
+      assert.notEqual(approved, game);
+      game = approved;
+    }
+    const next = Campaign.advance(game);
+    assert.notEqual(next, game);
+    game = next;
+  }
+  assert.equal(Campaign.acceptTechnicalIntake(game, 1), game);
+  game = Campaign.decide(game, "centralNagpurCorridor");
+  assert.ok(!Campaign.nextDecision(game));
+  const plan = Campaign.technicalIntake(game);
+  assert.deepEqual(plan.pairs.map(({ school, workshop }) => [school.name, workshop.name]), [["Jubbulpore", "Jubbulpore"], ["Itarsi", "Hoshangabad"]]);
+  assert.equal(Campaign.acceptTechnicalIntake(game, 3), game);
+  const smallTreasury = { ...game, cash: 7 };
+  assert.equal(Campaign.acceptTechnicalIntake(smallTreasury, 1), smallTreasury);
+  let signed = Campaign.acceptTechnicalIntake(game, 2);
+  assert.equal(signed.cash, game.cash - 16);
+  assert.equal(Campaign.acceptTechnicalIntake(signed, 1), signed);
+  let snapshot;
+  const storage = { getItem: () => snapshot, setItem: (_key, value) => { snapshot = value; } };
+  Campaign.save(storage, signed);
+  assert.deepEqual(Campaign.load(storage, true), signed);
+
+  while (game.year <= 1965) {
+    while (Campaign.nextDecision(game)) {
+      const decision = Campaign.nextDecision(game);
+      const id = choices.find((choice) => decision.choices[choice]);
+      const next = Campaign.decide(game, id);
+      assert.notEqual(next, game, decision.title);
+      game = next;
+      signed = Campaign.decide(signed, id);
+    }
+    game = Campaign.advance(game);
+    const before = signed;
+    signed = Campaign.advance(signed);
+    const baseline = game.reports.at(-1);
+    const report = signed.reports.at(-1);
+    assert.equal(report.year, baseline.year);
+    const intake = report.technicalIntake;
+    const operating = report.year >= 1958 && report.year <= 1962;
+    assert.equal(intake.skills, report.year >= 1958 ? 4 : 0);
+    assert.equal(intake.output, operating ? 6 : 0);
+    assert.equal(report.skills - baseline.skills, intake.skills);
+    assert.equal(report.output - baseline.output, intake.output + intake.skillOutput);
+    assert.equal(intake.receipts, Campaign.earnedReceipts(report).workshops - Campaign.earnedReceipts(baseline).workshops);
+    if (report.year === 1957) assert.equal(Campaign.technicalIntake(game), null);
+    if (report.year === 1958) {
+      assert.match(briefContent(report), /Placements added 6 output/);
+      for (const { hex } of intake.sites) {
+        assert.deepEqual(siteResults(report, hex).workshopEffects.find(({ label }) => label === "technical training intake"), { label: "technical training intake", units: 3 });
+      }
+      const { school, workshop } = signed.journey.technicalIntake.pairs[1];
+      const transfer = { ...before, owners: { ...before.owners, [school]: "neighbor" } };
+      const after = Campaign.advance(transfer).reports.at(-1);
+      assert.equal(after.technicalIntake.skills, 2);
+      assert.ok(!after.technicalIntake.sites.some(({ hex }) => hex === workshop));
+    }
+    if (report.year === 1963) assert.match(briefContent(report), /Technical placements ended/);
+  }
+});
+
 test("Central Provinces develops through the Vidarbha transfer and both Chambal allocations", async () => {
   const { economySites, siteResults } = await import("./src/site-economy.js");
   const { Campaign } = await import("./src/campaign.js");

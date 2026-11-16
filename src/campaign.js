@@ -7,6 +7,7 @@ import { applyPoliticalDecision, politicalDecision } from "./politics.js";
 import { activeProgramme, basinAgreementsFor, basinFloodDecision, programmeCommissioned, programmeRequirements, programmes, visibleProgrammes } from "./programmes.js";
 import { apprenticeshipOutput, extensionDryRecovery, extensionFloodRecovery, extensionYield, trainingModel } from "./training.js";
 import { reservePlan, reserveWindow, resolveReserve, signReserve } from "./union-reserve.js";
+import { enrollIntake, intakeEffects, intakePlan, intakeStatus, matureSchools, placementOutput } from "./technical-intake.js";
 
 export const Campaign = (() => {
   const projects = {
@@ -77,7 +78,7 @@ export const Campaign = (() => {
 
   function training(game) {
     if (!game.journey) return trainingModel(game);
-    const schools = active(game, "school").filter(({ completed }) => completed <= game.year - 2);
+    const schools = matureSchools(game, active(game, "school"));
     const reached = access(game).reached;
     const sheltered = protectedSites(active(game, "levee"));
     const exposure = ({ hex }) => sheltered.has(hex) ? 0 : World.tiles[hex].flood;
@@ -95,6 +96,18 @@ export const Campaign = (() => {
       cash: game.cash - option.cost,
       journey: { ...game.journey, training: { id, cost: option.cost, upkeep: option.upkeep, authorized: game.year, opens: game.year + 1 } },
     };
+  }
+
+  function technicalIntake(game) {
+    const status = intakeStatus(game);
+    if (!status) return null;
+    const reached = access(game).reached;
+    return intakePlan(game, matureSchools(game, active(game, "school")),
+      active(game, "mill").filter(({ hex }) => isConnected(reached, hex)), status === "open" && nextDecision(game));
+  }
+
+  function acceptTechnicalIntake(game, count) {
+    return enrollIntake(game, technicalIntake(game), count);
   }
 
   function cost(game, kind) {
@@ -519,9 +532,13 @@ export const Campaign = (() => {
       waterYield, waterRecovery, storage: depots * 18, marketReceipts: terminals * Math.min(8, Math.max(0, towns - 2)), importCapacity: terminals * 3,
     };
     const mills = active(state, "mill");
+    const linkedMills = mills.filter(({ hex }) => isConnected(reached, hex));
+    const schools = active(state, "school");
+    const intake = intakeEffects(state, schools, linkedMills);
+    const intakeSites = new Set(intake?.sites.map(({ hex }) => hex));
     const regional = game.journey ? resolveNeighbors(state, World, {
       harvest, demand, towns, monsoon,
-      connectedWorkshops: mills.filter(({ hex }) => isConnected(reached, hex)).length,
+      connectedWorkshops: linkedMills.length,
       freightTerminals: freightTerminals.filter(({ hex }) => isConnected(reached, hex)).length,
     }) : null;
     const juteMills = mills.filter(({ programme }) => programmes[programme]?.rawJute).length;
@@ -530,7 +547,8 @@ export const Campaign = (() => {
       : programmeCommissioned(state, "juteSupply") ? "Domestic supply"
         : easternPartner?.access === "Open corridor" ? `Corridor with ${easternPartner.name}` : "Supply disrupted";
     const juteLoss = juteSource === "Supply disrupted" ? 2 : 0;
-    const skills = active(state, "school").reduce((total, asset) => total + Math.min(7, game.year - asset.completed + 1), 0) + development.skills;
+    const ordinarySkills = schools.reduce((total, asset) => total + Math.min(7, game.year - asset.completed + 1), 0) + development.skills;
+    const skills = ordinarySkills + (intake?.skills ?? 0);
     const industry = { workshops: 0, base: 0, minerals: 0, marketAccess: 0, skills: 0, power: 0, newWorkshops: 0 };
     const assamDisruption = World.key === "assam" && game.year >= 1947 && game.year < 1950;
     const assamRail = World.key === "assam" && game.year >= 1950 && programmeCommissioned(state, "assamRailLink");
@@ -551,7 +569,8 @@ export const Campaign = (() => {
       const materialLoss = programmes[asset.programme]?.rawJute ? juteLoss : 0;
       const supplierOutput = bhilaiSuppliers && accessBonus && tile.district === "chhattisgarhPlain" ? 2 : 0;
       const rail = assamRail && accessBonus && programmes[asset.programme]?.teaFreight ? 2 : 0;
-      const produced = 3 + minerals + accessBonus + skillBonus + powerBonus + charterBonus + research + park + supplierOutput - materialLoss;
+      const placement = intakeSites.delete(asset.hex) ? placementOutput : 0;
+      const produced = 3 + minerals + accessBonus + skillBonus + powerBonus + charterBonus + research + park + supplierOutput + placement - materialLoss;
       teaOutput += rail;
       bhilaiOutput += supplierOutput;
       industry.workshops++;
@@ -564,7 +583,7 @@ export const Campaign = (() => {
       development.parkOutput += park;
       if (asset.completed === game.year) industry.newWorkshops += produced;
       return { hex: asset.hex, output: produced + rail, base: 3, market: accessBonus, skills: skillBonus, research,
-        power: powerBonus, apprenticeship: charterBonus, minerals, park, supplier: supplierOutput, rail, materialLoss };
+        power: powerBonus, apprenticeship: charterBonus, placement, minerals, park, supplier: supplierOutput, rail, materialLoss };
     });
     const output = workshopSites.reduce((total, site) => total + site.output, 0);
     const neighborHarvest = 3 + Math.floor(yearlyRoll(game, 911) * 8);
@@ -643,6 +662,10 @@ export const Campaign = (() => {
     if (bhilaiSuppliers) report.bhilai = { output: bhilaiOutput };
     if (emergencyBudget !== null) report.relief = { budget: emergencyBudget, bought, spent: bought * buyPrice };
     if (union) report.unionReserve = { ...union, reserve };
+    if (intake) {
+      const skillOutput = mills.length * (skillBonus - workshopSkillBonus(ordinarySkills));
+      report.technicalIntake = { ...intake, skillOutput, receipts: receipts.workshops - localReceipts(output - intake.output - skillOutput, towns).workshops };
+    }
     if (juteMills) report.jute = { source: juteSource, mills: juteMills, lost: juteMills * juteLoss };
     if (colleges || universities || technical || agricultural || depots || water || terminals || parks) report.development = development;
     if (service) {
@@ -701,7 +724,7 @@ export const Campaign = (() => {
 
   return {
     saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, grantWindow, grantOffers, acceptGrant, advance, score, load, save,
-    training, adoptTraining, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve,
+    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve,
     partnerOffers: (game) => partnerOffers(game, World),
     jointProjectOffers: (game) => jointProjectOffers(game, World),
     neighbors: (game) => neighborsFor(World, game),

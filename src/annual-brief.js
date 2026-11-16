@@ -158,10 +158,12 @@ function whyContent(report, previous) {
   const production = detailRows([
     ["Connected towns", report.towns], ["Skill points", report.skills],
     ...(development?.skills ? [["Skills from higher education", `+${development.skills}`]] : []),
+    ...(report.technicalIntake?.skills ? [["Skills from the technical intake", `+${report.technicalIntake.skills}`]] : []),
     ...(industry?.workshops ? [["Workshop base output", industry.base], ["From mineral sites", `+${industry.minerals}`], ["From market access", `+${industry.marketAccess}`], ["From technical training", `+${industry.skills}`]] : []),
     ...(report.bhilai?.output ? [["Bhilai supplier contracts", `+${report.bhilai.output}`]] : []),
     ...(industry?.power ? [["From power supply", `+${industry.power}`]] : []),
     ...(report.training?.output ? [["From apprenticeships", `+${report.training.output}`]] : []),
+    ...(report.technicalIntake?.output ? [["From technical intake placements", `+${report.technicalIntake.output}`]] : []),
     ...(development?.researchOutput ? [["From higher education and research", `+${development.researchOutput}`]] : []),
     ...(development?.parkOutput ? [["From industrial parks", `+${development.parkOutput}`]] : []),
     ...(report.jute ? [["Raw jute supply", report.jute.source]] : []),
@@ -196,6 +198,7 @@ function whyContent(report, previous) {
       ${training ? `<p class="brief-note">${escapeText(training.title)} · ${served.length ? `Served ${escapeText(names.format(served))}.` : escapeText(training.message)}</p>` : ""}</section>
     <section><h3>Treasury</h3>${cash}${grant ? `<p class="brief-note">${escapeText(grant.title)} awarded ${money(grant.grant)} with a ${money(grant.match)} local match. Already included in cash after planning.</p>` : ""}
     ${training?.setup ? `<p class="brief-note">The charter’s ${money(training.setup)} setup cost is included in cash after planning.</p>` : ""}
+    ${report.technicalIntake?.state ? `<p class="brief-note">The state’s ${money(report.technicalIntake.state)} technical intake share is included in cash after planning. The Union paid ${money(report.technicalIntake.union)} directly for equipment.</p>` : ""}
     ${report.relief ? `<p class="brief-note">Emergency purchase authorization was ${money(report.relief.budget)}. Purchases used ${money(report.relief.spent)}.</p>` : ""}
     ${agreement ? `<p class="brief-note">${escapeText(agreement.title)} · ${escapeText(funding.stateName ?? World.name)} committed ${money(funding.state ?? funding.bihar)}.${funding.union ? ` The Union committed ${money(funding.union)} directly to the works.` : ""} The state share is included in cash after planning.</p>` : ""}
     ${response?.cost ? `<p class="brief-note">Emergency work to keep the ${basinNameFor(delivery.id)} timetable cost ${money(response.cost)}. Included in cash after planning.</p>` : ""}</section>
@@ -265,6 +268,16 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const intake = report.technicalIntake;
+  if (intake?.state) {
+    add("education", "Technical training intake funded", `${money(intake.state)} state share · ${money(intake.union)} Union equipment. First graduates in ${intake.first}.`);
+  } else if (intake && report.year === intake.last + 1) {
+    add("education", "Technical placements ended", `The first cohort’s workshop placements ended. Retained schools contribute ${intake.skills} Skills.`);
+  } else if (intake && report.year >= intake.first && ["skills", "output"].some((key) => intake[key] !== previous?.technicalIntake?.[key])) {
+    const places = intake.sites.map(({ name }) => name);
+    const placement = places.length ? `Placements added ${intake.output} output at ${names.format(places)}.` : "No paired workshop produced placement output this year.";
+    add("education", "Technical training intake", `+${intake.skills} Skills. ${placement}${intake.receipts ? ` Earned ${money(intake.receipts)} in additional workshop receipts.` : ""}`);
+  }
   const union = report.unionReserve;
   if (union) {
     const result = union.released ? `Received ${units(union.released)} after state and shared reserves.`

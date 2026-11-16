@@ -13,6 +13,8 @@ import { Fiscal } from "./fiscal.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
+import { intakeDeadline, intakeStatus } from "./technical-intake.js";
+import { technicalIntakeMarkup } from "./technical-intake-view.js";
 import { economyRoles, economySites, siteResults } from "./site-economy.js";
 import { freightBoardMarkup, freightContractMarkup } from "./freight-view.js";
 import { upcomingFreightContract } from "./neighbor-competition.js";
@@ -522,6 +524,10 @@ function showDevelopmentTrees(focusDepartment = false, focusNode = null) {
         showTraining(true);
         return;
       }
+      if (id === "technical-intake") {
+        showTechnicalIntake(true);
+        return;
+      }
       modal.close();
       reviewProgramme(id, true);
     });
@@ -586,6 +592,33 @@ function showUnionReserve(back = null, label = "Return to map") {
   }
 }
 
+function showTechnicalIntake(fromTree = false) {
+  const plan = Campaign.technicalIntake(game);
+  if (!plan) return;
+  showModal(`${Math.min(game.year, campaignEnd(game))} · Education`, "Technical training intake", technicalIntakeMarkup(plan), [
+    fromTree ? choiceButton("Back to Education", () => showDevelopmentTrees(false, "technical-intake"), true)
+      : choiceButton("Return to map", () => {
+        returnToMap();
+        byId("technical-intake").focus();
+      }, true),
+  ]);
+  modal.classList.add("opening-dialog");
+  const content = byId("modal-content");
+  for (const button of content.querySelectorAll("[data-technical-enroll]")) {
+    button.addEventListener("click", () => {
+      const updated = Campaign.acceptTechnicalIntake(game, Number(button.dataset.technicalEnroll));
+      if (updated === game) return;
+      game = updated;
+      persist();
+      render();
+      showTechnicalIntake(fromTree);
+    });
+  }
+  for (const button of content.querySelectorAll("[data-technical-site]")) {
+    button.addEventListener("click", () => focusEconomySite(button.dataset.technicalSite));
+  }
+}
+
 function render() {
   const done = game.year > campaignEnd(game);
   const end = campaignEnd(game);
@@ -644,6 +677,7 @@ function render() {
   const production = results?.output != null ? `${results.output} workshop output` : "";
   const harvest = results?.food != null ? `${results.food} food from irrigation` : "";
   const resultsSummary = [production, harvest].filter(Boolean).join(" · ");
+  const intakeSchool = owned && latest?.technicalIntake?.schools?.find(({ hex }) => hex === selected);
   const roleSummary = selectedRoles.map((role) => economyRoles[role].label).join(" · ");
   const effects = results?.workshopEffects.length ? `<ul aria-label="Effects on workshop output">${results.workshopEffects.map(({ label, units }) => `<li><b>${units > 0 ? "+" : ""}${units}</b> ${label}</li>`).join("")}</ul>` : "";
   const floodSites = latest?.attribution?.food?.floodSites ?? [];
@@ -683,11 +717,16 @@ function render() {
     ${floodSummary ? `<p class="site-bonus">${latest.year} flood · ${floodSummary}</p>` : ""}
     ${tile.mineral ? '<p class="site-bonus">◆ Local mineral deposits</p>' : ''}
     ${resultsSummary ? `<section class="site-production"><h3>${latest.year} production</h3><p>${resultsSummary}</p>${effects}</section>` : ""}
+    ${intakeSchool ? `<p class="site-bonus">${latest.year} technical intake · +${intakeSchool.skills} Skills</p>` : ""}
     ${localAssets.length ? `<ul class="site-works">${localAssets.map((asset) => `<li data-building="${Boolean(asset.remaining)}"><strong>${Campaign.projects[asset.kind].name}</strong><small>${asset.remaining ? `Due ${game.year + asset.remaining - 1}` : asset.completed ? `Operating since ${asset.completed}` : "Operating"}</small></li>`).join("")}</ul>` : "<p class='site-bonus'>No works at this site.</p>"}`;
   renderProgrammes();
   renderCabinetGuide();
   byId("training-charter").hidden = !training.available;
   byId("training-charter").innerHTML = trainingStatusMarkup(training);
+  const intakeAction = byId("technical-intake");
+  const intake = intakeStatus(game);
+  intakeAction.hidden = !intake;
+  intakeAction.querySelector("small").textContent = intake === "signed" ? "Funded →" : intake === "open" ? "Apply this year →" : `${intakeDeadline} offer →`;
 
   byId("trade-policy").value = game.policy;
   byId("trade-policy").disabled = done;
@@ -866,6 +905,11 @@ function showComparison() {
 function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
+  if (game.journey && [1950, 1954, intakeDeadline].includes(game.year) && intakeStatus(game) !== "signed") return {
+    advice: game.year === intakeDeadline ? "Fund the technical training intake this year using established schools and market-linked workshops."
+      : `Open a technical school by the end of ${intakeDeadline - 2} to qualify for equipment funding.`,
+    label: "Review training intake", open: showTechnicalIntake,
+  };
   const reserveOffer = reserveStatus(game);
   if (reserveOffer === "notice" || reserveOffer === "open") return {
     advice: reserveOffer === "notice" ? `In ${reserveStart}, the Union will pay states with connected food stores for surplus shipments.`
@@ -918,15 +962,19 @@ function showMonsoonMap(report) {
   byId("map").focus();
 }
 
-function showEconomyMap() {
+function focusEconomySite(hex) {
   modal.close();
   layer = "economy";
   trainingPreview = null;
-  const sites = economySites(game);
-  const workshop = sites.find(({ roles }) => roles.includes("industry"));
-  if (workshop || sites.length) selectSite((workshop ?? sites[0]).hex);
+  if (hex) selectSite(hex);
   else render();
   byId("map").focus();
+}
+
+function showEconomyMap() {
+  const sites = economySites(game);
+  const workshop = sites.find(({ roles }) => roles.includes("industry"));
+  focusEconomySite((workshop ?? sites[0])?.hex);
 }
 
 function showReport(index = game.reports.length - 1) {
@@ -938,7 +986,11 @@ function showReport(index = game.reports.length - 1) {
     choiceButton("Earlier", () => showReport(index - 1), false, index === 0),
     choiceButton("Later", () => showReport(index + 1), false, latest),
     ...(latest && report.monsoon !== "Typical monsoon" ? [choiceButton("View monsoon map", () => showMonsoonMap(report))] : []),
-    ...(latest && report.siteEconomy?.workshops.length ? [choiceButton("Locate workshops", showEconomyMap)] : []),
+    ...(latest && report.siteEconomy?.workshops.length ? [choiceButton("Locate workshops", () => {
+      const placement = report.technicalIntake?.sites[0];
+      if (placement) focusEconomySite(placement.hex);
+      else showEconomyMap();
+    })] : []),
     ...(report.regional?.nationalMarket ? [choiceButton("Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
@@ -1257,6 +1309,7 @@ byId("development-trees").addEventListener("click", () => {
 });
 byId("relief").addEventListener("click", showRelief);
 byId("union-reserve").addEventListener("click", () => showUnionReserve());
+byId("technical-intake").addEventListener("click", () => showTechnicalIntake());
 byId("cabinet-guide").addEventListener("click", (event) => {
   if (!event.target.closest("[data-guide-dismiss]")) return;
   guideDismissed = true;

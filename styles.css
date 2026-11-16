@@ -125,6 +125,7 @@ progress { display: block; height: 5px; width: 100%; margin-top: 4px; accent-col
 .development-launch { width: 100%; margin-top: 8px; display: flex; gap: 8px; align-items: baseline; justify-content: space-between; text-align: left; border-color: #9a8254; color: var(--gold); }
 .development-launch[hidden] { display: none; }
 .development-launch small { color: var(--subtle); font-size: .67rem; }
+.intake-launch { color: var(--sector-accent); border-color: #587c7e; }
 .programme-list button { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; min-height: 31px; padding: 4px 8px; font-size: .79rem; }
 .programme-list button small { flex-shrink: 0; color: var(--subtle); font-size: .67rem; }
 .programme-list button[aria-pressed="true"] { border-color: #a59058; background: #413d2d; color: #fff0c7; }

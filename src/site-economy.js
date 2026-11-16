@@ -24,7 +24,7 @@ export function economySites(game) {
 
 const workshopSources = {
   base: "base production",
-  market: "market access", skills: "Skills", research: "education and research", apprenticeship: "apprenticeships",
+  market: "market access", skills: "Skills", research: "education and research", apprenticeship: "apprenticeships", placement: "technical training intake",
   minerals: "mineral deposits", power: "power", park: "industrial park", supplier: "Bhilai contracts", rail: "rail feeders",
   materialLoss: "raw material disruption",
 };
@@ -36,7 +36,7 @@ export function siteResults(report, hex) {
     output: workshops.length ? workshops.reduce((total, site) => total + site.output, 0) : null,
     food: irrigation.length ? irrigation.reduce((total, site) => total + site.food, 0) : null,
     workshopEffects: Object.entries(workshopSources).flatMap(([key, label]) => {
-      const units = workshops.reduce((total, site) => total + site[key], 0);
+      const units = workshops.reduce((total, site) => total + (site[key] ?? 0), 0);
       return units ? [{ label, units: key === "materialLoss" ? -units : units }] : [];
     }),
   };

@@ -117,11 +117,22 @@ function programmeNode(game, id, tier, current) {
 
 export function developmentTrees(game) {
   const training = Campaign.training(game);
+  const intake = Campaign.technicalIntake(game);
   const current = activeProgramme(game);
-  return departmentTracks(World, game).map(({ tiers, ...track }) => ({
-    ...track,
-    nodes: tiers.flatMap((ids, index) => ids.map((id) => id.startsWith("charter:")
+  return departmentTracks(World, game).map(({ tiers, ...track }) => {
+    const nodes = tiers.flatMap((ids, index) => ids.map((id) => id.startsWith("charter:")
       ? charterNode(id.slice("charter:".length), index + 1, training)
-      : programmeNode(game, id, index + 1, current)).filter(Boolean)),
-  }));
+      : programmeNode(game, id, index + 1, current)).filter(Boolean));
+    if (track.id === "education" && intake) {
+      const status = intake.award ? game.year <= intake.first ? "active" : "completed"
+        : intake.options.some(({ reason }) => !reason) ? "available" : "locked";
+      nodes.push({
+        id: "technical-intake", tier: 2, title: "Technical training intake", icon: "school",
+        metric: "Match mature schools with linked workshops",
+        status, statusLabel: intake.award ? status === "active" ? "Funded" : "Enrolled" : status === "available" ? "Applications open" : intake.status === "notice" ? `Apply in ${intake.deadline}` : "Review requirements",
+        actionLabel: "Review intake",
+      });
+    }
+    return { ...track, nodes };
+  });
 }
