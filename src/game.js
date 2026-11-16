@@ -10,6 +10,7 @@ import { departmentBadge, departmentIdentity, programmeDepartment } from "./depa
 import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
+import { foodPlanMarkup } from "./food-plan-view.js";
 import { freightBoardMarkup, freightContractMarkup } from "./freight-view.js";
 import { upcomingFreightContract } from "./neighbor-competition.js";
 import { campaignCapital, campaignEnd, campaignLengths, campaignName, foundingSaveKey, journeySettings, polityPhase, southernName, successorKey, targets } from "./journey.js";
@@ -33,13 +34,14 @@ const mapLayers = {
   terrain: [],
   access: [["#e8ca7e", "Connected route"]],
   jurisdiction: World.key === "bihar" ? [["#c6753a", "District council sites"]] : [],
-  weather: [["#4696b2", "Flood-exposed sites"], ["#d59f50", "Dry plains sites"]],
+  weather: [],
   works: [["#83cbbb", "Operating works"], ["#efc377", "Under construction"]],
 };
 const modal = byId("modal");
 let game;
 let selected = initialSite;
 let inspectSelection = false;
+let inspectWeather = false;
 let trainingPreview = null;
 let selectedProgramme = "food";
 let selectedBasinTerms = "focused";
@@ -231,6 +233,7 @@ function acknowledgeOpening() {
 function reviewProgramme(id, focus = false) {
   selectedProgramme = id;
   inspectSelection = false;
+  inspectWeather = false;
   trainingPreview = null;
   const plan = programmes[id];
   selected = plan.works[0].hex;
@@ -534,14 +537,11 @@ function renderCabinetGuide() {
 }
 
 function showRelief() {
-  const authorization = game.relief?.year === game.year ? game.relief.budget : 0;
-  const lastDemand = game.reports.at(-1)?.demand;
-  const coverage = lastDemand ? ` · ${Math.round(game.reserve / lastDemand * 100)}% of last year’s needs` : "";
+  const plan = Campaign.foodPlan(game);
+  const { authorization } = plan;
   showModal(`${game.year} · Monsoon planning`, "Emergency food plan", `
-    <div class="fiscal-summary"><div><small>Forecast</small><strong>${Campaign.outlook(game)}</strong></div>
-    <div><small>Food in reserve</small><strong>${game.reserve} units</strong><span>${coverage.replace(/^ · /, "")}</span></div></div>
-    <p>Authorize purchases for this year only. The cabinet draws down reserves first, then buys available food if a shortage remains. The treasury pays only for what it buys.</p>
-    <p class="fiscal-note">${authorization ? `${money(authorization)} currently authorized. ` : ""}This replaces the standing food policy for ${game.year}. Purchase prices range from ₹1 to ₹2 lakh per unit.</p>
+    ${foodPlanMarkup(plan)}
+    <p class="fiscal-note">A purchase cap replaces the standing food policy for ${game.year}.</p>
     <div id="relief-options" class="modal-actions" role="group" aria-label="Set purchase cap"></div>`,
   [choiceButton("Return to map", () => { returnToMap(); byId("relief").focus(); })]);
   for (const budget of [0, 4, 8, 12]) {
@@ -582,7 +582,11 @@ function render() {
   byId("neighbors").classList.toggle("funding-open", Boolean(contract));
   byId("progress").max = end - World.start + 1;
   byId("progress").value = game.reports.length;
-  byId("campaign-line").textContent = done ? `${game.reports.length} years of regional decisions are ready to review.` : `${Campaign.outlook(game)}. Check food reserves before committing the budget.`;
+  const outlook = Campaign.outlook(game);
+  const stress = !done && game.journey && outlook !== "No monsoon warning" ? Campaign.foodPlan(game).cases[1] : null;
+  byId("campaign-line").textContent = done ? `${game.reports.length} years of regional decisions are ready to review.`
+    : stress ? `${outlook}. ${stress.gap ? `${stress.gap} more food ${stress.gap === 1 ? "unit" : "units"} could be needed after reserves.` : "Harvest and reserves cover the forecast scenario."}`
+      : `${outlook}.`;
   byId("pending-decision").hidden = !pending;
   byId("pending-year").textContent = pending ? `Decision pending · ${game.year}` : "";
   byId("pending-title").textContent = pending?.title ?? "";
@@ -605,11 +609,17 @@ function render() {
   const localAssets = game.assets.filter((asset) => asset.hex === tile.id);
   const operating = localAssets.filter((asset) => !asset.remaining);
   const building = localAssets.length - operating.length;
+  const floodSites = latest?.attribution?.food?.floodSites ?? [];
+  const floodImpact = layer === "weather" && floodSites.find(({ hex }) => hex === selected);
+  const floodSummary = floodImpact && [
+    floodImpact.lost ? `${floodImpact.lost} food lost` : "",
+    floodImpact.protected ? `${floodImpact.protected} food saved` : "",
+  ].filter(Boolean).join(" · ");
   byId("map-site-peek").hidden = !inspectSelection;
   byId("map-site-name").textContent = townName ?? World.districts[tile.district];
-  byId("map-site-summary").textContent = localAssets.length
+  byId("map-site-summary").textContent = floodSummary || (localAssets.length
     ? [operating.length ? `${operating.length} operating` : "", building ? `${building} building` : ""].filter(Boolean).join(" · ")
-    : "No works at this site";
+    : "No works at this site");
   const exposure = ["Low", "Moderate", "High", "Severe"][tile.flood];
   const owner = game.owners[selected];
   const ownerName = owner === World.key ? `${name} administration` : World.owners[owner];
@@ -617,6 +627,7 @@ function render() {
   byId("site-details").innerHTML = `<p class="site-location">${World.districts[tile.district]} <span>·</span> ${ownerName}</p>
     <div class="site-facts"><div><small>Terrain</small><b>${terrain.name}</b></div><div><small>Flood risk</small><b>${exposure}</b></div><div><small>Market</small><b>${Campaign.isConnected(reached, selected) ? "In reach" : "Isolated"}</b></div></div>
     <p class="site-bonus">${elevation === undefined ? "Elevation unavailable" : `Approximate elevation · ${elevation.toLocaleString("en-IN")} m`}</p>
+    ${floodSummary ? `<p class="site-bonus">${latest.year} flood · ${floodSummary}</p>` : ""}
     ${tile.mineral ? '<p class="site-bonus">◆ Local mineral deposits</p>' : ''}
     ${localAssets.length ? `<ul class="site-works">${localAssets.map((asset) => `<li data-building="${Boolean(asset.remaining)}"><strong>${Campaign.projects[asset.kind].name}</strong><small>${asset.remaining ? `Due ${game.year + asset.remaining - 1}` : asset.completed ? `Operating since ${asset.completed}` : "Operating"}</small></li>`).join("")}</ul>` : "<p class='site-bonus'>No works at this site.</p>"}`;
   renderProgrammes();
@@ -653,11 +664,17 @@ function render() {
   byId("map-subtitle").textContent = ReliefMap.boundary(game);
   byId("bengal-map-credit").hidden = World.key !== "west-bengal";
   const key = [["#f9dfa1", `${name} border`], ["#b7c0b2", "Neighboring borders"], ...mapLayers[layer], ["#53999b", "River"]];
+  if (layer === "weather") {
+    if (latest?.monsoon === "Severe flood") key.push(["#4696b2", "Flood-prone terrain"]);
+    if (latest?.monsoon === "Dry monsoon") key.push(["#d59f50", "Dry-season exposure"]);
+    if (floodSites.some(({ lost }) => lost)) key.push(["#80d7f2", "Food lost at site"]);
+    if (floodSites.some((site) => site.protected)) key.push(["#c9e78d", "Food saved at site"]);
+  }
   const trainingPath = training.options.find(({ id }) => id === (trainingPreview ?? training.charter));
   const showTraining = layer === "works" && trainingPath?.sites.length && (trainingPreview || training.status === "operating");
   const trainingTint = trainingPath?.id === "extension" ? 0xc8e88d : 0xe8aa5f;
   let preview;
-  if (layer !== "works") {
+  if (layer !== "works" && !(layer === "weather" && inspectWeather)) {
     key.push([tint, "Programme sites"]);
     if (coverage.length) key.push(["#a8d8b4", "Protection reach"]);
     preview = { cells: footprint.map(({ hex }) => hex), color: colour, coverage };
@@ -802,6 +819,20 @@ function nextBriefDecision(report) {
   return null;
 }
 
+function showMonsoonMap(report) {
+  modal.close();
+  layer = "weather";
+  inspectWeather = true;
+  const sites = report.attribution?.food?.floodSites ?? [];
+  const highlight = sites.find(({ lost }) => lost) ?? sites[0];
+  if (highlight) selectSite(highlight.hex);
+  else {
+    render();
+    ReliefMap.reset();
+  }
+  byId("map").focus();
+}
+
 function showReport(index = game.reports.length - 1) {
   const report = game.reports[index];
   const latest = index === game.reports.length - 1;
@@ -810,6 +841,7 @@ function showReport(index = game.reports.length - 1) {
   showModal(`${report.year} · Annual brief`, briefHeadline(report, game.reports[index - 1]), briefContent(report, game.reports[index - 1], decision?.advice), [
     choiceButton("Earlier", () => showReport(index - 1), false, index === 0),
     choiceButton("Later", () => showReport(index + 1), false, latest),
+    ...(latest && report.monsoon !== "Typical monsoon" ? [choiceButton("View monsoon map", () => showMonsoonMap(report))] : []),
     ...(report.regional?.nationalMarket ? [choiceButton("Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
@@ -1114,6 +1146,7 @@ for (const tile of Object.values(World.tiles).filter((entry) => entry.town).sort
 for (const [key, name] of Object.entries(Campaign.policies)) byId("trade-policy").append(new Option(name, key));
 for (const button of document.querySelectorAll("[data-layer]")) button.addEventListener("click", () => {
   layer = button.dataset.layer;
+  inspectWeather = layer === "weather";
   trainingPreview = null;
   render();
 });
@@ -1168,7 +1201,14 @@ byId("advance").addEventListener("click", async () => {
   topActions.inert = true;
   byId("season-name").textContent = `${report.year} · ${report.monsoon}`;
   const works = report.completed.length;
-  byId("season-detail").textContent = works ? `${works} ${works === 1 ? "work" : "works"} completed` : "Resolving harvest and trade";
+  const food = report.attribution.food;
+  const recovered = food.protection + (report.training?.recovered ?? 0) + (report.development?.waterRecovery ?? 0);
+  const netLoss = Math.max(0, food.weatherLoss - recovered);
+  byId("season-detail").textContent = [
+    netLoss && `${netLoss} food lost`,
+    recovered && `${recovered} food protected or recovered`,
+    works && `${works} ${works === 1 ? "work" : "works"} completed`,
+  ].filter(Boolean).join(" · ") || "Harvest and trade resolved";
   byId("map-conditions").hidden = false;
   try {
     await ReliefMap.season(report);

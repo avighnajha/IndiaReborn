@@ -75,7 +75,12 @@ test("Central Provinces develops through the Vidarbha transfer and both Chambal 
         assert.match(brief, /Earned receipts/);
         assert.match(brief, /Planning commitments and grants/);
       }
-      if (year === 1957) assert.equal(report.monsoon, "Dry monsoon");
+      if (year === 1957) {
+        assert.equal(report.monsoon, "Dry monsoon");
+        const plan = Campaign.foodPlan(game);
+        assert.equal(plan.cases[1].harvest, report.harvest);
+        assert.equal(plan.cases[1].reserveUsed, report.fromReserve);
+      }
       if (year === 1959) {
         assert.ok(report.bhilai.output > 0);
         assert.match(briefContent(report), /Bhilai supplier contracts/);

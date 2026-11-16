@@ -1,0 +1,74 @@
+.food-plan {
+  display: grid;
+  gap: 9px;
+  margin: 4px 0 10px;
+}
+
+.food-plan-outlook {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 12px;
+  border: 1px solid #667955;
+  border-radius: 6px;
+  background: linear-gradient(110deg, #2c392b, var(--panel-dark));
+}
+
+.food-plan-outlook .department-badge { grid-column: 2; grid-row: 1; }
+.food-plan-outlook > strong { grid-column: 1; grid-row: 1; font: 700 1.22rem var(--serif); }
+.food-plan-outlook p { grid-column: 1 / -1; }
+.food-plan-outlook p, .food-plan-note, .food-plan-purchases p { font-size: .83rem; color: var(--subtle); }
+.food-plan-outlook p b, .food-plan-purchases p b { color: #f0efdc; }
+
+.food-plan-cases {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(225px, 100%), 1fr));
+  align-items: stretch;
+  gap: 8px;
+}
+
+.food-plan-case {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #667955;
+  border-radius: 6px;
+  background: var(--panel-dark);
+}
+
+.food-plan-case[data-food-plan-gap="true"] { border-color: #b67d66; }
+.food-plan-case header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 2px 8px; }
+.food-plan-case h3 { color: #f0efdc; font: 700 1.08rem var(--serif); }
+.food-plan-case header strong { font-size: .8rem; color: var(--sector-accent); }
+.food-plan-case[data-food-plan-gap="true"] header strong { color: #ffba99; }
+
+.food-plan-meter {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  margin: 8px 0;
+  border: 1px solid #4a5445;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #15201b;
+}
+
+.food-plan [data-food-source="harvest"] { --food-plan-source: #a6c27a; }
+.food-plan [data-food-source="reserve"] { --food-plan-source: #e2bb6e; }
+.food-plan [data-food-source="gap"] { --food-plan-source: #e69b7d; }
+.food-plan-meter span { flex-basis: 0; min-width: 2px; background: var(--food-plan-source); }
+.food-plan-meter [data-food-source="gap"] { background: repeating-linear-gradient(125deg, #e69b7d 0 4px, #a65f49 4px 8px); }
+
+.food-plan-sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.food-plan-sources > div { display: grid; gap: 3px; align-content: space-between; padding: 4px 0 0; border-top: 2px solid var(--food-plan-source); }
+.food-plan-sources dt { font-size: .75rem; color: var(--subtle); }
+.food-plan-sources dd { margin: 0; font-size: .93rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.food-plan-case-note { margin-top: 7px; font-size: .76rem; color: var(--subtle); }
+.food-plan-purchases { border-top: 1px solid var(--line); padding-top: 7px; }
+#modal-content .food-plan-purchases p + p { margin-top: 3px; }
+
+@media (max-width: 440px) {
+  .food-plan-outlook { grid-template-columns: 1fr; }
+  .food-plan-outlook .department-badge { grid-column: 1; grid-row: 1; }
+  .food-plan-outlook > strong { grid-row: 2; }
+}

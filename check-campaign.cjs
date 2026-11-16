@@ -236,6 +236,31 @@ test("a connected terminal wins freight without changing signed payments", async
   assert.equal(light.regional.nationalMarket, undefined);
 });
 
+test("Bihar's flood plan previews delivered irrigation and real emergency needs", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { approveProgramme } = await import("./src/programmes.js");
+  const opening = Campaign.newGame(1946, { end: 1965, preset: "standard" });
+  const trade = approveProgramme(opening, "trade");
+  const food = approveProgramme(opening, "food");
+  const tradePlan = Campaign.foodPlan(trade);
+  const foodPlan = Campaign.foodPlan(food);
+  assert.equal(foodPlan.outlook, "Flood risk elevated");
+  assert.deepEqual(tradePlan.cases.map(({ gap }) => gap), [0, 6]);
+  assert.deepEqual(foodPlan.cases.map(({ gap }) => gap), [0, 2]);
+  const authorized = Campaign.authorizeRelief(food, 4);
+  assert.equal(Campaign.foodPlan(authorized).authorization, 4);
+  const next = Campaign.advance(authorized);
+  const report = next.reports.at(-1);
+  const flood = foodPlan.cases[1];
+  assert.equal(report.monsoon, "Severe flood");
+  assert.equal(report.demand, foodPlan.demand);
+  assert.equal(report.harvest, flood.harvest);
+  assert.equal(report.fromReserve, flood.reserveUsed);
+  assert.equal(report.shortage + report.bought + report.regional.emergencyFood, flood.gap);
+  assert.deepEqual(report.attribution.food.floodSites, [{ hex: "hex-5-4", lost: 2, protected: 0 }]);
+  assert.equal(Campaign.foodPlan(next).authorization, 0);
+});
+
 test("inland exchanges win existing orders, collect their revenue once and invest in loading yards", async () => {
   const { settleFreight, settleNationalTrade } = await import("./src/interregional.js");
   const game = { year: 1959, seed: 1946, journey: { end: 1965, preset: "standard" } };

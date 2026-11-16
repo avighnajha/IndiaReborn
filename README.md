@@ -24,6 +24,8 @@ Under Standard politics, open **Domestic market** from **Neighbors** or any reso
 
 The **Neighbors** button flags the next freight contract during planning. Compare the capacity of your approved works with the strongest known rival. From 1961, a qualified winner can earn ₹6 lakh each year for five years. [Contract rules](design/interregional-model.md#regional-freight-contracts)
 
+Open **Emergency food plan** in the Cabinet to see how the expected harvest and reserves would cover food needs under typical conditions and the current weather warning. The latest flood report opens the **Monsoon** layer and highlights the growing sites that lost food or benefited from protection.
+
 - **Bihar** opens with ₹34 lakh. The Ganga Market Corridor commits ₹32 lakh to a crossing north of Patna, a link to Darbhanga and a workshop. Northern Food Security costs ₹29 lakh and improves the first harvest. Once it finishes, compare three **Kosi Flood Compact** agreements.
 - **Orissa** opens with ₹19 lakh. Develop coastal and interior markets, fund schools, or start with **Delta Food Security**. The Mahanadi programme offers earlier, state-funded delta protection and a wider, Union-backed **Hirakud** agreement. To qualify for Hirakud, fund the 1948 survey. When the station opens, choose whether its power supports workshops or irrigation. Both effects appear in the annual brief.
 - **Mayurbhanj** opens with a modeled ₹8 lakh. Choose tank and grain investment, Baripada market roads, or technical schools. Keep a local works office or join Orissa and take on a larger population, budget, and programme catalogue.

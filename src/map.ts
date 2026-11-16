@@ -6,7 +6,8 @@ import { World } from './scenario.js';
 import { building, center, drawLandscape, elevation, height, riverChannels, tiles, width, type Point, type Tile } from './landscape';
 
 type Asset = { hex: string; kind: string; remaining: number };
-type Season = { monsoon: string; year: number; completed: Asset[] };
+type FloodSite = { hex: string; lost: number; protected: number };
+type Season = { monsoon: string; year: number; completed: Asset[]; attribution?: { food?: { floodSites?: FloodSite[] } } };
 type State = { year: number; owners: Record<string, string>; assets: Asset[]; reports: Season[]; journey?: { jurisdiction?: Jurisdiction } };
 type SelectSite = (id: string, fromMap?: boolean) => void;
 type ProgrammePreview = { cells: string[]; color: number; coverage?: string[] };
@@ -404,6 +405,20 @@ function floodOverlay(g: Graphics, game: State, strong: boolean) {
   }
 }
 
+function floodResults(graphics: Graphics, report: Season) {
+  for (const { hex, lost, protected: saved } of report.attribution?.food?.floodSites ?? []) {
+    const [x, y] = center(tiles[hex]);
+    if (lost) {
+      graphics.ellipse(x, y, 17, 11).stroke({ color: 0x172b35, width: 4 })
+        .ellipse(x, y, 17, 11).stroke({ color: 0x80d7f2, width: 2 });
+    }
+    if (saved) {
+      graphics.circle(x + 12, y - 8, 4.5).fill(0x21352c)
+        .circle(x + 12, y - 8, 2.9).fill(0xc9e78d);
+    }
+  }
+}
+
 function displayedBoundary(game: State) {
   const jurisdiction = game.journey && (game.journey.jurisdiction ?? { settlement: 'pending' });
   return campaignBoundary(game.year, jurisdiction);
@@ -487,7 +502,11 @@ function render(game: State, layer: string, selected: string, select: SelectSite
       markers.circle(x + 8, y + 5, 3.1).fill(0x283b32).circle(x + 8, y + 5, 2).fill(0xefc377);
     }
   }
-  if (layer === 'weather' && game.reports.at(-1)?.monsoon === 'Severe flood') floodOverlay(regions, game, false);
+  const latest = game.reports.at(-1);
+  if (layer === 'weather' && latest?.monsoon === 'Severe flood') {
+    floodOverlay(regions, game, false);
+    floodResults(markers, latest);
+  }
   if (layer === 'weather' && game.reports.at(-1)?.monsoon === 'Dry monsoon') {
     for (const tile of allTiles) if (tile.kind === 'p') regions.ellipse(...center(tile), 17, 10).fill({ color: 0xd59f50, alpha: .24 });
   }
@@ -554,6 +573,7 @@ function construction(hexId: string) {
 }
 
 function season(report: Season) {
+  if (report.monsoon === 'Typical monsoon' && !report.completed.length) return Promise.resolve();
   const scene = new Container();
   const haze = new Graphics();
   const rain = new Container();
