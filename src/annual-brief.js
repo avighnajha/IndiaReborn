@@ -16,7 +16,7 @@ const signedMoney = (value) => `${value < 0 ? "−" : "+"}${money(Math.abs(value
 
 export function foodStatus(report) {
   if (report.shortage) return "Shortfall";
-  if (report.fromReserve || report.bought || report.regional?.emergencyFood) return "Covered with support";
+  if (report.fromReserve || report.bought || report.regional?.emergencyFood || report.unionReserve?.released) return "Covered with support";
   return "Covered by harvest";
 }
 
@@ -40,6 +40,7 @@ function foodCoverage(report) {
     ["harvest", "Harvest", report.harvest],
     ["reserve", "State reserves", report.fromReserve],
     ["shared", "Shared reserves", report.regional?.emergencyFood],
+    ["union", "Union reserve", report.unionReserve?.released],
     ["purchase", "Purchases", report.bought],
   ];
   let remainder = supplied;
@@ -140,6 +141,8 @@ function whyContent(report, previous) {
   ] : [["Baseline after seasonal effects", report.baseline], ["Irrigation after seasonal effects", `+${report.farms}`]];
   const food = detailRows([...harvestRows, ["Harvest delivered", report.harvest], ["Drawn from reserves", report.fromReserve],
     ...(report.regional?.emergencyFood ? [["Shared reserve deliveries", report.regional.emergencyFood]] : []),
+    ...(report.unionReserve?.released ? [["Received from the Union reserve", report.unionReserve.released]] : []),
+    ...(report.unionReserve?.shipped ? [["Shipped to the Union reserve", report.unionReserve.shipped]] : []),
     ["Emergency purchases", report.bought], ["Needs covered", `${Math.max(0, report.demand - report.shortage)} of ${report.demand}`], ["Reserves carried forward", report.reserve],
     ...(development?.storage ? [["Extra storage from reserve depots", `+${development.storage}`]] : []),
     ...(development?.importCapacity ? [["Extra purchase capacity from freight terminals", `+${development.importCapacity}`]] : []),
@@ -171,6 +174,7 @@ function whyContent(report, previous) {
     ...(Number.isFinite(planningChange) && planningChange ? [["Cash carried in", money(previous.cash)], ["Planning commitments and grants", signedMoney(planningChange)]] : []),
     ["Cash after planning", money(report.openingCash)], ...revenueRows(report),
     ["Food sales", money(report.sold)], ["Food purchases", money(report.bought * report.buyPrice)],
+    ...(report.unionReserve?.proceeds ? [["Union food shipments", money(report.unionReserve.proceeds)]] : []),
     ...(report.regionalCash ? [["Freight agreements", money(report.regionalCash - (report.regional?.jointFreightCash ?? 0))]] : []),
     ...(report.regional?.jointFreightCash ? [["Joint freight projects", money(report.regional.jointFreightCash)]] : []),
     ...(competition ? [["Competitive freight receipts", money(competition.player.earnings)]] : []),
@@ -261,6 +265,13 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const union = report.unionReserve;
+  if (union) {
+    const result = union.released ? `Received ${units(union.released)} after state and shared reserves.`
+      : union.shipped ? `Shipped ${units(union.shipped)} and earned ${money(union.proceeds)}.`
+        : union.capacity ? "No food available to ship above the reserve floor." : "No connected depot available for shipments.";
+    add("food", "Union food reserve", `${result} ${units(union.reserve)} remain in state reserves.`);
+  }
   const contract = report.regional?.freightContract;
   if (contract?.awarded) {
     const { winner, start, end, fee, minimumCapacity, playerCapacity } = contract;
@@ -343,7 +354,7 @@ function changeRows(report, previous) {
   const stores = completed.filter(({ kind }) => kind === "granary").length;
   const protection = impact?.food?.basinProtection ?? impact?.food?.kosiProtection;
   if (newIrrigation > 0) add("food", "New irrigation", `${units(newIrrigation)} added to the harvest after weather effects.`);
-  if (stores) add("food", "New grain stores", `${units(stores * 10)} added to reserve capacity.`);
+  if (stores) add("food", "New food stores", `${units(stores * 10)} added to reserve capacity.`);
   if (protection && protection !== (previous?.attribution?.food?.basinProtection ?? previous?.attribution?.food?.kosiProtection)) {
     add("food", programmes[report.southernPower?.id ?? (World.key === "madras" ? delivery?.id : World.basinProgramme)]?.title ?? "Basin protection", `${units(protection)} of flood losses prevented.`);
   }

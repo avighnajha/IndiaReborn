@@ -11,6 +11,8 @@ import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
+import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
+import { unionReserveMarkup } from "./union-reserve-view.js";
 import { economyRoles, economySites, siteResults } from "./site-economy.js";
 import { freightBoardMarkup, freightContractMarkup } from "./freight-view.js";
 import { upcomingFreightContract } from "./neighbor-competition.js";
@@ -491,7 +493,9 @@ function showDevelopmentTrees(focusDepartment = false, focusNode = null) {
   const delivery = activeProgramme(game);
   const overview = `${money(game.cash)} available · ${delivery ? `Works office occupied through ${delivery.finish}` : "Works office available"}`;
   showModal(`${Math.min(game.year, campaignEnd(game))} · Cabinet planning`, "Development trees",
-    departmentTreeMarkup(developmentTrees(game), selectedDepartment, overview), [choiceButton("Regional programmes →", () => {
+    departmentTreeMarkup(developmentTrees(game), selectedDepartment, overview), [
+    ...(selectedDepartment === "food" && reserveWindow(game) ? [choiceButton("Union food reserve", () => showUnionReserve(showDevelopmentTrees, "Back to Food & Water"))] : []),
+    choiceButton("Regional programmes →", () => {
       modal.close();
       openCabinetDepartment(selectedDepartment);
     }), choiceButton("Return to map", () => {
@@ -558,6 +562,27 @@ function showRelief() {
     button.dataset.reliefBudget = budget;
     button.setAttribute("aria-pressed", String(budget === authorization));
     byId("relief-options").append(button);
+  }
+}
+
+function showUnionReserve(back = null, label = "Return to map") {
+  const plan = Campaign.unionReserve(game);
+  showModal(`${game.year} · Department of Food`, "Union food reserve", unionReserveMarkup(plan), [
+    choiceButton(label, back ?? (() => {
+      returnToMap();
+      byId("union-reserve").focus();
+    }), true),
+  ]);
+  modal.classList.add("opening-dialog");
+  for (const button of byId("modal-content").querySelectorAll("[data-union-reserve-choice]")) {
+    button.addEventListener("click", () => {
+      const updated = Campaign.acceptUnionReserve(game, button.dataset.unionReserveChoice);
+      if (updated === game) return;
+      game = updated;
+      persist();
+      render();
+      showUnionReserve(back, label);
+    });
   }
 }
 
@@ -670,6 +695,12 @@ function render() {
   byId("trade-note").textContent = relief ? `Purchase cap for ${game.year}` : "Applies each year";
   byId("relief").hidden = !game.journey || done;
   byId("relief").textContent = relief ? `Emergency purchases · ${money(relief.budget)} cap` : "Emergency food plan";
+  const reserveAction = byId("union-reserve");
+  const reserveOffer = reserveStatus(game);
+  reserveAction.hidden = done || !reserveWindow(game);
+  reserveAction.textContent = reserveOffer === "notice" ? `Union food reserve · ${reserveStart} offer`
+    : reserveOffer === "open" ? "Union food reserve · Sign this year"
+      : reserveOffer === "signed" ? "Union food reserve · Signed" : "Union food reserve";
   byId("advance").textContent = done ? "Campaign results →" : pending ? "Review pending decision →" : `Advance ${game.year} →`;
   byId("reports").disabled = !game.reports.length;
   const active = activeProgramme(game);
@@ -774,7 +805,9 @@ function showFinance() {
     ${developmentRecord ? `<p class="fiscal-note">FY ${Fiscal.yearLabel(game.year)} development spending reference: ${money(developmentRecord.lakh)} (${developmentRecord.basis}). <a href="${developmentRecord.url}" target="_blank" rel="noopener">View programme source</a></p>` : ""}
     ${historic.transferNote ? `<p class="fiscal-note">${historic.transferNote}</p>` : historic.transferYear !== historic.fiscalYear ? `<p class="fiscal-note">The modeled split uses the FY ${Fiscal.yearLabel(historic.transferYear)} transfer mix.</p>` : ""}
     <section class="union-funding"><h3>Union funding</h3><p>${fundingNote}</p><div id="grant-offers"></div></section>`, [
-    choiceButton("Compare states", showComparison), choiceButton("Economy breakdown", showEconomy), choiceButton("Return to map", () => modal.close(), true),
+    choiceButton("Compare states", showComparison), choiceButton("Economy breakdown", showEconomy),
+    ...(reserveWindow(game) ? [choiceButton("Union food reserve", () => showUnionReserve(showFinance, "Back to budget office"))] : []),
+    choiceButton("Return to map", () => modal.close(), true),
   ]);
   for (const offer of Campaign.grantOffers(game)) {
     const card = document.createElement("div");
@@ -795,10 +828,11 @@ function showFinance() {
 function showEconomy() {
   const report = game.reports.at(-1);
   const freightReceipts = report?.regional?.freightCompetition?.player.earnings;
-  const { workshops, markets, freight, contract, sales, total } = report ? Campaign.earnedReceipts(report)
-    : { workshops: 0, markets: 0, freight: 0, contract: 0, sales: 0, total: 0 };
+  const { workshops, markets, freight, contract, sales, procurement, total } = report ? Campaign.earnedReceipts(report)
+    : { workshops: 0, markets: 0, freight: 0, contract: 0, sales: 0, procurement: 0, total: 0 };
   const sources = [`${money(workshops)} workshops`, `${money(markets)} markets`, freight && `${money(freight)} freight`,
-    contract && `${money(contract)} freight contract`, sales && `${money(sales)} food sales`].filter(Boolean).join(" · ");
+    contract && `${money(contract)} freight contract`, sales && `${money(sales)} food sales`,
+    procurement && `${money(procurement)} Union food shipments`].filter(Boolean).join(" · ");
   const recordedAllocation = report && report.baselineTransfers !== undefined
     ? report.tax - workshops - markets + report.baselineTransfers
     : null;
@@ -832,6 +866,13 @@ function showComparison() {
 function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
+  const reserveOffer = reserveStatus(game);
+  if (reserveOffer === "notice" || reserveOffer === "open") return {
+    advice: reserveOffer === "notice" ? `In ${reserveStart}, the Union will pay states with connected food stores for surplus shipments.`
+      : "Choose how much food to keep at home before supplying the Union reserve. Sign by year end.",
+    label: "Review reserve offer",
+    open: showUnionReserve,
+  };
   if ((game.year === charterOpening || report.completed.some(({ kind }) => ["school", "road", "mill", "irrigation"].includes(kind))) &&
       Campaign.training(game).status === "ready") {
     return { advice: "Your technical school network can specialize in industry or agriculture.", label: "Compare specializations", open: showTraining };
@@ -1215,6 +1256,7 @@ byId("development-trees").addEventListener("click", () => {
   showDevelopmentTrees();
 });
 byId("relief").addEventListener("click", showRelief);
+byId("union-reserve").addEventListener("click", () => showUnionReserve());
 byId("cabinet-guide").addEventListener("click", (event) => {
   if (!event.target.closest("[data-guide-dismiss]")) return;
   guideDismissed = true;

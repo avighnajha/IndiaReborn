@@ -10,7 +10,7 @@ The opening briefing offers three regional programmes. Food and water aims for s
 
 ## Next playable evolution
 
-**Make follow-on decisions react to outcomes.** Each starter programme now opens a related proposal. Give the next iteration different terms based on what actually happened. Strong grain reserves might improve bargaining power after a flood. A busy corridor might attract industry, but with a maintenance commitment. The player should be able to point to the earlier investment that gave them a better choice.
+**Make follow-on decisions react to outcomes.** A busy corridor can qualify for freight bids. Connected food stores make the 1957 Union reserve offer viable, and earlier harvests determine how much the state can afford to ship. The state chooses a reserve floor for the entire agreement. Carry this structure into a timed skills funding opportunity with requirements that reflect earlier education choices.
 
 **Make the monsoon change the plan.** The Cabinet compares typical conditions with the forecast flood or dry scenario, including projects due that year and food in reserve. A shortfall before imports gives the player a basis for choosing which works to fund or whether to cap emergency purchases. Resolved floods mark irrigated sites where food was lost or saved. Seasons with typical weather and no completed works go straight to the annual brief. Early food procurement and crossing reinforcement remain possible follow-ons.
 

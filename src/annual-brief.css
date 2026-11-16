@@ -76,6 +76,7 @@ dialog.brief-dialog {
 .brief-dialog [data-source="harvest"] { --brief-source: #a6c27a; }
 .brief-dialog [data-source="reserve"] { --brief-source: #e2bb6e; }
 .brief-dialog [data-source="shared"] { --brief-source: #9bc5d1; }
+.brief-dialog [data-source="union"] { --brief-source: #d1e0af; }
 .brief-dialog [data-source="purchase"] { --brief-source: #c5a8d9; }
 .brief-dialog [data-source="other"] { --brief-source: #bac5b5; }
 .brief-dialog [data-source="shortfall"] { --brief-source: #e69b7d; }

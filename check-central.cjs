@@ -174,3 +174,81 @@ test("Madhya Pradesh can prioritize engineering and Itarsi to win the 1961 freig
   assert.equal(Campaign.freightContract(game).upcoming, null);
   assert.equal(game.reports.reduce((total, report) => total + Campaign.earnedReceipts(report).contract, 0), 30);
 });
+
+test("the 1957 reserve offer commits to one floor and accounts for shipments and relief", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { approveProgramme } = await import("./src/programmes.js");
+  const { briefContent } = await import("./src/annual-brief.js");
+
+  function play(seed, choice, programmes, policy = "hold") {
+    let game = { ...Campaign.newGame(seed, { end: 1965, preset: "standard" }), policy };
+    const results = {};
+    for (let year = 1946; year <= 1961; year++) {
+      let decision;
+      while ((decision = Campaign.nextDecision(game))) {
+        const decided = Campaign.decide(game, choices.find((key) => decision.choices[key]));
+        assert.notEqual(decided, game, decision.title);
+        game = decided;
+      }
+      if (programmes[year]) {
+        const approved = approveProgramme(game, programmes[year]);
+        assert.notEqual(approved, game, programmes[year]);
+        game = approved;
+      }
+
+      const forecast = year === 1957 ? Campaign.unionReserve(game) : null;
+      if (forecast) {
+        assert.equal(forecast.status, "open");
+        assert.equal(Campaign.acceptUnionReserve(game, "invalid"), game);
+        const signed = Campaign.acceptUnionReserve(game, choice);
+        assert.equal(signed === game, !forecast.capacity);
+        game = signed;
+        assert.equal(Campaign.acceptUnionReserve(game, "buffer"), game);
+        const record = new Map();
+        const device = { getItem: (key) => record.get(key), setItem: (key, value) => record.set(key, value) };
+        Campaign.save(device, game);
+        assert.deepEqual(Campaign.load(device, true), game);
+      } else {
+        assert.equal(Campaign.acceptUnionReserve(game, choice), game);
+      }
+
+      const next = Campaign.advance(game);
+      assert.equal(next.year, year + 1);
+      const report = next.reports.at(-1);
+      const union = report.unionReserve;
+      results[year] = report;
+      if (union) {
+        assert.equal(union.closing, union.opening + union.shipped - union.released);
+        assert.equal(union.proceeds, union.shipped * 2);
+        assert.equal(union.closing, next.journey.unionReserve.stock);
+        assert.equal(report.demand - report.shortage, Math.min(report.harvest, report.demand) + report.fromReserve +
+          (report.regional?.emergencyFood ?? 0) + union.released + report.bought);
+        assert.equal(Campaign.earnedReceipts(report).total,
+          report.income - Campaign.finance(game).total + report.bought * report.buyPrice);
+        if (union.shipped) assert.ok(report.reserve >= union.floor && !union.released);
+        if (forecast && policy === "hold") {
+          const { projections } = forecast.offers.find(({ id }) => id === choice);
+          const dry = projections.find(({ name }) => name === "If the monsoon is dry");
+          assert.deepEqual([dry.shipped, dry.proceeds, dry.reserve], [union.shipped, union.proceeds, report.reserve]);
+        }
+      }
+      game = next;
+    }
+    assert.equal(results[1961].unionReserve, undefined);
+    return results;
+  }
+
+  const supply = play(69, "supply", { 1946: "food" });
+  const buffer = play(69, "buffer", { 1946: "food" });
+  assert.deepEqual([supply[1957].unionReserve.shipped, supply[1957].reserve], [5, 4]);
+  assert.deepEqual([buffer[1957].unionReserve.shipped, buffer[1957].reserve], [0, 9]);
+  assert.equal(supply[1958].unionReserve.released, 2);
+  assert.equal(buffer[1958].unionReserve.released, 0);
+  assert.match(briefContent(supply[1958]), /Received 2 units after state and shared reserves/);
+  assert.deepEqual([supply[1959].shortage, buffer[1959].shortage], [4, 1]);
+
+  const late = play(1946, "supply", { 1946: "trade", 1956: "food" }, "export");
+  assert.deepEqual([late[1958].unionReserve.shipped, late[1958].sold, late[1958].reserve], [6, 6, 4]);
+  const unqualified = play(1946, "supply", { 1946: "trade" });
+  assert.equal(unqualified[1957].unionReserve, undefined);
+});

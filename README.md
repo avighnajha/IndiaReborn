@@ -26,6 +26,8 @@ Under Standard politics, open **Domestic market** from **Neighbors** or any reso
 
 The **Neighbors** button flags the next freight contract during planning. Compare the capacity of your approved works with the strongest known rival. From 1961, a qualified winner can earn ₹6 lakh each year for five years. [Contract rules](design/interregional-model.md#regional-freight-contracts)
 
+In 1956, check the **Union food reserve** notice in the Cabinet. With a market-connected food store and at least two linked towns, you can sign in 1957 to ship surplus at ₹2 lakh per unit through 1960. Choose between a larger shipment allowance and keeping more food at home. The forecast shows how each choice affects your reserves if the monsoon worsens. From 1958, eligible states can receive up to three units when their own supplies fall short. The annual brief records the shipment, payment, or relief. [Reserve rules and historical sources](design/interregional-model.md#union-food-reserve)
+
 Open **Emergency food plan** in the Cabinet to see how the expected harvest and reserves would cover food needs under typical conditions and the current weather warning. The latest flood report opens the **Monsoon** layer and highlights the growing sites that lost food or benefited from protection.
 
 - **Bihar** opens with ₹34 lakh. The Ganga Market Corridor commits ₹32 lakh to a crossing north of Patna, a link to Darbhanga and a workshop. Northern Food Security costs ₹29 lakh and improves the first harvest. Once it finishes, compare three **Kosi Flood Compact** agreements.

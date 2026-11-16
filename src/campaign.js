@@ -6,6 +6,7 @@ import { contractPlayerBid, contractRivalBid, upcomingFreightContract } from "./
 import { applyPoliticalDecision, politicalDecision } from "./politics.js";
 import { activeProgramme, basinAgreementsFor, basinFloodDecision, programmeCommissioned, programmeRequirements, programmes, visibleProgrammes } from "./programmes.js";
 import { apprenticeshipOutput, extensionDryRecovery, extensionFloodRecovery, extensionYield, trainingModel } from "./training.js";
+import { reservePlan, reserveWindow, resolveReserve, signReserve } from "./union-reserve.js";
 
 export const Campaign = (() => {
   const projects = {
@@ -15,7 +16,7 @@ export const Campaign = (() => {
     road: { name: "Road link", icon: "╍", cost: 7, years: 1, summary: "Extend a chain from an existing hub. Connected towns unlock trade and improve workshop output." },
     mill: { name: "Workshop", icon: "⚙", cost: 24, years: 2, summary: "Earns revenue. Nearby minerals improve output and a market road raises it further." },
     school: { name: "Technical school", icon: "◇", cost: 17, years: 2, summary: "Trains workers over seven years. Skills raise workshop output and count toward shared prosperity." },
-    granary: { name: "Grain reserve", icon: "▣", cost: 12, years: 1, summary: "Stores 10 more units of surplus grain for lean years." },
+    granary: { name: "Food store", icon: "▣", cost: 12, years: 1, summary: "Stores 10 more food units for lean years." },
     power: { name: "Hydropower station", icon: "ϟ", cost: 20, years: 3, summary: "Supplies connected industry or irrigation pumps through the Mahanadi agreement." },
     college: { name: "Degree college", summary: "Adds 6 Skills. Connected workshops gain 1 output when the college network is operating." },
     university: { name: "Regional university", summary: "Adds 8 Skills. Connected workshops gain 1 output from university research." },
@@ -196,7 +197,8 @@ export const Campaign = (() => {
     const freight = (report.regionalCash ?? 0) + (report.regional?.freightCompetition?.player.earnings ?? 0);
     const contract = playerContractReceipts(report.regional?.freightContract);
     const sales = report.sold ?? 0;
-    return { workshops, markets, freight, contract, sales, total: workshops + markets + freight + contract + sales };
+    const procurement = report.unionReserve?.proceeds ?? 0;
+    return { workshops, markets, freight, contract, sales, procurement, total: workshops + markets + freight + contract + sales + procurement };
   }
 
   function playerContractReceipts(contract) {
@@ -461,6 +463,30 @@ export const Campaign = (() => {
     return { outlook: outlook(game), demand, reserve: game.reserve, cases, cash: game.cash, authorization };
   }
 
+  function reserveFacilities(state, { reached, towns }) {
+    const granaries = active(state, "granary");
+    const depots = active(state, "foodDepot");
+    const connected = (assets) => assets.filter(({ hex }) => isConnected(reached, hex));
+    const localStores = connected(granaries);
+    const cooperatives = connected(depots);
+    const depotNames = [...new Set([...localStores, ...cooperatives].map(({ hex }) => {
+      const tile = World.tiles[hex];
+      return tile.town?.name ?? World.districts[tile.district];
+    }))];
+    return { capacity: Math.max(0, Math.min(6, towns - 1, localStores.length * 4 + cooperatives.length * 6)),
+      storage: 5 + granaries.length * 10 + depots.length * 18, depotNames };
+  }
+
+  function unionReserve(game) {
+    const state = { ...game, assets: yearWorks(game).assets };
+    return reservePlan(game, reserveFacilities(state, access(state)), foodPlan(game));
+  }
+
+  function acceptUnionReserve(game, id) {
+    const state = { ...game, assets: yearWorks(game).assets };
+    return signReserve(game, id, reserveFacilities(state, access(state)).capacity);
+  }
+
   function advance(game) {
     if (game.year > campaignEnd(game) || nextDecision(game) || basinFloodDecision(game)) return game;
     const charter = game.journey?.training ? training(game) : null;
@@ -550,12 +576,17 @@ export const Campaign = (() => {
     const supply = Math.max(0, (market === "Tight" ? 2 : 5) + Math.floor((towns - 1) / 2) + (game.decisions[1952] === "contract" ? 4 : 0) + (regional?.marketCapacity ?? 0) + railCapacity) + development.importCapacity;
     const fromReserve = Math.min(game.reserve, Math.max(0, demand - harvest));
     const fromPartnerReserve = regional?.emergencyFood ?? 0;
-    const foodDeficit = Math.max(0, demand - harvest - fromReserve - fromPartnerReserve);
+    const afterLocalRelief = Math.max(0, demand - harvest - fromReserve - fromPartnerReserve);
+    const available = Math.max(0, game.reserve + harvest - demand);
+    const union = reserveWindow(game) ? resolveReserve(game, reserveFacilities(state, { reached, towns }).capacity, available, afterLocalRelief) : null;
+    const foodDeficit = afterLocalRelief - (union?.released ?? 0);
     const emergencyBudget = relief?.year === game.year ? relief.budget : null;
     const policy = emergencyBudget === null ? game.policy : "import";
     const purchaseFunds = Math.max(0, Math.min(game.cash - charterUpkeep, emergencyBudget ?? Infinity));
     const bought = policy === "import" ? Math.min(foodDeficit, availableGrain, supply, Math.floor(purchaseFunds / buyPrice)) : 0;
-    const sold = policy === "export" ? Math.min(Math.max(0, harvest - demand), 18 - availableGrain, market === "Tight" ? towns * 2 : towns) : 0;
+    const foodAfterShipment = available - (union?.shipped ?? 0);
+    const marketSurplus = Math.min(Math.max(0, harvest - demand), Math.max(0, foodAfterShipment - (union?.floor ?? 0)));
+    const sold = policy === "export" ? Math.min(marketSurplus, 18 - availableGrain, market === "Tight" ? towns * 2 : towns) : 0;
     const bilateral = regional && settleNeighborTrade(regional, { bought, sold, buyPrice });
     const regionalSettlement = bilateral && settleFreight(settleNationalTrade(bilateral, game, World), game);
     const marketStock = availableGrain - bought + sold;
@@ -564,14 +595,14 @@ export const Campaign = (() => {
       : marketStock;
     const shortage = foodDeficit - bought;
     const capacity = 5 + active(state, "granary").length * 10 + development.storage;
-    const reserve = Math.min(capacity, game.reserve - fromReserve + Math.max(0, harvest - demand - sold));
+    const reserve = Math.min(capacity, foodAfterShipment - sold);
     const funding = finance(game);
     const receipts = localReceipts(output, towns, development.marketReceipts);
     const tax = funding.local + receipts.markets + receipts.workshops;
     const maintenance = Math.ceil(assets.filter((asset) => asset.remaining === 0 && game.owners[asset.hex] === World.key).length / 4) + charterUpkeep;
     const competitiveReceipts = regionalSettlement?.report.freightCompetition?.player.earnings ?? 0;
     const contractReceipts = playerContractReceipts(regionalSettlement?.report.freightContract);
-    const income = tax + funding.transfers + sold - bought * buyPrice + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts;
+    const income = tax + funding.transfers + sold - bought * buyPrice + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts + (union?.proceeds ?? 0);
     const cash = Math.max(0, game.cash + income - maintenance);
     const previouslyReached = completed.some((asset) => asset.kind === "road") ? access(game).reached : reached;
     const newlyConnected = [...reached].filter((id) => !previouslyReached.has(id) && World.tiles[id].town).map((id) => World.tiles[id].town.name);
@@ -611,6 +642,7 @@ export const Campaign = (() => {
       allocation, food: powerIrrigation, output: industry.power };
     if (bhilaiSuppliers) report.bhilai = { output: bhilaiOutput };
     if (emergencyBudget !== null) report.relief = { budget: emergencyBudget, bought, spent: bought * buyPrice };
+    if (union) report.unionReserve = { ...union, reserve };
     if (juteMills) report.jute = { source: juteSource, mills: juteMills, lost: juteMills * juteLoss };
     if (colleges || universities || technical || agricultural || depots || water || terminals || parks) report.development = development;
     if (service) {
@@ -633,7 +665,9 @@ export const Campaign = (() => {
     return {
       ...state, year: game.year + 1, cash, reserve, marketStock: carryStock,
       population: Math.max(1, game.population + growth + (regional?.migration ?? 0)),
-      ...(regionalSettlement ? { journey: { ...game.journey, partners: regionalSettlement.partners } } : {}),
+      ...(regionalSettlement ? { journey: { ...game.journey, partners: regionalSettlement.partners,
+        ...(union ? { unionReserve: { ...game.journey.unionReserve, stock: union.closing } } : {}),
+      } } : {}),
       reports: [...game.reports, report],
     };
   }
@@ -667,7 +701,7 @@ export const Campaign = (() => {
 
   return {
     saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, grantWindow, grantOffers, acceptGrant, advance, score, load, save,
-    training, adoptTraining, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan,
+    training, adoptTraining, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve,
     partnerOffers: (game) => partnerOffers(game, World),
     jointProjectOffers: (game) => jointProjectOffers(game, World),
     neighbors: (game) => neighborsFor(World, game),
