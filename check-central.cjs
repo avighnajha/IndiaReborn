@@ -9,6 +9,7 @@ const choices = ["roads", "centralReceiveFamilies", "centralDistrictSchool", "di
   "centralMaharashtra", "extension", "ration"];
 
 test("Central Provinces develops through the Vidarbha transfer and both Chambal allocations", async () => {
+  const { economySites, siteResults } = await import("./src/site-economy.js");
   const { Campaign } = await import("./src/campaign.js");
   const { World } = await import("./src/scenario.js");
   const { campaignCapital, campaignName } = await import("./src/journey.js");
@@ -41,6 +42,8 @@ test("Central Provinces develops through the Vidarbha transfer and both Chambal 
           assert.ok(game.assets.some(({ hex, remaining }) => departure.includes(hex) && remaining > 0));
           assert.ok(expansion.every((hex) => game.owners[hex] === "central"));
           assert.ok(departure.every((hex) => game.owners[hex] === "bombay"));
+          assert.ok(economySites(before).some(({ hex }) => departure.includes(hex)));
+          assert.ok(economySites(game).every(({ hex }) => !departure.includes(hex)));
           assert.equal(World.tiles[campaignCapital(game)].town.name, "Bhopal");
           assert.equal(Campaign.finance(game).historic.name, "Madhya Pradesh");
           const memory = new Map();
@@ -66,6 +69,13 @@ test("Central Provinces develops through the Vidarbha transfer and both Chambal 
       const next = Campaign.advance(game);
       assert.equal(next.year, year + 1);
       const report = next.reports.at(-1);
+      assert.equal(report.siteEconomy.workshops.reduce((total, site) => total + site.output, 0), report.output);
+      if (year === 1949) {
+        const workshop = siteResults(report, "hex-13-10");
+        assert.equal(workshop.output, 7);
+        assert.deepEqual(workshop.workshopEffects, [{ label: "base production", units: 3 }, { label: "market access", units: 4 }]);
+        assert.equal(siteResults({ ...report, siteEconomy: undefined }, "hex-13-10").output, null);
+      }
       assert.equal(report.cash, report.openingCash + report.income - report.maintenance + report.upkeepShortfall);
       assert.equal(Campaign.earnedReceipts(report).total,
         report.income - Campaign.finance(game).total + report.bought * report.buyPrice);

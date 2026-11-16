@@ -407,6 +407,7 @@ export const Campaign = (() => {
     const extraFood = extension ? servedSites.size * extensionYield : 0;
     let extensionRecovery = extension && monsoon === "Dry monsoon" ? Math.min(weatherLoss, servedSites.size * extensionDryRecovery) : 0;
     const floodSites = [];
+    const irrigationSites = [];
     const farms = irrigated.reduce((total, { hex, completed }) => {
       const tile = World.tiles[hex];
       const potential = 2 + World.terrain[tile.kind].fertility;
@@ -421,6 +422,7 @@ export const Campaign = (() => {
       const recoveredHere = servedSites.has(hex) ? Math.min(extensionFloodRecovery, exposedLoss - avoidedLoss) : 0;
       extensionRecovery += recoveredHere;
       if (exposedLoss) floodSites.push({ hex, lost: exposedLoss - avoidedLoss - recoveredHere, protected: avoidedLoss + recoveredHere });
+      irrigationSites.push({ hex, food: produced + (servedSites.has(hex) ? extensionYield : 0) + recoveredHere });
       return total + produced;
     }, 0);
     if (powerIrrigation) foodEffects.powerIrrigation = powerIrrigation;
@@ -432,7 +434,7 @@ export const Campaign = (() => {
     const harvest = baseline + farms + powerIrrigation + extraFood + extensionRecovery + researchFood + waterYield + waterRecovery;
     const demand = Math.max(expanded ? 18 : economy.demandFloor, Math.floor(game.population) - (hasCouncil ? 7 : 0));
     return { harvest, demand, baseline, farms, expanded, extraFood, extensionRecovery, waterRecovery,
-      researchFood, waterYield, foodEffects, earthquakeLoss, bankRepairs };
+      researchFood, waterYield, foodEffects, irrigationSites, earthquakeLoss, bankRepairs };
   }
 
   function foodPlan(game) {
@@ -475,7 +477,7 @@ export const Campaign = (() => {
     const successor = successorRegion(game);
     const { powerCommitment, allocation, sharedPower, powerIrrigation, industrialPower } = powerEffects(game, state, successor);
     const { harvest, demand, baseline, farms, expanded, extraFood, extensionRecovery, waterRecovery,
-      researchFood, waterYield, foodEffects, earthquakeLoss, bankRepairs } = harvestFor(game, state, monsoon, { successor, powerIrrigation, operating });
+      researchFood, waterYield, foodEffects, irrigationSites, earthquakeLoss, bankRepairs } = harvestFor(game, state, monsoon, { successor, powerIrrigation, operating });
     const colleges = active(state, "college").length;
     const universities = active(state, "university").length;
     const technical = active(state, "technicalInstitute").length;
@@ -506,14 +508,13 @@ export const Campaign = (() => {
     const industry = { workshops: 0, base: 0, minerals: 0, marketAccess: 0, skills: 0, power: 0, newWorkshops: 0 };
     const assamDisruption = World.key === "assam" && game.year >= 1947 && game.year < 1950;
     const assamRail = World.key === "assam" && game.year >= 1950 && programmeCommissioned(state, "assamRailLink");
-    const teaWorkshops = World.key === "assam" ? mills.filter(({ programme, hex }) => programmes[programme]?.teaFreight && isConnected(reached, hex)).length : 0;
-    const teaOutput = assamRail ? teaWorkshops * 2 : 0;
+    let teaOutput = 0;
     const bhilaiSuppliers = game.journey?.events["central-bhilai"]?.choice === "centralBhilaiSuppliers";
     let bhilaiOutput = 0;
     const skillBonus = workshopSkillBonus(skills);
     const apprenticeships = service?.id === "apprenticeships";
     const extraOutput = apprenticeships ? servedSites.size * apprenticeshipOutput : 0;
-    const output = mills.reduce((total, asset) => {
+    const workshopSites = mills.map((asset) => {
       const tile = World.tiles[asset.hex];
       const minerals = tile.mineral ? 2 : 0;
       const accessBonus = isConnected(reached, asset.hex) ? 4 : 0;
@@ -523,7 +524,9 @@ export const Campaign = (() => {
       const park = accessBonus ? parks * 3 : 0;
       const materialLoss = programmes[asset.programme]?.rawJute ? juteLoss : 0;
       const supplierOutput = bhilaiSuppliers && accessBonus && tile.district === "chhattisgarhPlain" ? 2 : 0;
+      const rail = assamRail && accessBonus && programmes[asset.programme]?.teaFreight ? 2 : 0;
       const produced = 3 + minerals + accessBonus + skillBonus + powerBonus + charterBonus + research + park + supplierOutput - materialLoss;
+      teaOutput += rail;
       bhilaiOutput += supplierOutput;
       industry.workshops++;
       industry.base += 3;
@@ -534,8 +537,10 @@ export const Campaign = (() => {
       development.researchOutput += research;
       development.parkOutput += park;
       if (asset.completed === game.year) industry.newWorkshops += produced;
-      return total + produced;
-    }, 0) + teaOutput;
+      return { hex: asset.hex, output: produced + rail, base: 3, market: accessBonus, skills: skillBonus, research,
+        power: powerBonus, apprenticeship: charterBonus, minerals, park, supplier: supplierOutput, rail, materialLoss };
+    });
+    const output = workshopSites.reduce((total, site) => total + site.output, 0);
     const neighborHarvest = 3 + Math.floor(yearlyRoll(game, 911) * 8);
     const backgroundStock = Math.max(0, Math.min(18, game.marketStock + neighborHarvest - 6));
     const availableGrain = Math.max(0, Math.min(18, backgroundStock + (regional?.marketStockAdjustment ?? 0)));
@@ -594,6 +599,7 @@ export const Campaign = (() => {
       skills, output, towns, completed, tax, maintenance, income, openingCash: game.cash, cash, upkeepShortfall: Math.max(0, maintenance - game.cash - income),
       baselineTransfers: funding.transfers, grantAward: game.grantAwards?.[game.year] ?? null,
       attribution: { food: foodEffects, industry, newlyConnected, programme: delivery },
+      siteEconomy: { workshops: workshopSites, irrigation: irrigationSites },
     };
     if (World.key === "assam" && (railCapacity || earthquakeLoss || game.year === 1950)) {
       report.assam = { railCapacity, teaOutput, earthquakeLoss, bankRepairs };

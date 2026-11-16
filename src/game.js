@@ -11,6 +11,7 @@ import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
+import { economyRoles, economySites, siteResults } from "./site-economy.js";
 import { freightBoardMarkup, freightContractMarkup } from "./freight-view.js";
 import { upcomingFreightContract } from "./neighbor-competition.js";
 import { campaignCapital, campaignEnd, campaignLengths, campaignName, foundingSaveKey, journeySettings, polityPhase, southernName, successorKey, targets } from "./journey.js";
@@ -32,6 +33,7 @@ const openingKey = founding ? `${foundingSaveKey(World.key)}-briefing` : World.k
 const guideKey = `${openingKey}-guide-dismissed`;
 const mapLayers = {
   terrain: [],
+  economy: [],
   access: [["#e8ca7e", "Connected route"]],
   jurisdiction: World.key === "bihar" ? [["#c6753a", "District council sites"]] : [],
   weather: [],
@@ -41,6 +43,7 @@ const modal = byId("modal");
 let game;
 let selected = initialSite;
 let inspectSelection = false;
+let inspectEconomy = false;
 let inspectWeather = false;
 let trainingPreview = null;
 let selectedProgramme = "food";
@@ -609,6 +612,15 @@ function render() {
   const localAssets = game.assets.filter((asset) => asset.hex === tile.id);
   const operating = localAssets.filter((asset) => !asset.remaining);
   const building = localAssets.length - operating.length;
+  const owned = game.owners[selected] === World.key;
+  const developedSites = layer === "economy" ? economySites(game) : [];
+  const selectedRoles = developedSites.find(({ hex }) => hex === selected)?.roles ?? [];
+  const results = owned ? siteResults(latest, selected) : null;
+  const production = results?.output != null ? `${results.output} workshop output` : "";
+  const harvest = results?.food != null ? `${results.food} food from irrigation` : "";
+  const resultsSummary = [production, harvest].filter(Boolean).join(" · ");
+  const roleSummary = selectedRoles.map((role) => economyRoles[role].label).join(" · ");
+  const effects = results?.workshopEffects.length ? `<ul aria-label="Effects on workshop output">${results.workshopEffects.map(({ label, units }) => `<li><b>${units > 0 ? "+" : ""}${units}</b> ${label}</li>`).join("")}</ul>` : "";
   const floodSites = latest?.attribution?.food?.floodSites ?? [];
   const floodImpact = layer === "weather" && floodSites.find(({ hex }) => hex === selected);
   const floodSummary = floodImpact && [
@@ -617,9 +629,25 @@ function render() {
   ].filter(Boolean).join(" · ");
   byId("map-site-peek").hidden = !inspectSelection;
   byId("map-site-name").textContent = townName ?? World.districts[tile.district];
-  byId("map-site-summary").textContent = floodSummary || (localAssets.length
+  byId("map-site-summary").textContent = floodSummary || (layer === "economy" && (resultsSummary || roleSummary)) || (localAssets.length
     ? [operating.length ? `${operating.length} operating` : "", building ? `${building} building` : ""].filter(Boolean).join(" · ")
     : "No works at this site");
+  const siteProduction = byId("map-site-production");
+  const siteDetails = byId("inspect-site");
+  const economyDetailsOpen = layer === "economy" && inspectEconomy;
+  siteProduction.hidden = !economyDetailsOpen;
+  siteDetails.textContent = economyDetailsOpen ? "Hide" : "Details";
+  if (layer === "economy") {
+    siteDetails.setAttribute("aria-expanded", String(economyDetailsOpen));
+    siteDetails.setAttribute("aria-controls", "map-site-production");
+  } else {
+    siteDetails.removeAttribute("aria-expanded");
+    siteDetails.removeAttribute("aria-controls");
+  }
+  if (economyDetailsOpen) {
+    const facilities = [...new Set(operating.map(({ kind }) => Campaign.projects[kind].name))].join(" · ");
+    siteProduction.innerHTML = `${resultsSummary ? `<b>${latest.year} production</b>${effects}` : ""}<p>${facilities || "No operating facilities"}</p>`;
+  }
   const exposure = ["Low", "Moderate", "High", "Severe"][tile.flood];
   const owner = game.owners[selected];
   const ownerName = owner === World.key ? `${name} administration` : World.owners[owner];
@@ -629,6 +657,7 @@ function render() {
     <p class="site-bonus">${elevation === undefined ? "Elevation unavailable" : `Approximate elevation · ${elevation.toLocaleString("en-IN")} m`}</p>
     ${floodSummary ? `<p class="site-bonus">${latest.year} flood · ${floodSummary}</p>` : ""}
     ${tile.mineral ? '<p class="site-bonus">◆ Local mineral deposits</p>' : ''}
+    ${resultsSummary ? `<section class="site-production"><h3>${latest.year} production</h3><p>${resultsSummary}</p>${effects}</section>` : ""}
     ${localAssets.length ? `<ul class="site-works">${localAssets.map((asset) => `<li data-building="${Boolean(asset.remaining)}"><strong>${Campaign.projects[asset.kind].name}</strong><small>${asset.remaining ? `Due ${game.year + asset.remaining - 1}` : asset.completed ? `Operating since ${asset.completed}` : "Operating"}</small></li>`).join("")}</ul>` : "<p class='site-bonus'>No works at this site.</p>"}`;
   renderProgrammes();
   renderCabinetGuide();
@@ -664,6 +693,10 @@ function render() {
   byId("map-subtitle").textContent = ReliefMap.boundary(game);
   byId("bengal-map-credit").hidden = World.key !== "west-bengal";
   const key = [["#f9dfa1", `${name} border`], ["#b7c0b2", "Neighboring borders"], ...mapLayers[layer], ["#53999b", "River"]];
+  if (layer === "economy") {
+    const activeRoles = new Set(developedSites.flatMap(({ roles }) => roles));
+    for (const [role, { color, label }] of Object.entries(economyRoles)) if (activeRoles.has(role)) key.push([color, label]);
+  }
   if (layer === "weather") {
     if (latest?.monsoon === "Severe flood") key.push(["#4696b2", "Flood-prone terrain"]);
     if (latest?.monsoon === "Dry monsoon") key.push(["#d59f50", "Dry-season exposure"]);
@@ -674,7 +707,7 @@ function render() {
   const showTraining = layer === "works" && trainingPath?.sites.length && (trainingPreview || training.status === "operating");
   const trainingTint = trainingPath?.id === "extension" ? 0xc8e88d : 0xe8aa5f;
   let preview;
-  if (layer !== "works" && !(layer === "weather" && inspectWeather)) {
+  if (layer !== "works" && layer !== "economy" && !(layer === "weather" && inspectWeather)) {
     key.push([tint, "Programme sites"]);
     if (coverage.length) key.push(["#a8d8b4", "Protection reach"]);
     preview = { cells: footprint.map(({ hex }) => hex), color: colour, coverage };
@@ -683,7 +716,18 @@ function render() {
     preview = { cells: trainingPath.sites.map(({ id }) => id), color: trainingTint };
   }
   byId("legend").innerHTML = key.map(([color, label]) => `<span><i style="--swatch:${color}"></i>${label}</span>`).join("") + (layer === "weather" ? `<span>${weather}</span>` : "");
-  ReliefMap.render(game, layer, selected, selectSite, preview);
+  const sitePicker = byId("economy-sites");
+  sitePicker.hidden = !developedSites.length;
+  if (developedSites.length) {
+    sitePicker.replaceChildren(new Option("Jump to operating site", ""));
+    const siteName = (hex) => World.tiles[hex].town?.name ?? World.districts[World.tiles[hex].district];
+    const sorted = [...developedSites].sort((a, b) => siteName(a.hex).localeCompare(siteName(b.hex)));
+    for (const { hex, roles } of sorted) sitePicker.append(new Option(`${siteName(hex)} · ${roles.map((role) => economyRoles[role].label).join(", ")}`, hex));
+    sitePicker.value = selectedRoles.length ? selected : "";
+  }
+  byId("map-help").textContent = layer === "economy" ? (developedSites.length ? "Select a marker to inspect its works. Zoom in to see more roles." : "Operating facilities will appear here when construction finishes.")
+    : "Scroll to zoom, drag to pan. Select a site to see its works.";
+  ReliefMap.render(game, layer, selected, selectSite, preview, developedSites);
 }
 
 function showTraining(fromTree = false) {
@@ -775,7 +819,7 @@ function showEconomy() {
       <li><b>Harvest and reserves → food security.</b> Rain changes the harvest. Irrigation, flood protection, stored food and emergency purchases cover demand. Sales add cash and purchases use it.</li>
     </ul>
     <p class="fiscal-note">The treasury also reflects public allocations, one-off grants, food purchases and upkeep. Workshop output is in production units and earnings are in rupees.</p>`,
-  [choiceButton("Budget office", showFinance), choiceButton("Return to map", returnToMap, true)]);
+  [choiceButton("Budget office", showFinance), choiceButton("Economy map", showEconomyMap), choiceButton("Return to map", returnToMap, true)]);
 }
 
 function showComparison() {
@@ -833,6 +877,17 @@ function showMonsoonMap(report) {
   byId("map").focus();
 }
 
+function showEconomyMap() {
+  modal.close();
+  layer = "economy";
+  trainingPreview = null;
+  const sites = economySites(game);
+  const workshop = sites.find(({ roles }) => roles.includes("industry"));
+  if (workshop || sites.length) selectSite((workshop ?? sites[0]).hex);
+  else render();
+  byId("map").focus();
+}
+
 function showReport(index = game.reports.length - 1) {
   const report = game.reports[index];
   const latest = index === game.reports.length - 1;
@@ -842,6 +897,7 @@ function showReport(index = game.reports.length - 1) {
     choiceButton("Earlier", () => showReport(index - 1), false, index === 0),
     choiceButton("Later", () => showReport(index + 1), false, latest),
     ...(latest && report.monsoon !== "Typical monsoon" ? [choiceButton("View monsoon map", () => showMonsoonMap(report))] : []),
+    ...(latest && report.siteEconomy?.workshops.length ? [choiceButton("Locate workshops", showEconomyMap)] : []),
     ...(report.regional?.nationalMarket ? [choiceButton("Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
@@ -1167,7 +1223,13 @@ byId("cabinet-guide").addEventListener("click", (event) => {
   byId("development-trees").focus();
 });
 byId("jump").addEventListener("change", (event) => { if (event.target.value) selectSite(event.target.value); });
+byId("economy-sites").addEventListener("change", (event) => { if (event.target.value) selectSite(event.target.value); });
 byId("inspect-site").addEventListener("click", () => {
+  if (layer === "economy") {
+    inspectEconomy = !inspectEconomy;
+    render();
+    return;
+  }
   const inspector = byId("site-inspector");
   inspector.open = true;
   inspector.querySelector("summary").focus();

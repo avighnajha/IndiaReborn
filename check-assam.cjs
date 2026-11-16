@@ -82,6 +82,9 @@ test("Assam recovers rail access and keeps developing through its territorial ch
     assert.ok(programmeCommissioned(game, "brahmaputra"));
     assert.equal(Campaign.score(game).latest.year, end);
     assert.ok(Campaign.score(game).latest.assam.teaOutput > 0);
+    const { output, siteEconomy, assam } = Campaign.score(game).latest;
+    assert.equal(siteEconomy.workshops.reduce((total, site) => total + site.output, 0), output);
+    assert.equal(siteEconomy.workshops.reduce((total, site) => total + site.rail, 0), assam.teaOutput);
   }
   assert.ok(branchResults[0].harvest > branchResults[1].harvest);
   assert.equal(branchResults[1].development.importCapacity, 3);

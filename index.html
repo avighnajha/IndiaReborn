@@ -31,6 +31,7 @@
           <div class="segmented" role="group" aria-label="Map layer">
             <button type="button" data-layer="terrain" aria-pressed="true">Relief</button>
             <button type="button" data-layer="access" aria-pressed="false">Trade</button>
+            <button type="button" data-layer="economy" aria-pressed="false">Economy</button>
             <button type="button" data-layer="jurisdiction" aria-pressed="false">Borders</button>
             <button type="button" data-layer="weather" aria-pressed="false">Monsoon</button>
             <button type="button" data-layer="works" aria-pressed="false">Works</button>
@@ -42,10 +43,11 @@
           <div id="map-site-peek" class="map-site-peek" hidden>
             <div><strong id="map-site-name"></strong><small id="map-site-summary"></small></div>
             <button type="button" id="inspect-site">Details</button>
+            <div id="map-site-production" hidden></div>
           </div>
           <div class="zoom-controls" role="group" aria-label="Map zoom"><button type="button" id="zoom-in" aria-label="Zoom in">+</button><button type="button" id="zoom-out" aria-label="Zoom out">−</button><button type="button" id="reset-map" aria-label="Reset map view">↺</button></div>
         </div>
-        <footer class="atlas-footer"><div id="legend" class="legend" aria-label="Map key"></div><div class="map-footer-row"><p id="map-help">Scroll to zoom, drag to pan. Select a site to see its works.</p><a id="bengal-map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors</a><button type="button" class="map-sources" id="map-sources">Map sources</button></div></footer>
+        <footer class="atlas-footer"><div id="legend" class="legend" aria-label="Map key"></div><div class="map-footer-row"><p id="map-help">Scroll to zoom, drag to pan. Select a site to see its works.</p><select id="economy-sites" aria-label="Jump to an operating site" hidden></select><a id="bengal-map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" hidden>© OpenStreetMap contributors</a><button type="button" class="map-sources" id="map-sources">Map sources</button></div></footer>
       </section>
       <div class="sidebar">
       <aside class="command panel" aria-label="Regional planning">

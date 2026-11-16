@@ -4,6 +4,7 @@ import { geography, loadGeography, terrainImage } from './geography';
 import { campaignBoundary, type Jurisdiction } from './journey-map';
 import { World } from './scenario.js';
 import { building, center, drawLandscape, elevation, height, riverChannels, tiles, width, type Point, type Tile } from './landscape';
+import { drawTownRole, type TownRole } from './town-role-art';
 
 type Asset = { hex: string; kind: string; remaining: number };
 type FloodSite = { hex: string; lost: number; protected: number };
@@ -11,6 +12,7 @@ type Season = { monsoon: string; year: number; completed: Asset[]; attribution?:
 type State = { year: number; owners: Record<string, string>; assets: Asset[]; reports: Season[]; journey?: { jurisdiction?: Jurisdiction } };
 type SelectSite = (id: string, fromMap?: boolean) => void;
 type ProgrammePreview = { cells: string[]; color: number; coverage?: string[] };
+type EconomySite = { hex: string; roles: TownRole[] };
 
 const host = document.querySelector<HTMLDivElement>('#map')!;
 const zoomLabel = document.querySelector<HTMLSpanElement>('#zoom-level')!;
@@ -21,6 +23,7 @@ const maxZoom = 2.65;
 const app = new Application();
 const board = new Container();
 const overlays = new Container();
+const economyMarks = new Container();
 const effects = new Container();
 const surfaceTints = new Container();
 const surfaceEffects = new Container();
@@ -37,6 +40,7 @@ let zoomLevel = 1;
 let viewCenter: Point = [width / 2, height / 2];
 let activeEffect: (() => void) | undefined;
 let ready = false;
+const roleSize = 22;
 
 function redraw() {
   if (ready) app.render();
@@ -51,6 +55,7 @@ function clampView() {
   board.scale.set(scale);
   const labelScale = Math.min(1.28, zoomLevel) / zoomLevel;
   for (const label of labelLayer.children) label.scale.set(labelScale);
+  layoutEconomyMarks(scale);
   board.position.set(app.screen.width / 2 - viewCenter[0] * scale, app.screen.height / 2 - viewCenter[1] * scale);
   zoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
   redraw();
@@ -63,6 +68,11 @@ function pointInWorld(event: MouseEvent): Point {
 
 function hit(event: PointerEvent) {
   const [x, y] = pointInWorld(event);
+  for (const site of economyMarks.children) {
+    for (const mark of site.children) {
+      if (mark.visible && Math.hypot(x - mark.x, y - mark.y) <= roleSize / 2 * mark.scale.x) return tiles[site.label];
+    }
+  }
   let best = 15;
   let match: Tile | undefined;
   for (const { tile, point: [sx, sy] } of sites) {
@@ -184,7 +194,7 @@ async function init() {
   reservoirLayer.addChild(reservoir);
   reservoirLayer.visible = false;
   landscape.surface.addChild(surfaceTints, surfaceEffects, boundaryLines);
-  landscape.works.addChild(overlays);
+  landscape.works.addChild(overlays, economyMarks);
   board.addChild(landscape.layer, effects);
   app.stage.addChild(board);
   ready = true;
@@ -424,7 +434,24 @@ function displayedBoundary(game: State) {
   return campaignBoundary(game.year, jurisdiction);
 }
 
-function render(game: State, layer: string, selected: string, select: SelectSite, preview?: ProgrammePreview) {
+function layoutEconomyMarks(scale: number) {
+  const markerScale = Math.max(14 / (scale * roleSize), Math.min(1, 21 / (scale * roleSize)));
+  const spacing = (roleSize + 2) * markerScale;
+  const placed: Point[] = [];
+  const marks = economyMarks.children.flatMap((site) => site.children.map((mark, index) => ({ site, mark, index })));
+  marks.sort((a, b) => a.index - b.index || Number(b.site.label === selectedId) - Number(a.site.label === selectedId));
+  for (const { site, mark, index } of marks) {
+    const [x, y] = center(tiles[site.label]);
+    const offset = Math.ceil(index / 2) * spacing * (index % 2 === 1 ? 1 : -1);
+    mark.position.set(Math.min(width - spacing / 2, Math.max(spacing / 2, x + offset)), y);
+    mark.scale.set(markerScale);
+    mark.visible = (index === 0 || zoomLevel >= 1.45 || site.label === selectedId) &&
+      !placed.some(([px, py]) => Math.hypot(px - mark.x, py - mark.y) < spacing - .01);
+    if (mark.visible) placed.push([mark.x, mark.y]);
+  }
+}
+
+function render(game: State, layer: string, selected: string, select: SelectSite, preview?: ProgrammePreview, developedSites: EconomySite[] = []) {
   currentGame = game;
   selectedId = selected;
   keyboardId = selected;
@@ -432,6 +459,7 @@ function render(game: State, layer: string, selected: string, select: SelectSite
   host.setAttribute('aria-label', `${World.name} relief map. Selected ${tiles[selected].town?.name ?? 'works site'}`);
   if (!ready) return;
   overlays.removeChildren().forEach((child) => child.destroy());
+  economyMarks.removeChildren().forEach((child) => child.destroy({ children: true }));
   roadLayer.removeChildren().forEach((child) => child.destroy());
   surfaceTints.removeChildren().forEach((child) => child.destroy());
   const routes = new Graphics();
@@ -483,7 +511,7 @@ function render(game: State, layer: string, selected: string, select: SelectSite
   }
   const stack = new Map<string, number>();
   const workStatus = new Map<string, { operating: boolean; building: boolean }>();
-  for (const asset of game.assets) {
+  for (const asset of layer === 'economy' ? [] : game.assets) {
     works(markers, tiles[asset.hex], asset, stack.get(asset.hex) ?? 0);
     stack.set(asset.hex, (stack.get(asset.hex) ?? 0) + 1);
     if (layer === 'works') {
@@ -527,6 +555,16 @@ function render(game: State, layer: string, selected: string, select: SelectSite
   roadLayer.addChild(routes);
   surfaceTints.addChild(regions);
   overlays.addChild(footprint, markers);
+  for (const { hex, roles } of developedSites) {
+    const site = new Container({ label: hex });
+    for (const role of roles) {
+      const mark = new Graphics();
+      drawTownRole(mark, role, roleSize);
+      site.addChild(mark);
+    }
+    economyMarks.addChild(site);
+  }
+  layoutEconomyMarks(board.scale.x);
   redraw();
 }
 

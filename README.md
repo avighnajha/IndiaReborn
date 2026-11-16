@@ -20,6 +20,8 @@ From 1953, two schools that have each taught for a full year unlock a technical 
 
 The annual brief shows food security, treasury, earned receipts and major investment outcomes, including food or revenue from jointly funded neighbor projects. Open **Why this happened** for the harvest, workshop and treasury breakdowns. Use **Earlier** and **Later** to review past years. The final scorecard compares your results with each target and links to the final brief and chronicle.
 
+Open the **Economy** map layer to find operating industry, schools, food and water facilities, and freight terminals. Zoom in for additional roles at the same site, or use **Jump to operating site**. After a workshop completes a year, **Locate workshops** in the latest brief opens the map. Select **Details** to see the site's recorded workshop output and what contributed, including market access, Skills and research. Irrigated sites show their measured harvest contribution. Older saves gain site production figures as new years resolve.
+
 Under Standard politics, open **Domestic market** from **Neighbors** or any resolved annual brief. The map shows food shipments between governments and how routes change with Partition and state reorganization. From 1957, shipments through your neighbors can add freight orders. Inland exchanges can compete for those orders through nearby markets and reinvest the proceeds. [Interregional model and sources](design/interregional-model.md)
 
 The **Neighbors** button flags the next freight contract during planning. Compare the capacity of your approved works with the strongest known rival. From 1961, a qualified winner can earn ₹6 lakh each year for five years. [Contract rules](design/interregional-model.md#regional-freight-contracts)
