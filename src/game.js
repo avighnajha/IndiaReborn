@@ -1072,8 +1072,10 @@ function showNeighbors() {
       ${neighbor.offer === null ? "" : `<p>${neighbor.offer} food available · ${neighbor.request} sought<br>${money(neighbor.cash)} modeled treasury</p>`}
       ${neighbor.national ? `<p>Domestic routes · ${neighbor.national.bought} food bought · ${neighbor.national.sold} sold</p>` : ""}
       ${neighbor.inherited ? `<p>Inherited works · ${money(neighbor.inherited.receipts)} in workshop receipts · ${money(neighbor.inherited.upkeepPaid)} upkeep</p>` : ""}
-      ${neighbor.works?.length ? `<ul class="neighbor-works">${neighbor.works.map(({ title, status, completionYear, effect }) =>
-        `<li><strong>${title}</strong><small>${status === "open" ? `Opened ${completionYear}` : `Due ${completionYear}`}</small><span>${effect}</span></li>`).join("")}</ul>` : ""}
+      ${neighbor.development?.harvestSaved ? `<p>${neighbor.development.harvestSaved} food saved by crop protection this year.</p>` : ""}
+      ${(neighbor.development?.trainingReceipts ?? 0) + (neighbor.development?.processingReceipts ?? 0) ? `<p>School and processing receipts · ${money(neighbor.development.trainingReceipts + neighbor.development.processingReceipts)} this year</p>` : ""}
+      ${neighbor.works?.length ? `<ul class="neighbor-works">${neighbor.works.map(({ title, status, completionYear, effect, department, reason }) =>
+        `<li${department ? ` data-sector="${department}"` : ""}>${department ? departmentBadge(department) : ""}<strong>${title}</strong><small>${status === "open" ? `Opened ${completionYear}` : `Due ${completionYear}`}</small><span>${effect}</span>${reason ? `<small>${reason}</small>` : ""}</li>`).join("")}</ul>` : ""}
       ${neighbor.agreement ? `<p><strong>${neighbor.agreement.title}</strong> · Signed ${neighbor.agreement.year}</p>` : `<div class="journey-events" data-partner="${neighbor.id}"></div>`}
       ${neighbor.jointProject ? jointProjectCard(neighbor.jointProject, neighbor.name) : `<div data-joint-partner="${neighbor.id}"></div>`}
     </section>`).join("")}</div>`, [

@@ -228,7 +228,8 @@ test("a connected terminal wins freight without changing signed payments", async
   assert.equal(improved.regionalCash, baseline.regionalCash);
   assert.equal(improved.income, improved.tax + improved.baselineTransfers + improved.regionalCash + competition.player.earnings);
   for (const row of improved.regional.partners) {
-    assert.equal(row.cash, row.openingCash + 1 + row.freight + row.competitionCash - row.developmentSpend +
+    assert.equal(row.cash, row.openingCash + 1 + row.freight + row.competitionCash +
+      (row.development?.trainingReceipts ?? 0) + (row.development?.processingReceipts ?? 0) - row.developmentSpend +
       row.sold * improved.buyPrice - row.bought + (row.national?.sold ?? 0) - (row.national?.bought ?? 0));
   }
   const light = Campaign.advance({ ...game, journey: { ...game.journey, preset: "light" } }).reports.at(-1);
@@ -362,4 +363,221 @@ test("domestic routes follow Partition and the first southern reorganizations", 
   const coast = { cash: 11, reserve: 4, works: {} };
   const reorganized = seedSouthernTransitions({ travancore: coast }, { year: 1956 }, world);
   assert.deepEqual(reorganized, { kerala: coast });
+});
+
+
+test("rival crop protection prevents actual local and inland weather losses on opening", async () => {
+  const { resolveNeighbors, settleNationalTrade } = await import("./src/interregional.js");
+  const works = {
+    storage: { opened: 1955 }, freight: { opened: 1955 },
+    loadingYard: { completionYear: 1985 }, protection: { started: 1960, completionYear: 1962, cost: 9 },
+    trainingSchool: { opened: 1960 }, processing: { opened: 1961 },
+  };
+  const fixture = (seed, protectedHarvest) => ({
+    year: 1962, seed, reserve: 0, assets: [], owners: {},
+    journey: { end: 1985, preset: "standard", partners: {
+      central: { cash: 40, reserve: 0, works: { ...works,
+        protection: { ...works.protection, completionYear: protectedHarvest ? 1962 : 1963 },
+      } },
+    } },
+  });
+  const local = (game, monsoon) => resolveNeighbors(game, { key: "orissa" }, {
+    harvest: 20, demand: 5, towns: 5, monsoon,
+  });
+  for (const [monsoon, saved] of [["Dry monsoon", 2], ["Severe flood", 1], ["Normal monsoon", 0]]) {
+    const protectedYear = local(fixture(1946, true), monsoon);
+    const exposedYear = local(fixture(1946, false), monsoon);
+    const actual = protectedYear.partners.central;
+    const exposed = exposedYear.partners.central;
+    assert.equal(actual.development.harvestSaved, saved, monsoon);
+    assert.equal(actual.reserve - actual.shortage - exposed.reserve + exposed.shortage, saved, monsoon);
+    assert.equal(actual.works.protection.opened, 1962);
+    assert.equal(protectedYear.report.partners.find(({ id }) => id === "central").developmentSpend, 0);
+    assert.equal(actual.cash, exposed.cash);
+  }
+  const inland = (game) => settleNationalTrade({ partners: game.journey.partners,
+    report: { partners: [], developments: [] } }, game, { key: "bihar" });
+  // Reverse actual national purchases and sales to compare the underlying harvest.
+  const beforeTrade = ({ reserve, shortage, national }) => reserve - shortage -
+    (national?.bought ?? 0) + (national?.sold ?? 0);
+  for (const [seed, saved] of [[1946, 2], [1947, 0]]) {
+    const opening = fixture(seed, true);
+    const snapshot = structuredClone(opening);
+    const protectedYear = inland(opening);
+    const exposedYear = inland(fixture(seed, false));
+    const actual = protectedYear.partners.central;
+    assert.equal(actual.development.harvestSaved, saved);
+    assert.equal(beforeTrade(actual) - beforeTrade(exposedYear.partners.central), saved);
+    assert.equal(actual.works.protection.opened, 1962);
+    assert.equal(actual.developmentSpend, 0);
+    assert.deepEqual(inland(JSON.parse(JSON.stringify(opening))), protectedYear);
+    assert.deepEqual(opening, snapshot);
+    const node = protectedYear.report.nationalMarket.nodes.find(({ id }) => id === "central");
+    assert.deepEqual(node.development, actual.development);
+    assert.ok(node.works.some(({ id, status }) => id === "protection" && status === "open"));
+  }
+});
+
+test("rival schools graduate before processing pays and receipts enter each treasury once", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { resolveNeighbors, settleNeighborTrade, settleNationalTrade, settleFreight } = await import("./src/interregional.js");
+  const { contractRivalBid } = await import("./src/neighbor-competition.js");
+  const year = 1962;
+  const baseWorks = { storage: { opened: 1955 }, freight: { opened: 1955 },
+    loadingYard: { completionYear: 1985 }, protection: { opened: 1960 } };
+  const cases = [
+    { school: { completionYear: year }, processing: { opened: 1961 }, training: 0, receipts: 0 },
+    { school: { opened: year }, processing: { opened: 1961 }, training: 0, receipts: 0 },
+    { school: { opened: year - 1 }, processing: { opened: 1961 }, training: 1, receipts: 2 },
+    { school: { opened: year - 1 }, processing: { completionYear: year + 1 }, training: 1, receipts: 0 },
+    { school: { completionYear: year + 1 }, processing: { opened: 1961 }, training: 0, receipts: 0 },
+    { school: null, processing: { opened: 1961 }, training: 0, receipts: 0 },
+  ];
+  for (const { school, processing, training, receipts } of cases) {
+    // Opened-only records are the shape used by older campaign saves.
+    const works = { ...baseWorks, ...(school ? { trainingSchool: school } : {}), processing };
+    const game = { year, seed: 1946, reserve: 5, assets: [], owners: {},
+      journey: { end: 1985, preset: "standard", partners: { central: { cash: 40, reserve: 6, works } } } };
+    const local = resolveNeighbors(game, { key: "orissa" }, { harvest: 20, demand: 5, towns: 5, monsoon: "Normal monsoon" });
+    const central = local.report.partners.find(({ id }) => id === "central");
+    assert.deepEqual(central.development, { harvestSaved: 0, trainingReceipts: training, processingReceipts: receipts });
+    assert.equal(central.cash, 41 + training + receipts);
+    const extraCapacity = training + Number(receipts > 0);
+    assert.equal(local.freight.partners.find(({ id }) => id === "central").capacity, 3 + extraCapacity);
+    assert.equal(contractRivalBid(central).capacity, 3 + extraCapacity);
+    const traded = settleNeighborTrade(local, { bought: 2, sold: 1, buyPrice: 2 });
+    const domestic = settleNationalTrade(traded, game, { key: "orissa" });
+    const final = settleFreight(domestic, game);
+    for (const row of final.report.partners) {
+      assert.equal(row.cash, row.openingCash + 1 + row.freight +
+        row.development.trainingReceipts + row.development.processingReceipts - row.developmentSpend +
+        row.sold * 2 - row.bought + (row.national?.sold ?? 0) - (row.national?.bought ?? 0) +
+        (row.competitionCash ?? 0) + (row.contractCash ?? 0), row.id);
+    }
+    assert.equal(final.cash, local.cash);
+    assert.equal(final.report.cash, local.report.cash);
+    assert.deepEqual(final.partners.central.development, central.development);
+    const inland = settleNationalTrade({ partners: game.journey.partners, report: { partners: [], developments: [] } }, game, { key: "bihar" });
+    const remote = inland.partners.central;
+    assert.equal(remote.development.trainingReceipts, training);
+    assert.equal(remote.development.processingReceipts, receipts);
+    assert.equal(remote.cash, 41 + training + receipts - remote.developmentSpend +
+      (remote.national?.sold ?? 0) - (remote.national?.bought ?? 0));
+    // An uncongested gateway isolates workforce capacity from route limits.
+    const hauled = settleFreight({
+      partners: { up: { cash: 10 }, central: remote },
+      freight: { towns: 3, workshops: 1, terminals: 0,
+        partners: [{ id: "up", name: "Uttar Pradesh", capacity: 8 }] },
+      report: { partners: [{ id: "up", name: "Uttar Pradesh", cash: 10 }], nationalMarket: {
+        nodes: [{ id: "up", local: true, cash: 10, shortage: 0 },
+          { id: "central", name: "Madhya Pradesh", local: false, cash: remote.cash, shortage: 0 }],
+        links: [{ from: "up", to: "central", capacity: 8 }],
+      } },
+    }, game);
+    const carrier = hauled.report.freightCompetition.inland.find(({ id }) => id === "central");
+    assert.equal(carrier.capacity, 2 + extraCapacity);
+    assert.equal(hauled.partners.central.cash, remote.cash + carrier.earnings);
+    assert.equal(hauled.report.nationalMarket.nodes.find(({ id }) => id === "central").cash, hauled.partners.central.cash);
+  }
+  const initial = Campaign.newGame(1946, { end: 1985, preset: "standard" });
+  const legacy = { ...initial, year, cash: 100, journey: { ...initial.journey, partners: {
+    up: { cash: 40, reserve: 6, works: { ...baseWorks,
+      trainingSchool: { opened: year - 1 }, processing: { opened: 1961 } } },
+    central: { cash: 40, reserve: 6, works: { ...baseWorks,
+      trainingSchool: { opened: year - 1 }, processing: { completionYear: year, cost: 16 } } },
+  } } };
+  const saved = new Map();
+  const storage = { getItem: (key) => saved.get(key), setItem: (key, value) => saved.set(key, value) };
+  Campaign.save(storage, legacy);
+  const loaded = Campaign.load(storage, true);
+  assert.ok(loaded);
+  const advanced = Campaign.advance(legacy);
+  assert.equal(advanced.year, year + 1);
+  assert.deepEqual(Campaign.advance(loaded), advanced);
+  assert.deepEqual(Campaign.advance(Campaign.advance(loaded)), Campaign.advance(advanced));
+  assert.equal(advanced.journey.partners.up.development.trainingReceipts, 1);
+  assert.equal(advanced.journey.partners.up.development.processingReceipts, 2);
+  assert.equal(advanced.journey.partners.central.development.processingReceipts, 2);
+});
+
+test("rivals fund one justified department project with actual money and completion times", async () => {
+  const { resolveNeighbors } = await import("./src/interregional.js");
+  const basic = { storage: { opened: 1950 }, freight: { opened: 1952 } };
+  const simulate = ({ year = 1956, cash = 50, reserve = 10, shortage = 0, works = basic, monsoon = "Normal monsoon" } = {}) => {
+    const game = { year, seed: 1946, reserve: 5, assets: [], owners: {},
+      journey: { end: 1985, preset: "standard", partners: { central: { cash, reserve, shortage, works } } } };
+    const regional = resolveNeighbors(game, { key: "orissa" }, { harvest: 20, demand: 5, towns: 5, monsoon });
+    return regional.report.partners.find(({ id }) => id === "central");
+  };
+  const protection = simulate({ shortage: 1, reserve: 0, monsoon: "Dry monsoon" });
+  assert.equal(protection.developmentSpend, 9);
+  assert.equal(protection.works.protection.started, 1956);
+  assert.equal(protection.works.protection.completionYear, 1958);
+  assert.equal(protection.cash, 51 - 9);
+  const school = simulate();
+  assert.equal(school.developmentSpend, 12);
+  assert.equal(school.works.trainingSchool.started, 1956);
+  assert.equal(school.works.trainingSchool.completionYear, 1958);
+  assert.equal(school.cash, 51 - 12);
+  const processing = simulate({ year: 1960, works: { ...basic,
+    protection: { opened: 1957 }, loadingYard: { opened: 1958 }, trainingSchool: { opened: 1958 },
+  } });
+  assert.equal(processing.developmentSpend, 16);
+  assert.equal(processing.works.processing.started, 1960);
+  assert.equal(processing.works.processing.completionYear, 1963);
+  assert.equal(processing.cash, 51 + 1 - 16);
+  const inProgress = simulate({ year: 1961, cash: processing.cash, works: processing.works });
+  assert.equal(inProgress.developmentSpend, 0);
+  assert.deepEqual(inProgress.works.processing, processing.works.processing);
+  assert.equal(inProgress.development.processingReceipts, 0);
+  const beforeEligibility = simulate({ year: 1955, shortage: 1, reserve: 0, monsoon: "Dry monsoon" });
+  assert.equal(beforeEligibility.developmentSpend, 0);
+  assert.equal(beforeEligibility.works.protection, undefined);
+  assert.equal(beforeEligibility.works.trainingSchool, undefined);
+  const cannotAfford = simulate({ cash: 8, shortage: 1, reserve: 0, monsoon: "Dry monsoon" });
+  assert.equal(cannotAfford.developmentSpend, 0);
+  assert.equal(cannotAfford.works.protection, undefined);
+  assert.equal(cannotAfford.cash, 9);
+});
+
+test("boundary divisions transfer new rival works once and retain the trained processing workforce", async () => {
+  const { seedBombayDivision, seedSouthernTransitions, seedPunjabDivision } = await import("./src/national-market.js");
+  const works = {
+    storage: { opened: 1950 }, freight: { opened: 1951 }, loadingYard: { opened: 1952 },
+    protection: { started: 1953, completionYear: 1955, opened: 1955, cost: 9 },
+    trainingSchool: { started: 1954, completionYear: 1956, opened: 1956, cost: 12 },
+    processing: { started: 1958, completionYear: 1961, cost: 16 },
+  };
+  const world = { key: "bihar" };
+  for (const { divide, year, from, heirs } of [
+    { divide: seedBombayDivision, year: 1960, from: "bombay", heirs: ["maharashtra", "gujarat"] },
+    { divide: seedSouthernTransitions, year: 1953, from: "madras", heirs: ["madras", "andhra"] },
+    { divide: seedPunjabDivision, year: 1966, from: "punjab", heirs: ["punjab", "haryana"] },
+  ]) {
+    const initial = { [from]: { cash: 150, reserve: 12, works } };
+    const snapshot = structuredClone(initial);
+    const divided = divide(initial, { year }, world);
+    const [first, second] = heirs.map((id) => divided[id]);
+    const keys = [...Object.keys(first.works), ...Object.keys(second.works)];
+    assert.equal(keys.length, new Set(keys).size, `${from}: no free copies`);
+    assert.deepEqual(keys.sort(), Object.keys(works).sort());
+    assert.deepEqual({ ...first.works, ...second.works }, works);
+    const industrialHeir = heirs.find((id) => divided[id].works.processing);
+    assert.ok(divided[industrialHeir].works.trainingSchool);
+    assert.deepEqual(divided[industrialHeir].works.trainingSchool, works.trainingSchool);
+    assert.deepEqual(divided[industrialHeir].works.processing, works.processing);
+    const foodHeir = heirs.find((id) => divided[id].works.protection);
+    assert.ok(divided[foodHeir].works.storage);
+    assert.equal(divide(divided, { year }, world), divided);
+    assert.deepEqual(initial, snapshot);
+    if (from === "bombay") {
+      assert.equal(first.cash + second.cash, 150);
+      assert.equal(first.reserve + second.reserve, 12);
+      assert.equal(divided.bombay, undefined);
+    }
+    if (from === "madras") {
+      assert.equal(first.cash + second.cash + divided.mysore.cash, 150);
+      assert.equal(first.reserve + second.reserve, 12);
+    }
+  }
 });

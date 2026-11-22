@@ -285,6 +285,8 @@ dialog::backdrop { background: #0b120ed2; }
 .journey-choice button { margin-top: auto; }
 .neighbor-works { margin: 4px 0; padding: 0; list-style: none; display: grid; gap: 5px; }
 .neighbor-works li { padding: 6px 8px; border-left: 2px solid #a4bc8d; background: #253429; }
+.neighbor-works li[data-sector] { border-left-color: var(--sector-accent); }
+.neighbor-works li .department-badge { display: flex; margin-bottom: 4px; color: var(--sector-accent); }
 .neighbor-works li strong { font-size: .81rem; }
 .neighbor-works li small, .neighbor-works li span { display: block; font-size: .73rem; color: var(--subtle); }
 .joint-project { margin-top: 8px; padding: 8px; border: 1px solid #7a7956; border-radius: 5px; background: #30382a; }

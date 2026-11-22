@@ -35,6 +35,7 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-hub[data-connected="true"] circle { fill: var(--market-neighbor); stroke: #182b21; stroke-width: 1.5px; }
 .market-hub text { fill: #f4f2dd; stroke: #23372c; stroke-width: 3px; stroke-linejoin: round; paint-order: stroke fill; font: 650 11px system-ui, sans-serif; }
 .market-hub[data-connected="true"] text { fill: #e4edc7; }
+.market-hub .market-investment-pip { fill: var(--sector-accent); stroke: #172c24; stroke-width: .7px; }
 
 .market-map figcaption { display: grid; gap: 5px; padding: 8px 10px; border-top: 1px solid #516353; color: #c0ccbc; font-size: .72rem; }
 .market-map-key { display: flex; flex-wrap: wrap; gap: 5px 13px; margin: 0; padding: 0; list-style: none; }
@@ -42,6 +43,10 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-map-key li::before { width: 12px; content: ""; border-top: 2px solid var(--market-gold); }
 .market-map-key [data-key="idle"]::before { border-top: 1px dashed #b5c1a7; }
 .market-map-key [data-key="connected"]::before { width: 7px; height: 7px; border: 0; border-radius: 50%; background: var(--market-neighbor); }
+.market-department-key { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; }
+.market-department-key .department-badge { font-size: .68rem; }
+.market-department-key .department-badge::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--sector-accent); }
+.market-department-key .department-badge svg { width: 14px; height: 14px; }
 
 .market-shipments { display: grid; gap: 7px; min-width: 0; }
 .market-shipments h3 { margin: 0; color: #f2e8cd; font: 700 1.2rem var(--serif); }
@@ -67,6 +72,19 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-table thead th { background: var(--panel-dark); }
 .market-table tr[data-connected="true"] th { color: var(--market-neighbor); }
 .market-table small { display: block; color: var(--subtle); font-size: .73rem; font-weight: 400; }
+.market-table th, .market-table td { vertical-align: top; }
+.market-table .market-investment-row > td { padding-top: 0; border-top: 0; }
+.market-investments { max-width: calc(100vw - 100px); font-weight: 400; }
+.market-investments summary { padding: 4px 0; color: #e1e6d7; font-size: .73rem; font-weight: 650; }
+.market-investments summary:focus-visible { outline: 2px solid var(--market-gold); outline-offset: 2px; }
+.market-investments ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 6px; list-style: none; margin: 4px 0 6px; padding: 0; }
+.market-investments li { display: grid; gap: 3px; min-width: 0; padding: 7px 8px; border-inline-start: 2px solid var(--sector-accent); background: var(--panel-dark); }
+.market-investments li > strong { color: #ede9d7; font-size: .77rem; overflow-wrap: anywhere; }
+.market-investments li > span:not(.department-badge) { color: var(--subtle); font-size: .73rem; line-height: 1.35; }
+.market-investments li > .market-investment-reason { color: #e0dfcb; }
+.market-investments .department-badge { font-size: .68rem; }
+.market-investments .department-badge svg { width: 15px; height: 15px; }
+.market-table .market-development-results { margin-top: 5px; color: #d3dfb5; line-height: 1.35; }
 
 @media (max-width: 675px) {
   .market-layout { grid-template-columns: minmax(0, 1fr); }

@@ -1,6 +1,6 @@
 # India Alternate Futures Project Record
 
-Updated 15 November 2026. The original design and handoff in `design` describe the long-term scope. The [current design](design/current-design.md) reconciles them with later decisions. This file tracks feedback, priorities, and delivery.
+Updated 22 November 2026. The original design and handoff in `design` describe the long-term scope. The [current design](design/current-design.md) reconciles them with later decisions. This file tracks feedback, priorities, and delivery.
 
 ## Product intent
 
@@ -62,6 +62,7 @@ Build a release-quality strategy game about developing and governing historicall
 | Local economies on the map | Map art developer, campaign reviewer and project lead | The Economy layer illustrates operating facilities by role. The annual brief can locate workshops, and the inspector shows measured site output with contributions from Skills, market access, power and other sources. Transferred works remain visible in the Works layer, while the Economy layer follows the player’s current administration. |
 | Union food reserve | Historical researcher, interface developer, campaign reviewer and project lead | Added a 1957 signing window. Connected stores and surplus support payments through 1960. The cabinet compares earnings and reserve floors under the current monsoon outlook, while the annual brief reconciles shipments, receipts and later relief. |
 | Technical training intake | Historical researcher, interface developer, campaign reviewer and project lead | Checked eligibility through public game actions across all nine starts. Integrated a 1956 application window for one or two school and workshop pairs. The Education tree previews funding and named sites, and reports trace the delayed payoff through Skills, workshop output, receipts and the Economy map. |
+| Rival development priorities | Simulation developer, interface developer, campaign reviewer and project lead | Expanded Standard rivals into crop protection, technical education and processing. Investments use separate carried budgets and respond to food pressure or trading capacity. The market map identifies invested departments, and reports keep funding reasons, delivery dates and actual results. |
 
 ## Version control
 
@@ -82,7 +83,7 @@ Nine regional campaigns run from the 1946 selection to the ending, with starts i
 
 ### Remaining national and public release milestones
 
-1. **India-wide beta.** Review the remaining launch roster and whether neighboring administrations provide enough national coverage. Nine starts load their own maps on demand. Standard politics has domestic food routes from 1946 and each AI market keeps its own cash and reserves. The 1956 technical intake and 1957 Union reserve offer reward prior investment in schools and storage. The 1961 freight contract adds competition against neighboring bidders. Extend rival investment beyond freight and balance their choices against states of different sizes. See the [original handoff](design/India_Alternate_Futures_Codex_Handoff.md).
+1. **India-wide beta.** Review the remaining launch roster and whether neighboring administrations provide enough national coverage. Nine starts load their own maps on demand. Standard politics has domestic food routes from 1946 and each AI market keeps its own cash and reserves. Rivals fund protection, schools and processing alongside freight. The 1956 technical intake, 1957 Union reserve and 1961 freight contract reward earlier investment. Balance their choices against states of different sizes and review gaps in represented national geography and actors. See the [original handoff](design/India_Alternate_Futures_Codex_Handoff.md).
 2. **Map and historical review.** Resolve redistribution rights for digitized census boundaries and verify period waterways and borders as coverage grows. See the [map notes](design/map-production.md).
 3. **Public release validation.** Measure real playtime with new players, check supported browsers, keyboard access and performance, and resolve blockers across the launch roster.
 

@@ -242,9 +242,9 @@ function regionalContext(report) {
     regional.migration ? `${Math.abs(regional.migration)} population units ${regional.migration > 0 ? "arrived" : "departed"}` : "",
   ].filter(Boolean) : [];
   const choices = (report.politicalEvents ?? []).map(({ label, effect }) => `<p><b>${escapeText(label)}</b> · ${escapeText(effect)}</p>`).join("");
-  const developments = (regional?.developments ?? []).map(({ name, title, status, cost, effect }) => status === "open"
-    ? `<p><b>${escapeText(name)}</b> opened its ${escapeText(title.toLowerCase())}. ${escapeText(effect)}</p>`
-    : `<p><b>${escapeText(name)}</b> committed ${money(cost)} to ${escapeText(title.toLowerCase())}.</p>`).join("");
+  const developments = (regional?.developments ?? []).map(({ name, title, status, cost, effect, department, reason }) => `<section class="brief-rival-work"${department ? ` data-sector="${escapeText(department)}"` : ""}>
+    ${department ? departmentBadge(department) : ""}<p><b>${escapeText(name)}</b> ${status === "open" ? `opened its ${escapeText(title.toLowerCase())}. ${escapeText(effect)}`
+      : `committed ${money(cost)} to ${escapeText(title.toLowerCase())}.`}</p>${reason ? `<p class="brief-note">${escapeText(reason)}</p>` : ""}</section>`).join("");
   const projects = (regional?.jointProjects ?? []).map(({ name, title, status, playerCost, partnerCost, completionYear, effect }) => status === "open"
     ? `<p><b>${escapeText(title)} opened with ${escapeText(name)}.</b> ${escapeText(effect)}</p>`
     : `<p><b>${escapeText(title)} agreed with ${escapeText(name)}.</b> Your share ${money(playerCost)} · Partner share ${money(partnerCost)} · Due ${completionYear}.</p>`).join("");
@@ -268,6 +268,16 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const neighbors = new Set(report.regional?.partners.map(({ id }) => id));
+  for (const work of (report.regional?.developments ?? []).filter(({ id, partner, status }) =>
+    neighbors.has(partner) && ["protection", "trainingSchool", "processing"].includes(id) && status === "open").slice(0, 3)) {
+    const result = report.regional.partners.find(({ id }) => id === work.partner).development;
+    const outcome = work.id === "processing" && result?.processingReceipts
+      ? `Processing earned ${money(result.processingReceipts)} and added 1 freight bid capacity.`
+      : work.id === "trainingSchool" ? `Teaching began. Receipts and freight bid capacity start in ${report.year + 1}.`
+        : work.id === "protection" && result?.harvestSaved ? `Prevented ${units(result.harvestSaved)} of weather losses this year.` : work.effect;
+    add(work.department, `${work.name} · ${work.title}`, outcome);
+  }
   const intake = report.technicalIntake;
   if (intake?.state) {
     add("education", "Technical training intake funded", `${money(intake.state)} state share · ${money(intake.union)} Union equipment. First graduates in ${intake.first}.`);

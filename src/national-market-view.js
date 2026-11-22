@@ -1,4 +1,5 @@
 import { Fiscal } from "./fiscal.js";
+import { departmentBadge, departmentIdentity } from "./department-presentation.js";
 import snapshots from "./geography/founding.json";
 import "./national-market-view.css";
 
@@ -32,6 +33,8 @@ const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "
 const escapeText = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => entities[character]);
 const quantity = (value) => Number.isFinite(value) ? Math.max(0, value) : 0;
 const units = (value) => `${value} ${value === 1 ? "unit" : "units"}`;
+const investmentDepartments = (node) => [...new Set((node.works ?? []).map(({ department }) => department)
+  .filter((department) => Object.hasOwn(departmentIdentity, department)))];
 
 function mapRoute({ from, to, moved, capacity }) {
   const source = hubs.get(from.id);
@@ -56,15 +59,19 @@ function marketMap(nodes, routes, year) {
   const census = year >= 1956 ? 1961 : year >= 1947 ? 1951 : 1941;
   const historicalLabels = census === 1941 ? { up: "United Province", bengal: "Bengal", central: "Central Province and Berar", rajasthan: "Rajputana Agency" } : {};
   const connected = new Set(nodes.filter(({ local }) => local).map(({ id }) => historicalLabels[id] ?? hubs.get(id)?.census));
+  const fundedDepartments = new Set(nodes.flatMap(investmentDepartments));
   const outlines = snapshots[census];
   const zones = outlines.map(({ name, path }) => `<path class="market-zone${connected.has(name) ? " market-zone-connected" : ""}" d="${path}"/>`).join("");
   const pins = nodes.map((node) => {
     const hub = hubs.get(node.id);
     if (!hub) return "";
     const { x, y, dx, dy, align = "start" } = hub;
+    const departments = investmentDepartments(node);
+    const funded = departments.map((department) => departmentIdentity[department].label).join(", ");
     return `<g class="market-hub" data-connected="${node.local === true}">
-      <title>${escapeText(node.name)} · ${escapeText(node.market)}</title>
+      <title>${escapeText(node.name)} · ${escapeText(node.market)}${funded ? ` · Funded works in ${escapeText(funded)}` : ""}</title>
       <circle cx="${x}" cy="${y}" r="4"/><text x="${x + dx}" y="${y + dy}" text-anchor="${align}">${escapeText(node.market)}</text>
+      ${departments.map((department, index) => `<circle class="market-investment-pip" data-sector="${department}" cx="${x + 5 * (index - (departments.length - 1) / 2)}" cy="${y + 9}" r="2"/>`).join("")}
     </g>`;
   }).join("");
   return `<figure class="market-map">
@@ -77,6 +84,7 @@ function marketMap(nodes, routes, year) {
     </svg>
     <figcaption>
       <ul class="market-map-key"><li data-key="moving">Food shipped</li><li data-key="idle">Idle route</li><li data-key="connected">Your neighbor</li></ul>
+      ${fundedDepartments.size ? `<div class="market-department-key"><span>Funded works</span>${Object.keys(departmentIdentity).filter((department) => fundedDepartments.has(department)).map((department) => departmentBadge(department)).join("")}</div>` : ""}
       <span>${outlines.length ? `${census} census reference · ` : ""}Schematic connections</span>
     </figcaption>
   </figure>`;
@@ -90,17 +98,44 @@ function routeRows(routes) {
   </li>`).join("")}</ul>`;
 }
 
+function investmentRows(works, name) {
+  const building = works.filter(({ status }) => status !== "open").length;
+  return `<details class="market-investments" aria-label="${escapeText(name)} investments"><summary>${works.length} ${works.length === 1 ? "investment" : "investments"}${building ? ` · ${building} building` : " · Operating"}</summary>
+    <ul>${works.map(({ title, effect, department, status, started, completionYear, cost, reason }) => {
+      const sector = Object.hasOwn(departmentIdentity, department) ? department : "trade";
+      const timing = status === "open" ? `Opened ${quantity(completionYear)}` : `Due ${quantity(completionYear)}`;
+      return `<li data-sector="${sector}">
+        ${departmentBadge(sector)}<strong>${escapeText(title)}</strong>
+        <small class="market-investment-terms">${timing} · ${Fiscal.lakh(quantity(cost))}${Number.isFinite(started) ? ` committed ${started}` : ""}</small>
+        ${reason ? `<span class="market-investment-reason">${escapeText(reason)}</span>` : ""}
+        ${effect ? `<span>${escapeText(effect)}</span>` : ""}
+      </li>`;
+    }).join("")}</ul>
+  </details>`;
+}
+
+function developmentResults(development) {
+  if (!development) return "";
+  const { harvestSaved, trainingReceipts, processingReceipts } = development;
+  const results = [
+    harvestSaved > 0 ? `${units(harvestSaved)} of food losses prevented` : "",
+    trainingReceipts > 0 ? `${Fiscal.lakh(trainingReceipts)} training receipts` : "",
+    processingReceipts > 0 ? `${Fiscal.lakh(processingReceipts)} processing receipts` : "",
+  ].filter(Boolean);
+  return results.length ? `<small class="market-development-results">${results.join(" · ")}</small>` : "";
+}
+
 function marketBalances(nodes) {
   const hasFreight = nodes.some(({ freight }) => freight > 0);
   return `<details class="market-detail"><summary>Reserves and treasuries</summary>
-    <div class="market-table-wrap"><table class="market-table">
+    <div class="market-table-wrap" tabindex="0" role="region" aria-label="Administration balances and investments"><table class="market-table">
       <thead><tr><th scope="col">Administration</th><th scope="col">Food reserve</th><th scope="col">Shortfall</th><th scope="col">Treasury</th>${hasFreight ? '<th scope="col">Freight earnings</th>' : ''}</tr></thead>
-      <tbody>${nodes.map(({ name, market, reserve, shortage, cash, local, freight, freightContract, loadingYard }) => `<tr data-connected="${local === true}">
+      <tbody>${nodes.map(({ name, market, reserve, shortage, cash, local, freight, freightContract, loadingYard, works, development }) => `<tr data-connected="${local === true}">
         <th scope="row">${escapeText(name)} <small>${escapeText(market)}${local ? " · Neighbor" : ""}</small>
-          ${loadingYard ? `<small>Loading yard ${loadingYard.open ? "operating" : `due ${quantity(loadingYard.completionYear)}`}</small>` : ""}
+          ${!works && loadingYard ? `<small>Loading yard ${loadingYard.open ? "operating" : `due ${quantity(loadingYard.completionYear)}`}</small>` : ""}
           ${freightContract ? `<small>Freight contract earned ${Fiscal.lakh(quantity(freightContract))}</small>` : ""}</th>
         <td>${units(quantity(reserve))}</td><td>${shortage > 0 ? units(quantity(shortage)) : "Covered"}</td><td>${Fiscal.lakh(quantity(cash))}</td>${hasFreight ? `<td>${Fiscal.lakh(quantity(freight))}</td>` : ''}
-      </tr>`).join("")}</tbody>
+      </tr>${Array.isArray(works) && works.length ? `<tr class="market-investment-row"><td colspan="${hasFreight ? 5 : 4}">${investmentRows(works, name)}${developmentResults(development)}</td></tr>` : ""}`).join("")}</tbody>
     </table></div>
   </details>`;
 }

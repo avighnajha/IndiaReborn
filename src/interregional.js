@@ -23,9 +23,12 @@ const actors = {
 
 const reserveLimit = 12;
 const workPlans = {
-  storage: { title: "Reserve depots", cost: 7, years: 2, effect: "Holds 6 more food units and can offer one more unit to a priority buyer." },
-  freight: { title: "Freight exchange", cost: 10, years: 2, effect: "Handles more food trade and adds ₹1 lakh for each side when a signed corridor is open." },
-  loadingYard: { title: "Freight loading yards", cost: 14, years: 2, effect: "Adds capacity for 3 competitive freight loads each year while the route is open." },
+  storage: { title: "Reserve depots", department: "food", cost: 7, years: 2, effect: "Holds 6 more food units and can offer one more unit to a priority buyer." },
+  freight: { title: "Freight exchange", department: "trade", cost: 10, years: 2, effect: "Handles more food trade and adds ₹1 lakh for each side when a signed corridor is open." },
+  loadingYard: { title: "Freight loading yards", department: "trade", cost: 14, years: 2, effect: "Adds capacity for 3 competitive freight loads each year while the route is open." },
+  protection: { title: "Water and crop protection", department: "food", cost: 9, years: 2, effect: "Prevents up to 2 food units of flood or dry-season losses each year." },
+  trainingSchool: { title: "Technical school", department: "education", cost: 12, years: 2, effect: "After a year of teaching, adds ₹1 lakh in annual receipts and 1 freight bid capacity at an operating exchange." },
+  processing: { title: "Food processing workshops", department: "trade", cost: 16, years: 3, effect: "With a trained workforce, adds ₹2 lakh in annual receipts and 1 freight bid capacity at an operating exchange." },
 };
 const jointProjectPlans = {
   supply: {
@@ -105,6 +108,7 @@ export function neighborsFor(world, game) {
       national: previous?.national ?? null,
       works: Object.keys(workPlans).filter((kind) => previous?.works?.[kind])
         .map((kind) => workSummary(kind, previous.works[kind])),
+      development: previous?.development ?? null,
       jointProject: jointProjectStatus(game, id),
     };
   });
@@ -189,9 +193,20 @@ export function fundJointProject(game, world, id) {
 }
 
 function workSummary(kind, work) {
-  const { title, effect } = workPlans[kind];
-  return { id: kind, title, effect, status: work.opened ? "open" : "building",
-    started: work.started, completionYear: work.completionYear, cost: work.cost };
+  const { title, effect, department } = workPlans[kind];
+  return { id: kind, title, effect, department, status: work.opened ? "open" : "building",
+    started: work.started, completionYear: work.completionYear, cost: work.cost, reason: work.reason ?? null };
+}
+
+function developmentEffects(prior, year, shock) {
+  const opening = (kind) => prior?.works?.[kind]?.opened ?? prior?.works?.[kind]?.completionYear;
+  const operates = (kind) => opening(kind) <= year;
+  const trained = opening("trainingSchool") < year;
+  return {
+    harvestSaved: operates("protection") ? Math.min(2, shock) : 0,
+    trainingReceipts: trained ? 1 : 0,
+    processingReceipts: trained && operates("processing") ? 2 : 0,
+  };
 }
 
 function developNeighbor(game, actor, prior, { shortage, balance, towns, agreement, standard, nearbyId }) {
@@ -214,6 +229,29 @@ function developNeighbor(game, actor, prior, { shortage, balance, towns, agreeme
     const preferStorage = standard ? foodPressure || agreement?.kind === "supply" : !freightEligible;
     const priorities = preferStorage ? ["storage", "freight"] : ["freight", "storage"];
     const justified = { storage: !standard || storageNeed, freight: standard ? freightOpportunity : freightEligible };
+    const reasons = {
+      storage: foodPressure ? "Recent food shortages." : agreement?.kind === "supply" ? "A signed food supply compact." : "Reserves nearing existing storage capacity.",
+      freight: corridor ? "A signed market corridor." : "Surplus food and access to trading towns.",
+      loadingYard: "Freight orders and the next contract award.",
+      protection: "Recent shortages expose the harvest to weather losses.",
+      trainingSchool: "Secure food stocks and an operating freight exchange.",
+      processing: "A trained workforce and surplus food to process.",
+    };
+    if (standard && game.year >= 1956) {
+      if (foodPressure && Math.max(actor.flood, actor.dry) >= 2) {
+        priorities.unshift("protection");
+        justified.protection = true;
+      }
+      const stable = !foodPressure && balance >= 4 && works.freight?.opened;
+      if (stable) {
+        priorities.push("trainingSchool");
+        justified.trainingSchool = true;
+        if (works.trainingSchool?.opened < game.year && game.year >= 1960) {
+          priorities.unshift("processing");
+          justified.processing = true;
+        }
+      }
+    }
     const tender = nearbyId && domesticContractRival(nearbyId) && upcomingFreightContract(game);
     const canBid = tender && tender.start >= game.year + workPlans.loadingYard.years;
     if (standard && game.year >= freightCompetitionOpening && freightEligible && !foodPressure && works.freight?.opened &&
@@ -225,7 +263,7 @@ function developNeighbor(game, actor, prior, { shortage, balance, towns, agreeme
     for (const kind of priorities) {
       const plan = workPlans[kind];
       if (works[kind] || !justified[kind] || uncommittedCash < plan.cost || game.year + plan.years > game.journey.end) continue;
-      works[kind] = { started: game.year, completionYear: game.year + plan.years, cost: plan.cost };
+      works[kind] = { started: game.year, completionYear: game.year + plan.years, cost: plan.cost, reason: reasons[kind] };
       developmentSpend = plan.cost;
       changed.push(kind);
       break;
@@ -253,6 +291,7 @@ export function settleNationalTrade(regional, game, world) {
   const partners = { ...regional.partners };
   const localIds = regional.report.partners.map(({ id }) => id);
   const local = new Set(localIds);
+  const developments = [...(regional.report.developments ?? [])];
   const marketActors = nationalMarketActors(game, world).map((id) => {
     const actor = actors[id];
     if (!local.has(id)) {
@@ -260,23 +299,29 @@ export function settleNationalTrade(regional, game, world) {
       const weather = yearlyRoll(game, actor.seed + 1925);
       const shock = weather < 0.16 ? actor.flood : weather > 0.75 ? actor.dry : 0;
       const expandedWheatHarvest = (id === "punjab" || id === "haryana") && game.year >= 1968 ? 2 : 0;
-      const balance = actor.harvest + expandedWheatHarvest + Math.floor(yearlyRoll(game, actor.seed) * 6) - 2 - shock +
+      const development = developmentEffects(prior, game.year, shock);
+      const balance = actor.harvest + expandedWheatHarvest + Math.floor(yearlyRoll(game, actor.seed) * 6) - 2 - shock + development.harvestSaved +
         (prior?.reserve ?? 3) - actor.demand;
       const shortage = Math.max(0, -balance);
-      const { works, openingCash, developmentSpend } = developNeighbor(game, actor, prior, {
+      const { works, openingCash, developmentSpend, changed } = developNeighbor(game, actor, prior, {
         shortage, balance, towns: 3, standard: true,
       });
       partners[id] = {
         ...prior, works, shortage, competitionLoads: 0, population: prior?.population ?? actor.demand,
         reserve: clamp(balance, 0, reserveLimit + (works.storage?.opened ? 6 : 0)),
-        cash: openingCash + 1 - developmentSpend,
+        cash: openingCash + 1 + development.trainingReceipts + development.processingReceipts - developmentSpend,
+        development, openingCash, developmentSpend,
       };
+      for (const kind of changed) developments.push({ partner: id, name: actorName(id, game.year), year: game.year, ...workSummary(kind, works[kind]) });
     }
     const name = game.year === 1946 && id === "madras" ? "Madras Province" : actorName(id, game.year);
     return { id, name, market: marketHubs[id] };
   });
   const { market, flows } = clearNationalMarket(game, partners, marketActors, localIds);
   for (const node of market.nodes) {
+    const partner = partners[node.id];
+    node.works = Object.keys(workPlans).filter((kind) => partner.works?.[kind]).map((kind) => workSummary(kind, partner.works[kind]));
+    node.development = partner.development;
     const yard = partners[node.id].works?.loadingYard;
     if (yard) node.loadingYard = { completionYear: yard.completionYear, open: Boolean(yard.opened) };
   }
@@ -286,7 +331,7 @@ export function settleNationalTrade(regional, game, world) {
   const rows = regional.report.partners.map((row) => flows[row.id]
     ? { ...row, cash: partners[row.id].cash, reserve: partners[row.id].reserve, shortage: partners[row.id].shortage, national: flows[row.id] }
     : row);
-  return { ...regional, partners, report: { ...regional.report, partners: rows, nationalMarket: market } };
+  return { ...regional, partners, report: { ...regional.report, partners: rows, developments, nationalMarket: market } };
 }
 
 function inlandCarriers(market, partners, nearby) {
@@ -301,7 +346,9 @@ function inlandCarriers(market, partners, nearby) {
     const node = nodes.get(id);
     const { works } = partners[id];
     if (node.local || node.shortage || !works?.freight?.opened) continue;
-    const capacity = Math.min(routeLimit, gateway.capacity, works.loadingYard?.opened ? 4 : 2);
+    const development = partners[id].development;
+    const workforce = (development?.trainingReceipts ?? 0) + Number(development?.processingReceipts > 0);
+    const capacity = Math.min(routeLimit, gateway.capacity, (works.loadingYard?.opened ? 4 : 2) + workforce);
     if ((carriers.get(id)?.capacity ?? 0) >= capacity) continue;
     carriers.set(id, { id, name: node.name, via: gateway.name, capacity });
   }
@@ -360,7 +407,8 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const inherited = inheritedSuccessorWorks(game, world, id);
     const roll = yearlyRoll(game, actor.seed);
     const shock = monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0;
-    const supply = actor.harvest + Math.floor(roll * 6) - 2 - shock + (inherited?.irrigation ?? 0);
+    const development = developmentEffects(prior, game.year, shock);
+    const supply = actor.harvest + Math.floor(roll * 6) - 2 - shock + development.harvestSaved + (inherited?.irrigation ?? 0);
     const priorPopulation = prior?.population ?? actor.demand;
     const actorDemand = clamp(Math.round(priorPopulation), actor.demand - 2, actor.demand + 2);
     const balance = supply + (prior?.reserve ?? 3) - actorDemand;
@@ -390,7 +438,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
       const reason = restricted ? "Route restricted after a shortfall."
         : !hasFreightFacility ? "Freight exchange has yet to open."
           : !localExchange ? "Needs a connection to your market." : null;
-      const addedCapacity = (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3;
+      const addedCapacity = (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3 + development.trainingReceipts + Number(development.processingReceipts > 0);
       freightRivals.push({ id, name, reason, capacity: reason ? 0 : Math.min(maxFreightCapacity, 3 + (works.loadingYard?.opened ? 3 : 0) + addedCapacity) });
     }
     const extraHandling = jointFreight ? 1 : 0;
@@ -400,7 +448,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const jointFreightCash = jointFreight ? 2 : 0;
     const freight = corridor ? (towns >= 5 ? 2 : 1) + (exchangeOpen ? 1 : 0) + jointFreightCash : 0;
     const inheritedReceipts = inherited?.workshops ?? 0;
-    const cashBeforeUpkeep = openingCash + 1 + freight + inheritedReceipts - developmentSpend;
+    const cashBeforeUpkeep = openingCash + 1 + freight + inheritedReceipts + development.trainingReceipts + development.processingReceipts - developmentSpend;
     const inheritedUpkeep = Math.min(inherited?.upkeep ?? 0, cashBeforeUpkeep);
     const cash = cashBeforeUpkeep - inheritedUpkeep;
     const tradeAccess = !restricted && (corridor || localExchange);
@@ -414,7 +462,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const population = populationUnits(priorPopulation - migration);
     const status = shortage ? "Buying" : offer ? "Food available" : "Holding stocks";
     const access = restricted ? "Restricted" : disrupted ? "Limited river trade" : corridor ? "Open corridor" : priority && offer ? "Priority supply" : "Local trade";
-    partners[id] = { status, access, offer, request, reserve, cash, population, shortage, works, ...(inherited ? { inherited: { ...inherited, receipts: inheritedReceipts, upkeepPaid: inheritedUpkeep } } : {}) };
+    partners[id] = { status, access, offer, request, reserve, cash, population, shortage, works, development, ...(inherited ? { inherited: { ...inherited, receipts: inheritedReceipts, upkeepPaid: inheritedUpkeep } } : {}) };
     report.partners.push({ id, name, ...partners[id], bought: 0, sold: 0, migration, freight, openingCash, developmentSpend, reserveCapacity, emergencyFood, jointFreightCash });
     for (const kind of changed) {
       report.developments.push({ partner: id, name, year: game.year, ...workSummary(kind, works[kind]) });

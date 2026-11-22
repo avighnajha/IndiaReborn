@@ -23,11 +23,15 @@ export const domesticContractRival = (id) => id !== "eastBengal" && id !== "west
 export function contractRivalBid(row, byYear = 0) {
   const { id, name, access, works, inherited } = row;
   const willOperate = (kind) => works?.[kind]?.opened || (byYear && works?.[kind]?.completionYear <= byYear);
+  const year = byYear || row.year || 0;
+  const teachingYear = works?.trainingSchool?.opened ?? works?.trainingSchool?.completionYear;
+  const trained = year ? teachingYear < year : Boolean(row.development?.trainingReceipts);
+  const workforce = trained ? 1 + Number(Boolean(willOperate("processing"))) : 0;
   const reason = !domesticContractRival(id) ? "Outside the domestic contract area."
     : access === "Restricted" ? "Route restricted after a shortfall."
       : !(willOperate("freight") || inherited?.terminals) ? "Freight exchange has yet to open." : null;
   const capacity = reason ? 0 : Math.min(maxFreightCapacity, 3 + (willOperate("loadingYard") ? 3 : 0) +
-    (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3);
+    (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3 + workforce);
   return { id, name, capacity, reason };
 }
 

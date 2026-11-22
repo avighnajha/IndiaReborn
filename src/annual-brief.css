@@ -199,6 +199,7 @@ dialog.brief-dialog {
 .brief-context-grid section { min-width: 0; padding: 7px 9px; background: #19241f; border-radius: 5px; }
 .brief-context-grid h3 { color: #eee1bd; font-size: .8rem; }
 .brief-context-grid p { color: #d1dacd; font-size: .78rem; }
+.brief-context-grid .brief-rival-work { margin-top: 6px; border-inline-start: 2px solid var(--sector-accent, #a4bc8d); }
 .brief-dialog .brief-ledger dd { overflow-wrap: anywhere; }
 
 @media (max-width: 620px) {

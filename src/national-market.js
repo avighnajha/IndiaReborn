@@ -74,10 +74,10 @@ export function seedSouthernTransitions(partners, game, world) {
     const andhraCash = Math.floor(cash * 27 / 75);
     const mysoreCash = Math.floor(cash / 75);
     const andhraReserve = Math.floor(reserve * .36);
-    const { storage, ...madrasWorks } = works;
+    const { storage, protection, ...madrasWorks } = works;
     return { ...partners,
       madras: { ...partners.madras, cash: cash - andhraCash - mysoreCash, reserve: reserve - andhraReserve, works: madrasWorks },
-      andhra: { cash: andhraCash, reserve: andhraReserve, works: storage ? { storage } : {} },
+      andhra: { cash: andhraCash, reserve: andhraReserve, works: { ...(storage ? { storage } : {}), ...(protection ? { protection } : {}) } },
       mysore: { ...partners.mysore, cash: (partners.mysore?.cash ?? 0) + mysoreCash },
     };
   }
@@ -104,23 +104,23 @@ export function seedBombayDivision(partners, game, world) {
   if (world.key === "bombay" || game.year !== 1960 || !previous || partners.maharashtra || partners.gujarat) return partners;
   const gujaratCash = Math.floor(previous.cash * 0.3369);
   const gujaratReserve = Math.floor(previous.reserve / 3);
-  const { storage, ...freightWorks } = previous.works ?? {};
+  const { storage, protection, ...freightWorks } = previous.works ?? {};
   const { bombay, ...successors } = partners;
   return {
     ...successors,
     maharashtra: { cash: previous.cash - gujaratCash, reserve: previous.reserve - gujaratReserve, works: freightWorks },
-    gujarat: { cash: gujaratCash, reserve: gujaratReserve, works: storage ? { storage } : {} },
+    gujarat: { cash: gujaratCash, reserve: gujaratReserve, works: { ...(storage ? { storage } : {}), ...(protection ? { protection } : {}) } },
   };
 }
 
 export function seedPunjabDivision(partners, game, world) {
   const previous = partners.punjab;
   if (world.key === "punjab" || game.year !== 1966 || !previous || partners.haryana) return partners;
-  const { storage, ...freightWorks } = previous.works ?? {};
+  const { storage, protection, ...freightWorks } = previous.works ?? {};
   return {
     ...partners,
     punjab: { cash: Math.floor(previous.cash * 0.5484), reserve: Math.floor(previous.reserve * 0.55), works: freightWorks },
-    haryana: { cash: Math.floor(previous.cash * 0.3738), reserve: Math.floor(previous.reserve * 0.37), works: storage ? { storage } : {} },
+    haryana: { cash: Math.floor(previous.cash * 0.3738), reserve: Math.floor(previous.reserve * 0.37), works: { ...(storage ? { storage } : {}), ...(protection ? { protection } : {}) } },
   };
 }
 
