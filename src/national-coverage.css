@@ -1,0 +1,21 @@
+.national-coverage { min-width: 0; margin-top: 12px; border: 1px solid #516354; border-radius: 6px; background: #1b2b25; }
+.national-coverage > summary { padding: 10px 12px; color: #ece6cc; cursor: pointer; font-size: .86rem; font-weight: 650; }
+.coverage-summary { display: inline-flex; flex-wrap: wrap; gap: 5px; margin-inline-start: 10px; vertical-align: middle; }
+.coverage-summary b { padding: 3px 6px; border: 1px solid #596a54; border-radius: 4px; color: #d9e5c7; font-size: .69rem; font-weight: 550; }
+.national-coverage > summary:focus-visible, .coverage-year select:focus-visible { outline: 2px solid #edd69a; outline-offset: 3px; }
+.coverage-body { display: grid; gap: 10px; padding: 0 10px 10px; }
+.coverage-year { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #c5d0bf; font-size: .76rem; }
+.coverage-year select { min-width: 100px; padding: 4px 8px; }
+.coverage-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.coverage-card { --coverage-accent: #c5bba3; min-width: 0; padding: 10px; border: 1px solid #445348; border-top: 3px solid var(--coverage-accent); border-radius: 4px; background: #17261f; }
+.coverage-card[data-coverage-status="playable"] { --coverage-accent: #e9c87b; }
+.coverage-card[data-coverage-status="simulated"] { --coverage-accent: #9ad2bf; }
+.coverage-card h3 { margin: 0; color: var(--coverage-accent); font-size: .86rem; font-family: inherit; }
+.coverage-card h3 > span { display: inline-block; width: 18px; font-size: 1rem; }
+.coverage-card p { margin: 6px 0 9px; color: #d7ddcf; font-size: .75rem; line-height: 1.4; }
+.coverage-card small { display: block; margin-top: 9px; color: #aebaad; font-size: .71rem; line-height: 1.4; }
+.coverage-chips { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.coverage-chips li { max-width: 100%; padding: 3px 5px; border: 1px solid #48564a; border-radius: 3px; color: #e1e4d7; font-size: .7rem; line-height: 1.3; overflow-wrap: anywhere; }
+.national-market .national-coverage { margin-top: 0; }
+@media (max-width: 750px) { .coverage-cards { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 490px) { .coverage-summary { display: flex; margin: 7px 0 0 14px; } }

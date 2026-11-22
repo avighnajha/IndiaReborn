@@ -1,17 +1,21 @@
 # India Alternate Futures Current Design
 
-Updated 12 November 2026. The original design and [implementation handoff](India_Alternate_Futures_Codex_Handoff.md) are the baseline. The decisions below record where subsequent play and feedback have changed the approach. Items marked proposed are ready for discussion before implementation.
+Updated 22 November 2026. The original design and [implementation handoff](India_Alternate_Futures_Codex_Handoff.md) are the baseline. The decisions below record where subsequent play and feedback have changed the approach. Items marked proposed are ready for discussion before implementation.
 
 ## Design commitments
 
 | Area | Current decision | Relationship to original handoff |
 | --- | --- | --- |
-| Campaign and agency | One year per turn, with seasonal effects. The player is a continuing regional steward. Eight campaigns start in 1946. Punjab's short campaign ends in 1970, five years later than the other short campaigns. All long campaigns finish in 1985. | Retains the decision register and annual cadence in sections 2, 5 and 6. The founding campaign has separate autosaves from the earlier regional scenarios. |
+| Campaign and agency | One year per turn, with seasonal effects. The player is a continuing regional steward. Nine campaigns start in 1946. Punjab's short campaign ends in 1970, five years later than the other short campaigns. All long campaigns finish in 1985. | Retains the decision register and annual cadence in sections 2, 5 and 6. The founding campaign has separate autosaves from the earlier regional scenarios. |
 | Development | Players approve regional programmes, set budget and policy, and decide whether to accelerate delivery. The works office places individual works. | Changes the interaction in sections 5, 6 and 11 from routine placement to commitments at corridor, district or basin scale. The underlying geography still affects results. |
 | Finance and politics | Show nominal rupees in lakh and crore. Use sourced fiscal anchors for the playable development envelope. Keep occasional negotiations and conditional political events. | Retains scarcity, player agency and light political management. [Fiscal source notes](fiscal-sources.md) distinguish historical records from modeled allocations and project prices. |
-| Map and territories | Keep physical sites, period jurisdictions, and development history separate. Both campaigns show continuous terrain, sourced geographic features and census-derived state outlines that change with the planning year. | Retains sections 4, 7, 9 and 17. Site identities and saves remain stable. [Production map notes](map-production.md). |
+| Map and territories | Keep physical sites, period jurisdictions, and development history separate. Regional maps show continuous terrain, sourced geographic features and census-derived state outlines that change with the planning year. | Retains sections 4, 7, 9 and 17. Site identities and saves remain stable. [Production map notes](map-production.md). |
 | Outcomes | Prosperity and industrial development remain the two current victory paths. Distinct starts and conditional consequences should make repeat play worthwhile. | Retains multiple victory paths and historically plausible divergence in sections 3 and 10. |
 | Release scope | The founding build runs from the national atlas through independence, reorganization, regional development and a scorecard. Nine playable starts interact with trading partners and a linked domestic food market from 1946 under Standard politics. | Launch roster review, wider competitive systems, playtime validation and public-release checks remain open against section 15. |
+
+## National coverage
+
+The atlas and Domestic market distinguish playable starts, annual market accounts and contextual territories. The atlas previews the actual graph by year; archived reports use only their saved accounts. Manipur and Tripura have separate annual economies from 1950, with limited roads to Imphal from 1950 and Agartala from 1955. Arunachal Pradesh enters the market model in 1972 through Bomdila. These are modeled market economies, with dated primary references for administrative transitions and road access. Northern territories, Sikkim, coastal enclaves and islands still have explicit coverage gaps. See the [national coverage review](national-coverage.md).
 
 ## Why the brief separates causes
 

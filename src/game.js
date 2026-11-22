@@ -144,13 +144,14 @@ function enterCampaign(region, mode, settings) {
 
 async function showRegions(initial = World.key) {
   const { nationalAtlas, startKind } = await import("./founding-atlas.js");
+  const { nationalCoverageMarkup } = await import("./national-coverage.js");
   let region = initial;
   const roster = Object.entries(territories).map(([key, info]) =>
     `<button type="button" class="founding-start" data-start="${key}" aria-pressed="false"><strong>${info.name}</strong><small>${startKind(key)}</small></button>`).join("");
   showModal("Campaign atlas · 1946", "Choose who you will govern", `
     <p>Begin before independence. Make your first development commitment, guide your administration through the transfer of power, then govern through the borders you negotiate.</p>
     <div class="founding-layout">
-      <div id="atlas-drawing"></div>
+      <div><div id="atlas-drawing"></div><div id="atlas-coverage"></div></div>
       <div class="founding-controls">
         <div class="founding-controls" role="group" aria-label="Starting region">${roster}</div>
         <div class="founding-preview" id="atlas-preview"></div>
@@ -169,9 +170,18 @@ async function showRegions(initial = World.key) {
     byId("politics-detail").textContent = byId("journey-politics").value === "light"
       ? "Major historical choices with simpler regional trade."
       : "Domestic markets trade from 1946. Neighbors adjust access and migration as conditions change.";
+    byId("atlas-coverage").innerHTML = nationalCoverageMarkup({ year: 1946, preset: byId("journey-politics").value });
   };
   byId("journey-politics").addEventListener("change", updatePolitics);
   updatePolitics();
+  byId("atlas-coverage").addEventListener("change", (event) => {
+    if (!event.target.matches("[data-coverage-period]")) return;
+    byId("atlas-coverage").innerHTML = nationalCoverageMarkup({
+      year: Number(event.target.value), preset: byId("journey-politics").value,
+    });
+    byId("atlas-coverage").querySelector("details").open = true;
+    byId("atlas-coverage").querySelector("[data-coverage-period]").focus({ preventScroll: true });
+  });
 
   function select(key) {
     region = key;
@@ -1067,8 +1077,9 @@ function showNeighbors() {
   showModal(`${Math.min(game.year, campaignEnd(game))} · Regional diplomacy`, "Neighboring administrations", `
     <p>Sign a trade agreement, then co-fund a reserve or freight project when the partner is ready.</p>
     ${freightContractMarkup(forecast)}${freight}
-    <div class="journey-choices">${neighbors.map((neighbor) => `<section class="journey-choice">
+    <div class="journey-choices">${neighbors.map((neighbor) => `<section class="journey-choice" data-neighbor="${neighbor.id}">
       <p class="kicker">${neighbor.access}</p><h3>${neighbor.name}</h3><p>${neighbor.status}</p>
+      ${neighbor.routeCapacity ? `<p>Road connection · up to ${neighbor.routeCapacity} food unit per year</p>` : ""}
       ${neighbor.offer === null ? "" : `<p>${neighbor.offer} food available · ${neighbor.request} sought<br>${money(neighbor.cash)} modeled treasury</p>`}
       ${neighbor.national ? `<p>Domestic routes · ${neighbor.national.bought} food bought · ${neighbor.national.sold} sold</p>` : ""}
       ${neighbor.inherited ? `<p>Inherited works · ${money(neighbor.inherited.receipts)} in workshop receipts · ${money(neighbor.inherited.upkeepPaid)} upkeep</p>` : ""}

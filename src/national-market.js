@@ -10,6 +10,9 @@ export const inlandActors = {
   nagaland: { name: "Naga Hills–Tuensang Area", later: "Nagaland", renamed: 1963, harvest: 6, demand: 6, flood: 2, dry: 2, seed: 967 },
   meghalaya: { name: "Meghalaya", harvest: 6, demand: 6, flood: 2, dry: 1, seed: 583 },
   mizoram: { name: "Mizoram", harvest: 5, demand: 5, flood: 2, dry: 2, seed: 913 },
+  manipur: { name: "Manipur", harvest: 6, demand: 6, flood: 2, dry: 2, seed: 811 },
+  tripura: { name: "Tripura", harvest: 6, demand: 6, flood: 3, dry: 1, seed: 478 },
+  arunachal: { name: "Arunachal Pradesh", harvest: 5, demand: 5, flood: 2, dry: 1, seed: 754 },
   travancore: { name: "Travancore and Cochin markets", later: "Travancore–Cochin", renamed: 1949, harvest: 7, demand: 8, flood: 2, dry: 1, seed: 312 },
 };
 
@@ -19,6 +22,7 @@ export const marketHubs = {
   mysore: "Bangalore", kerala: "Ernakulam", bombay: "Bombay", maharashtra: "Bombay", gujarat: "Ahmedabad",
   travancore: "Ernakulam", hyderabad: "Secunderabad",
   nagaland: "Dimapur", meghalaya: "Shillong", mizoram: "Aijal",
+  manipur: "Imphal", tripura: "Agartala", arunachal: "Bomdila",
 };
 
 const corridors = [
@@ -44,14 +48,16 @@ function domesticLinks(year) {
   const coast = year < 1956 ? ["madras", "travancore", 2] : ["madras", "kerala", 3];
   const assam = year >= 1950 ? [["bengal", "assam", 2], ["bihar", "assam", 1]]
     : year === 1946 ? [["bengal", "assam", 2]] : [];
+  if (year >= 1950) assam.push(["assam", "manipur", 1, "road"]);
+  if (year >= 1955) assam.push(["assam", "tripura", 1, "road"]);
   if (year >= 1958) assam.push(["assam", "nagaland", 2]);
-  if (year >= 1972) assam.push(["assam", "meghalaya", 2], ["assam", "mizoram", 1]);
+  if (year >= 1972) assam.push(["assam", "meghalaya", 2], ["assam", "mizoram", 1], ["assam", "arunachal", 1, "road"]);
   const hyderabad = year >= 1953 && year < 1956 ? [["hyderabad", "andhra", 2], ["hyderabad", "central", 2]] : [];
   const central = year >= 1956 ? [["central", "rajasthan", 2]] : [];
-  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central].map(([from, to, capacity]) => {
+  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central].map(([from, to, capacity, mode]) => {
     const southernPool = year >= 1965 && (from === "andhra" || from === "madras");
     const northernDispatch = year >= 1968 && (from === "punjab" || from === "haryana");
-    return [from, to, capacity + Number(southernPool || northernDispatch)];
+    return [from, to, capacity + Number(southernPool || northernDispatch), ...(mode ? [mode] : [])];
   });
 }
 
@@ -65,7 +71,9 @@ export function nationalMarketActors(game, world) {
       : world.key === "bombay" ? game.journey.jurisdiction?.bombaySuccessor ?? "bombay" : world.key;
   const playerMarket = world.key === "punjab" ? game.journey.jurisdiction?.punjabSuccessor ?? "punjab"
     : world.key === "madras" ? game.journey.jurisdiction?.madrasSuccessor ?? "madras" : played;
-  return [...new Set(["assam", ...domesticLinks(game.year).flatMap(([from, to]) => [from, to])])].filter((id) => id !== playerMarket);
+  // Tripura keeps its own economy before its metalled Assam road is available.
+  const separateMarkets = game.year >= 1950 ? ["manipur", "tripura"] : [];
+  return [...new Set(["assam", ...separateMarkets, ...domesticLinks(game.year).flatMap(([from, to]) => [from, to])])].filter((id) => id !== playerMarket);
 }
 
 export function seedSouthernTransitions(partners, game, world) {
@@ -90,13 +98,14 @@ export function seedSouthernTransitions(partners, game, world) {
 
 const marketChapters = {
   1947: "Partition interrupts the Bengal–Assam route.",
-  1950: "Assam reconnects to the domestic rail network.",
+  1950: "Assam reconnects to the domestic rail network. Manipur and Tripura have separate market accounts; Imphal trades over a limited road link.",
   1953: "Andhra opens a separate market after the division of Madras.",
+  1955: "The completed Assam–Agartala road connects Tripura’s market. Road freight remains limited.",
   1956: "Andhra Pradesh and Kerala enter the reorganized network. Madhya Pradesh gains a route to Rajasthan.",
   1960: "Bombay’s markets divide between Maharashtra and Gujarat.",
   1963: "Nagaland becomes a separate state.",
   1966: "Haryana opens a separate market from Punjab.",
-  1972: "Meghalaya and Mizoram enter as separate markets.",
+  1972: "Meghalaya, Mizoram and Arunachal Pradesh enter as separate markets. Manipur and Tripura become states; their existing accounts continue.",
 };
 
 export function seedBombayDivision(partners, game, world) {
@@ -133,7 +142,7 @@ export function clearNationalMarket(game, partners, actors, localIds) {
     reserve: partners[id].reserve, shortage: partners[id].shortage,
   }]));
   const links = domesticLinks(game.year).filter(([from, to]) => nodes[from] && nodes[to])
-    .map(([from, to, capacity]) => ({ from, to, capacity, units: 0 }));
+    .map(([from, to, capacity, mode]) => ({ from, to, capacity, units: 0, ...(mode ? { mode } : {}) }));
 
   const first = (game.year - 1946) % Math.max(1, links.length);
   const rotation = [...links.slice(first), ...links.slice(0, first)];

@@ -32,6 +32,8 @@ Open **Technical training intake** from the Cabinet or the Education tree. Commi
 
 Under Standard politics, check **Neighbors** and **Domestic market** to follow rival investment. From 1956, states can protect harvests, train workers and open processing workshops using their own funds. Department colours identify their funded priorities on the market map. Expand **Reserves and treasuries** for costs, reasons and delivery dates. Their resulting food supplies and freight capacity can change your trading opportunities. [Rival development rules](design/interregional-model.md#rival-investment-priorities)
 
+Expand **Beyond your borders** in the Campaign atlas to preview market coverage by year. It distinguishes playable starts, independently simulated markets and places outside the annual economy. Domestic market uses the accounts saved in that report. Manipur and Tripura keep separate treasuries from 1950; Imphal connects by road then, Agartala in 1955. Bomdila joins the network in 1972 under Arunachal Pradesh. The new roads carry at most one food unit each year. [National coverage and remaining work](design/national-coverage.md)
+
 Open **Emergency food plan** in the Cabinet to see how the expected harvest and reserves would cover food needs under typical conditions and the current weather warning. The latest flood report opens the **Monsoon** layer and highlights the growing sites that lost food or benefited from protection.
 
 - **Bihar** opens with ₹34 lakh. The Ganga Market Corridor commits ₹32 lakh to a crossing north of Patna, a link to Darbhanga and a workshop. Northern Food Security costs ₹29 lakh and improves the first harvest. Once it finishes, compare three **Kosi Flood Compact** agreements.

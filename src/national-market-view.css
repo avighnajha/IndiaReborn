@@ -30,12 +30,22 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-map-context { fill: #94ada1; font: 650 8px system-ui, sans-serif; letter-spacing: 1.2px; }
 .market-route { fill: none; stroke: #b5c1a7; stroke-width: 1.2px; stroke-linecap: round; stroke-dasharray: 3 4; opacity: .68; }
 .market-route[data-moving="true"] { stroke: var(--market-gold); stroke-width: var(--route-weight); stroke-dasharray: none; opacity: 1; }
+.market-route[data-mode="road"] { stroke-dasharray: 1 4; }
+.market-route[data-mode="road"][data-moving="true"] { stroke-dasharray: 6 3; }
 .market-map marker path { fill: var(--market-gold); }
 .market-hub circle { fill: #1b3229; stroke: #e6e4d3; stroke-width: 1.3px; }
 .market-hub[data-connected="true"] circle { fill: var(--market-neighbor); stroke: #182b21; stroke-width: 1.5px; }
 .market-hub text { fill: #f4f2dd; stroke: #23372c; stroke-width: 3px; stroke-linejoin: round; paint-order: stroke fill; font: 650 11px system-ui, sans-serif; }
 .market-hub[data-connected="true"] text { fill: #e4edc7; }
 .market-hub .market-investment-pip { fill: var(--sector-accent); stroke: #172c24; stroke-width: .7px; }
+.market-ne-frame { fill: #152e2850; stroke: #9cb39d; stroke-width: 1px; stroke-dasharray: 3 3; }
+.market-ne-caption { fill: #c7d6bd; font: 650 7px system-ui, sans-serif; }
+.market-northeast { border-top: 1px solid #516353; background: #172f28; }
+.market-northeast h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin: 0; padding: 8px 10px 0; color: #e5e8d6; font-size: .74rem; }
+.market-northeast h4 span { color: #adbfac; font-size: .67rem; font-weight: 400; }
+.market-northeast svg { background: transparent; }
+.market-northeast .market-local-note { margin: 0; padding: 0 10px 9px; color: #c5d0bf; font-size: .72rem; }
+.market-northeast .market-hub text { font-size: 12px; }
 
 .market-map figcaption { display: grid; gap: 5px; padding: 8px 10px; border-top: 1px solid #516353; color: #c0ccbc; font-size: .72rem; }
 .market-map-key { display: flex; flex-wrap: wrap; gap: 5px 13px; margin: 0; padding: 0; list-style: none; }
@@ -43,6 +53,7 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-map-key li::before { width: 12px; content: ""; border-top: 2px solid var(--market-gold); }
 .market-map-key [data-key="idle"]::before { border-top: 1px dashed #b5c1a7; }
 .market-map-key [data-key="connected"]::before { width: 7px; height: 7px; border: 0; border-radius: 50%; background: var(--market-neighbor); }
+.market-map-key [data-key="road"]::before { border-top-style: dashed; }
 .market-department-key { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; }
 .market-department-key .department-badge { font-size: .68rem; }
 .market-department-key .department-badge::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--sector-accent); }
@@ -59,6 +70,7 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-route-label strong { font-size: .82rem; }
 .market-route-label strong span { color: var(--market-gold); }
 .market-route-label > span { color: var(--subtle); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.market-mode { display: inline-block; margin-inline-end: 3px; padding: 1px 4px; border: 1px solid #879575; border-radius: 3px; color: #d8e4bd; font-size: .66rem; font-weight: 650; }
 .market-route-list progress { width: 100%; height: 5px; accent-color: var(--market-gold); }
 
 .market-detail { min-width: 0; border: 1px solid var(--line); border-radius: 5px; }
