@@ -10,6 +10,7 @@ import { apprenticeshipOutput, extensionDryRecovery, extensionFloodRecovery, ext
 import { reservePlan, reserveWindow, resolveReserve, signReserve } from "./union-reserve.js";
 import { enrollIntake, intakeEffects, intakePlan, intakeStatus, matureSchools, placementOutput } from "./technical-intake.js";
 import { adoptCabinetPlan, cabinetPlan, resolveCabinetPlan } from "./cabinet-plan.js";
+import { adoptRegionalMandate, recordRegionalMandate, regionalMandate } from "./regional-mandate.js";
 
 export const Campaign = (() => {
   const projects = {
@@ -755,6 +756,8 @@ export const Campaign = (() => {
       report.politicalEvents = Object.values(game.journey.events).filter(({ year }) => year === game.year);
       report.signedAgreements = Object.values(game.journey.agreements).filter(({ year }) => year === game.year);
     }
+    const mandate = recordRegionalMandate(game, report, { food: water, education: technical + agricultural, trade: parks });
+    if (mandate) report.regionalMandate = mandate;
     const growth = World.key === "mayurbhanj" && !expanded ? (shortage ? .06 : .16) : (shortage ? .15 : .55);
     return {
       ...state, year: game.year + 1, cash, reserve, marketStock: carryStock,
@@ -773,7 +776,7 @@ export const Campaign = (() => {
     const goals = targets(game);
     const prosperity = secureYears >= goals.secureYears && latest?.skills >= goals.skills && latest.towns >= goals.towns;
     const economy = latest?.output >= goals.output && latest.towns >= goals.towns && game.cash >= goals.cash;
-    return { latest, secureYears, prosperity, economy };
+    return { latest, secureYears, prosperity, economy, mandate: latest?.regionalMandate ?? null };
   }
 
   function validSave(game, region, founding) {
@@ -820,6 +823,12 @@ export const Campaign = (() => {
   return {
     saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, reportFunding, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
     training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority,
+    regionalMandate: (game) => regionalMandate(game, targets(game).output, game.journey?.mandate && {
+      food: active(game, "waterNetwork").length,
+      education: active(game, "technicalInstitute").length + active(game, "agriculturalInstitute").length,
+      trade: active(game, "industrialPark").length,
+    }),
+    chooseRegionalMandate: (game, id) => adoptRegionalMandate(game, id, targets(game).output),
     partnerOffers: (game) => partnerOffers(game, World),
     jointProjectOffers: (game) => jointProjectOffers(game, World),
     neighbors: (game) => neighborsFor(World, game),

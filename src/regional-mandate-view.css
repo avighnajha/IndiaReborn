@@ -1,0 +1,73 @@
+.regional-mandate, .regional-mandate-progress { min-width: 0; }
+.regional-mandate :is(h3, p), .regional-mandate-progress :is(h3, p) { margin: 0; }
+.regional-mandate-eyebrow { color: #d6c69e; font-size: .7rem; font-weight: 750; letter-spacing: .045em; text-transform: uppercase; }
+.regional-mandate-intro { display: grid; gap: 5px; margin-bottom: 13px; }
+.regional-mandate-intro > p:not(.regional-mandate-eyebrow) { color: #dce5d5; font-size: .88rem; line-height: 1.4; }
+.regional-mandate-intro > .regional-mandate-selection-window { color: #bbcbb6; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.regional-mandate-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.regional-mandate-option { display: flex; flex-direction: column; min-width: 0; padding: 13px; border: 1px solid #415346; border-top: 3px solid var(--sector-accent, #d2c08f); border-radius: 6px; background: #203027; }
+.regional-mandate-option > header { display: flex; align-items: center; gap: 9px; min-height: 37px; }
+.regional-mandate .regional-mandate-option h3 { color: #f3ead2; font-size: .96rem; line-height: 1.25; overflow-wrap: anywhere; }
+.regional-mandate-icon { display: inline-flex; flex: none; color: var(--sector-accent, #d2c08f); }
+.regional-mandate-icon svg { display: block; width: 31px; height: 31px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.regional-mandate .regional-mandate-description { margin-top: 9px; color: #d3ddcb; font-size: .8rem; line-height: 1.45; }
+.regional-mandate-conditions { display: grid; gap: 0; margin: 12px 0; padding: 0; }
+.regional-mandate-conditions > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; padding: 9px 0; border-block-start: 1px solid #3b4c3f; }
+.regional-mandate-conditions dt { color: #e1e7d8; font-size: .8rem; line-height: 1.35; }
+.regional-mandate-conditions dd { display: grid; justify-items: end; gap: 1px; margin: 0; color: var(--sector-accent, #d2c08f); font-size: .96rem; font-variant-numeric: tabular-nums; }
+.regional-mandate-conditions dd > span { color: #b6c6af; font-size: .61rem; font-weight: 650; text-transform: uppercase; letter-spacing: .025em; }
+.regional-mandate .regional-mandate-help { margin: 0 0 12px; color: #c7d4bf; font-size: .76rem; line-height: 1.45; }
+.regional-mandate-option > button, .regional-mandate-review { min-height: 40px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--sector-accent, #d2c08f) 65%, #415346); border-radius: 4px; background: #26392d; color: var(--sector-accent, #e1dfc1); font-size: .8rem; font-weight: 700; line-height: 1.3; }
+.regional-mandate-option > button { justify-content: center; width: 100%; margin-top: auto; }
+.regional-mandate-option > button:hover:not(:disabled), .regional-mandate-review:hover { background: color-mix(in srgb, var(--sector-accent, #d2c08f) 17%, #203027); }
+.regional-mandate button:focus-visible, .regional-mandate-progress button:focus-visible { outline: 2px solid #ffe2a0; outline-offset: 3px; }
+.regional-mandate-option > button:disabled { opacity: .65; cursor: default; }
+.regional-mandate-progress { padding: 13px; border: 1px solid #415346; border-inline-start: 3px solid var(--sector-accent, #d2c08f); border-radius: 6px; background: #24352d; }
+.regional-mandate-progress-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+.regional-mandate-progress-title { flex: 1; min-width: 120px; }
+.regional-mandate-progress .regional-mandate-progress-title h3 { margin-top: 2px; color: #f4ecd6; font: 700 1.1rem var(--serif); line-height: 1.25; }
+.regional-mandate-progress .regional-mandate-eyebrow { color: var(--sector-accent, #d2c08f); font-size: .65rem; }
+.regional-mandate-status { padding: 5px 8px; border-radius: 4px; background: #18291f; color: #d5dfc9; font-size: .74rem; line-height: 1.3; }
+.regional-mandate-progress[data-achieved="true"] .regional-mandate-status { color: #d2e7b2; background: #33462b; }
+.regional-mandate-progress[data-complete="true"][data-achieved="false"] .regional-mandate-status { color: #f1c6aa; background: #443228; }
+.regional-mandate-progress .regional-mandate-period { margin-top: 8px; color: #bbcbb6; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.regional-mandate-metrics { display: grid; gap: 9px; margin: 12px 0 0; padding: 0; }
+.regional-mandate-metric { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 12px; }
+.regional-mandate-metric dt { color: #e1e7d8; font-size: .83rem; line-height: 1.35; }
+.regional-mandate-metric dd { display: flex; align-items: center; flex-wrap: wrap; justify-content: end; gap: 4px 9px; margin: 0; }
+.regional-mandate-value { color: #becbb5; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.regional-mandate-value strong { color: #f4ecd6; font-size: .95rem; }
+.regional-mandate-metric-status { min-width: 67px; color: #c8d1bd; font-size: .72rem; white-space: nowrap; }
+.regional-mandate-metric[data-met="true"] .regional-mandate-metric-status { color: #d2e7b2; }
+.regional-mandate-metric dd:has(progress) { display: grid; grid-template-columns: auto auto; }
+.regional-mandate-metric progress { grid-column: 1 / -1; width: 100%; height: 5px; accent-color: var(--sector-accent, #d2c08f); }
+.regional-mandate-progress .regional-mandate-year-note { margin-top: 10px; padding-top: 8px; border-top: 1px solid #415346; color: #dfdcc4; font-size: .76rem; line-height: 1.4; }
+.regional-mandate-progress .regional-mandate-guidance { margin-top: 11px; color: #cdd8c3; font-size: .79rem; line-height: 1.45; }
+.regional-mandate-review { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; margin-top: 11px; }
+.regional-mandate-progress-compact { padding: 10px 11px; }
+.regional-mandate-progress-compact .regional-mandate-icon svg { width: 25px; height: 25px; }
+.regional-mandate-progress-compact .regional-mandate-progress-title h3 { font-size: .97rem; }
+.regional-mandate-progress-compact .regional-mandate-status { padding: 4px 6px; font-size: .7rem; }
+.regional-mandate-progress-compact .regional-mandate-metrics { gap: 7px; margin-top: 9px; }
+.regional-mandate-progress-compact .regional-mandate-metric dt { font-size: .77rem; }
+@media (max-width: 680px) {
+  .regional-mandate-options { grid-template-columns: minmax(0, 1fr); }
+  .regional-mandate-option { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .75fr); gap: 0 15px; }
+  .regional-mandate-option > header, .regional-mandate-description { grid-column: 1; }
+  .regional-mandate-conditions { grid-column: 2; grid-row: 1 / 4; align-self: center; margin: 0 0 10px; }
+  .regional-mandate .regional-mandate-help { grid-column: 1; margin-top: 10px; }
+  .regional-mandate-option > button { grid-column: 1 / -1; margin-top: 12px; }
+}
+@media (max-width: 440px) {
+  .regional-mandate-option { display: flex; padding: 11px; }
+  .regional-mandate-conditions { margin-top: 10px; }
+  .regional-mandate .regional-mandate-help { margin-top: 0; }
+  .regional-mandate-option > button { min-height: 44px; margin-top: 0; }
+  .regional-mandate-progress { padding: 10px; }
+  .regional-mandate-progress-heading { display: grid; grid-template-columns: 31px minmax(0, 1fr); gap: 7px; }
+  .regional-mandate-status { grid-column: 2; justify-self: start; }
+  .regional-mandate-metric { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .regional-mandate-metric dd { justify-content: space-between; }
+  .regional-mandate-metric dd:has(progress) { width: 100%; }
+  .regional-mandate-review { min-height: 44px; }
+}

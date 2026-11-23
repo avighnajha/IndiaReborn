@@ -13,6 +13,8 @@ import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
 import { fundingReferenceMarkup } from "./fiscal-view.js";
 import { cabinetPlanMarkup } from "./cabinet-plan-view.js";
+import { mandateOptionsMarkup, mandateProgressMarkup } from "./regional-mandate-view.js";
+import "./regional-mandate-view.css";
 import "./fiscal-view.css";
 import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
@@ -113,7 +115,7 @@ function choiceButton(text, action, primary = false, disabled = false) {
 }
 
 function showModal(kicker, title, content, buttons) {
-  modal.classList.remove("opening-dialog", "brief-dialog", "regions-dialog", "founding-dialog", "department-dialog", "results-dialog", "national-market-dialog");
+  modal.classList.remove("opening-dialog", "brief-dialog", "regions-dialog", "founding-dialog", "department-dialog", "results-dialog", "national-market-dialog", "mandate-dialog");
   byId("modal-kicker").textContent = kicker;
   byId("modal-title").textContent = title;
   byId("modal-content").innerHTML = content;
@@ -636,6 +638,30 @@ function showCabinetPriority() {
   }
 }
 
+function showRegionalMandate(back = returnToMap, backLabel = "Return to map") {
+  const model = Campaign.regionalMandate(game);
+  const focus = model.progress?.id;
+  const date = Math.min(game.year, campaignEnd(game));
+  showModal(`${date} · Cabinet planning`, "Regional mandate", mandateOptionsMarkup(model), [
+    ...(focus && !model.progress.complete ? [choiceButton(`Open ${departmentIdentity[focus].label} tree`, () => {
+      selectedDepartment = focus;
+      showDevelopmentTrees(true);
+    })] : []),
+    choiceButton(backLabel, back, true),
+  ]);
+  modal.classList.add("opening-dialog", "mandate-dialog");
+  for (const button of byId("modal-content").querySelectorAll("[data-regional-mandate]")) {
+    button.addEventListener("click", () => {
+      const next = Campaign.chooseRegionalMandate(game, button.dataset.regionalMandate);
+      if (next === game) return;
+      game = next;
+      persist();
+      render();
+      showRegionalMandate(back, backLabel);
+    });
+  }
+}
+
 function showPriorityMap(report = game.reports.at(-1)) {
   const priority = report?.cabinetPriority;
   const candidates = priority?.id === "food" ? priority.sites.food : priority?.id === "education" ? priority.sites.education : priority?.sites.trade;
@@ -687,6 +713,11 @@ function render() {
   byId("cabinet-priority").dataset.sector = priority.current?.id ?? "";
   byId("cabinet-priority").querySelector("small").textContent = priority.current
     ? `${priority.current.label} · ${priority.current.status === "paused" ? "Paused" : `to ${priority.current.ends}`}` : "Choose a focus →";
+  const mandate = Campaign.regionalMandate(game);
+  const mandateButton = byId("regional-mandate");
+  mandateButton.hidden = !mandate.available && !mandate.progress;
+  mandateButton.dataset.sector = mandate.progress?.id ?? "";
+  mandateButton.querySelector("small").textContent = mandate.progress?.label ?? `Choose by ${mandate.closes} →`;
 
   byId("year").textContent = done ? "Complete" : game.year;
   document.title = `${name} · India: Alternate Futures`;
@@ -977,6 +1008,10 @@ function showComparison() {
 function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
+  const mandate = Campaign.regionalMandate(game);
+  if (mandate.available && [mandate.opens, mandate.closes].includes(game.year)) {
+    return { advice: "Choose the outcome that will define this administration in 1985.", label: "Compare regional mandates", open: () => showRegionalMandate() };
+  }
   if (game.journey && [1950, 1954, intakeDeadline].includes(game.year) && intakeStatus(game) !== "signed") return {
     advice: game.year === intakeDeadline ? "Fund the technical training intake this year using established schools and market-linked workshops."
       : `Open a technical school by the end of ${intakeDeadline - 2} to qualify for equipment funding.`,
@@ -1077,6 +1112,7 @@ function showReport(index = game.reports.length - 1) {
     modal.classList.add("opening-dialog");
   });
   byId("brief-priority-map")?.addEventListener("click", () => showPriorityMap(report));
+  byId("brief-mandate-review")?.addEventListener("click", () => showRegionalMandate(() => showReport(index), "Back to annual brief"));
   for (const button of byId("modal-content").querySelectorAll("[data-brief-programme]")) {
     button.addEventListener("click", () => {
       modal.close();
@@ -1202,7 +1238,7 @@ function jointProjectCard(project, partner) {
 }
 
 function showResults() {
-  const { latest, secureYears, prosperity, economy } = Campaign.score(game);
+  const { latest, secureYears, prosperity, economy, mandate } = Campaign.score(game);
   const goal = targets(game);
   const name = campaignName(game);
   const path = (title, won, measures) => `<section class="result-path" data-achieved="${won}"><h3>${title} <span>${won ? "Achieved" : "Below target"}</span></h3>
@@ -1221,10 +1257,12 @@ function showResults() {
   const trainingEffect = charter?.id === "apprenticeships"
     ? `${trainingYears.reduce((total, { training }) => total + training.output, 0)} extra workshop output`
     : `${trainingYears.reduce((total, { training }) => total + training.food + training.recovered, 0)} extra food units including recovered losses`;
-  const result = prosperity && economy ? "Both goals achieved" : prosperity ? "Shared prosperity achieved" : economy ? "Industrial economy achieved" : "Campaign ended below both goals";
+  const baseResult = prosperity && economy ? "Both goals achieved" : prosperity ? "Shared prosperity achieved" : economy ? "Industrial economy achieved" : "Campaign ended below both goals";
+  const result = mandate ? mandate.achieved ? "Regional mandate achieved" : "Regional mandate fell short" : baseResult;
   const marketTowns = ["Market towns", latest.towns, goal.towns];
   showModal(`1946–${campaignEnd(game)} · ${identity}`, result, `
     <div class="result-summary"><div><strong>${allSecure}/${game.reports.length}</strong><span>food-secure years</span></div><div><strong>${completed}</strong><span>programmes delivered and retained</span></div><div><strong>${money(game.cash)}</strong><span>final treasury</span></div></div>
+    ${mandate ? mandateProgressMarkup(mandate) : ""}
     <div class="result-goals">
       ${path("Shared prosperity", prosperity, [["Secure years in the final five", secureYears, goal.secureYears], ["Skills", latest.skills, goal.skills], marketTowns])}
       ${path("Industrial economy", economy, [["Workshop output", latest.output, goal.output], marketTowns, ["Treasury", game.cash, goal.cash, money]])}
@@ -1388,6 +1426,7 @@ byId("relief").addEventListener("click", showRelief);
 byId("union-reserve").addEventListener("click", () => showUnionReserve());
 byId("technical-intake").addEventListener("click", () => showTechnicalIntake());
 byId("cabinet-priority").addEventListener("click", showCabinetPriority);
+byId("regional-mandate").addEventListener("click", () => showRegionalMandate());
 byId("cabinet-guide").addEventListener("click", (event) => {
   if (!event.target.closest("[data-guide-dismiss]")) return;
   guideDismissed = true;

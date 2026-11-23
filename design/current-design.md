@@ -105,6 +105,10 @@ Use shared programme families for **market access**, **food security**, **water 
 
 Bihar, Orissa, Mayurbhanj, West Bengal, Bombay, Punjab, Madras, Assam and Central Provinces and Berar supply local programmes and fiscal profiles. They use the same delivery and reporting rules. Orissa adds power allocation, Mayurbhanj can take responsibility for a larger province, and West Bengal can protect a jute-dependent mill through trade or domestic production.
 
+### Regional mandates through 1985
+
+Long founding campaigns offer an optional regional mandate after the main border changes. The player chooses one direction from 1974 through 1979. Each requires a final tier facility and an outcome sustained through the closing years or a new workforce trained since signing. The Cabinet links directly to the appropriate development tree, and archived annual briefs keep their recorded progress. [Targets and balance evidence](regional-mandates.md)
+
 ### Central Provinces and Berar
 
 The cabinet starts in Nagpur and incorporates the eastern princely districts in 1948. Berar cotton can earn early receipts, but Madhya Pradesh loses Vidarbha and the works there in 1956. From Bhopal, the cabinet can invest in the retained Narmada and Chhattisgarh towns or develop the new Malwa districts. An optional agreement keeps freight moving through Nagpur and transfers to Maharashtra in 1960.

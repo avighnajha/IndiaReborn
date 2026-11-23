@@ -4,6 +4,7 @@ import { Fiscal } from "./fiscal.js";
 import { fundingReferenceMarkup } from "./fiscal-view.js";
 import { basinAgreementsFor, basinNameFor, programmes } from "./programmes.js";
 import { World } from "./scenario.js";
+import { mandateProgressMarkup } from "./regional-mandate-view.js";
 
 const money = Fiscal.lakh;
 const units = (count) => `${count} ${count === 1 ? "unit" : "units"}`;
@@ -467,6 +468,7 @@ export function briefContent(report, previous, nextDecision, latest = true) {
     <div class="brief-year-facts">${weatherCard(report)}${treasuryCard(report, previous)}</div>
   </div>
   ${metricStrip(report, previous)}
+  ${report.regionalMandate ? mandateProgressMarkup(report.regionalMandate, { compact: true, review: latest }) : ""}
   ${priorityCard(report, latest)}
   ${changes.length ? `<section class="brief-investment"><h3>What changed</h3>${changeList(changes.slice(0, 4))}
     ${changes.length > 4 ? `<details class="brief-more"><summary>${changes.length - 4} more ${changes.length === 5 ? "change" : "changes"}</summary>${changeList(changes.slice(4))}</details>` : ""}</section>` : ""}
