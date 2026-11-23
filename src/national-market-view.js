@@ -1,6 +1,7 @@
 import { Fiscal } from "./fiscal.js";
 import { departmentBadge, departmentIdentity } from "./department-presentation.js";
 import { nationalCoverageMarkup } from "./national-coverage.js";
+import { marketFundingMarkup } from "./market-finance-view.js";
 import snapshots from "./geography/founding.json";
 import "./national-market-view.css";
 
@@ -31,6 +32,9 @@ const hubs = new Map([
   ["tripura", { x: 428.9, y: 255.2, dx: -10, dy: 4, align: "end" }],
   ["arunachal", { x: 446.6, y: 198.3, dx: 10, dy: 4 }],
   ["delhi", { x: 208, y: 176, dx: 11, dy: 4, census: "Delhi" }],
+  ["jammu", { x: 171.8, y: 107.5, dx: -10, dy: 3, align: "end" }],
+  ["himachal", { x: 203.6, y: 124.4, dx: 10, dy: -4 }],
+  ["sikkim", { x: 387, y: 197.1, dx: -10, dy: -7, align: "end" }],
 ]);
 
 // Expanded schematic spacing keeps the seven northeastern labels readable.
@@ -42,6 +46,14 @@ const northeastHubs = new Map([
   ["manipur", { x: 250, y: 132, dx: 10, dy: 4 }],
   ["tripura", { x: 95, y: 179, dx: -8, dy: 4, align: "end" }],
   ["mizoram", { x: 190, y: 180, dx: 10, dy: 4 }],
+]);
+
+const northernHubs = new Map([
+  ["jammu", { x: 72, y: 33, dx: 9, dy: 4 }],
+  ["himachal", { x: 212, y: 65, dx: 9, dy: 4 }],
+  ["punjab", { x: 127, y: 103, dx: -10, dy: 5, align: "end" }],
+  ["haryana", { x: 199, y: 130, dx: 9, dy: 4 }],
+  ["delhi", { x: 233, y: 182, dx: 9, dy: 4 }],
 ]);
 
 const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -64,8 +76,9 @@ function mapRoute({ from, to, moved, capacity, mode }, locations = hubs) {
   const x = destination.x - 10 * dx / length;
   const y = destination.y - 10 * dy / length;
   const weight = capacity ? 2.2 + 2.3 * Math.min(1, moved / capacity) : 2.2;
-  const description = `${moved ? `${from.market} to ${to.market}, ${units(moved)} carried` : `${from.market} and ${to.market}, idle`}${mode === "road" ? ", road freight" : ""}`;
-  return `<path class="market-route" data-moving="${Boolean(moved)}"${mode === "road" ? ' data-mode="road"' : ""} d="M${source.x} ${source.y} Q${cx} ${cy} ${x} ${y}"${moved ? ` style="--route-weight:${weight}px" marker-end="url(#market-direction)"` : ""}>
+  const transport = mode === "road" ? "road" : mode === "rail" ? "rail" : null;
+  const description = `${moved ? `${from.market} to ${to.market}, ${units(moved)} carried` : `${from.market} and ${to.market}, idle`}${transport ? `, ${transport} freight` : ""}`;
+  return `<path class="market-route" data-moving="${Boolean(moved)}"${transport ? ` data-mode="${transport}"` : ""} d="M${source.x} ${source.y} Q${cx} ${cy} ${x} ${y}"${moved ? ` style="--route-weight:${weight}px" marker-end="url(#market-direction)"` : ""}>
     <title>${escapeText(description)}</title>
   </path>`;
 }
@@ -93,6 +106,18 @@ function northeastMap(nodes, routes) {
   </div>`;
 }
 
+function northernMap(nodes, routes) {
+  const localNodes = nodes.filter(({ id }) => northernHubs.has(id));
+  const localRoutes = routes.filter(({ from, to }) => northernHubs.has(from.id) && northernHubs.has(to.id));
+  return `<div class="market-north"><h4>Northern connections <span>Expanded schematic</span></h4>
+    <svg viewBox="0 0 360 205" role="img" aria-label="Northern exchanges. Jammu represents its market, without a territorial boundary claim.">
+      <g>${localRoutes.filter(({ moved }) => !moved).map((route) => mapRoute(route, northernHubs)).join("")}${localRoutes.filter(({ moved }) => moved).map((route) => mapRoute(route, northernHubs)).join("")}</g>
+      <g>${localNodes.map((node) => mapHub(node, northernHubs.get(node.id))).join("")}</g>
+    </svg>
+    <p class="market-local-note">Jammu marks an exchange. Trade with your administration is shown in Neighbors.</p>
+  </div>`;
+}
+
 function marketMap(nodes, routes, year) {
   const census = year >= 1956 ? 1961 : year >= 1947 ? 1951 : 1941;
   const historicalLabels = census === 1941 ? { up: "United Province", bengal: "Bengal", central: "Central Province and Berar", rajasthan: "Rajputana Agency" } : {};
@@ -101,10 +126,11 @@ function marketMap(nodes, routes, year) {
   const outlines = snapshots[census];
   const zones = outlines.map(({ name, path }) => `<path class="market-zone${connected.has(name) ? " market-zone-connected" : ""}" d="${path}"/>`).join("");
   const expandedNortheast = nodes.filter(({ id }) => northeastHubs.has(id)).length > 2;
+  const expandedNorth = nodes.some(({ id }) => id === "himachal" || id === "jammu");
   const pins = nodes.map((node) => {
     const hub = hubs.get(node.id);
     if (!hub) return "";
-    return mapHub(node, hub, !expandedNortheast || !northeastHubs.has(node.id));
+    return mapHub(node, hub, (!expandedNortheast || !northeastHubs.has(node.id)) && (!expandedNorth || !northernHubs.has(node.id)));
   }).join("");
   return `<figure class="market-map">
     <svg viewBox="42 27 508 520" role="img" aria-label="Domestic food shipments${outlines.length ? ` on ${census} census outlines` : ""}. Route details follow the map.">
@@ -112,12 +138,14 @@ function marketMap(nodes, routes, year) {
       <g fill-rule="evenodd">${zones}</g>
       <g class="market-map-context"><text x="66" y="379">ARABIAN SEA</text><text x="323" y="417">BAY OF BENGAL</text></g>
       ${expandedNortheast ? '<rect class="market-ne-frame" x="415" y="186" width="99" height="100" rx="4"/><text class="market-ne-caption" x="415" y="299">Northeast · expanded below</text>' : ""}
+      ${expandedNorth ? '<rect class="market-ne-frame" x="157" y="97" width="80" height="92" rx="4"/><text class="market-ne-caption" x="157" y="90">North · expanded below</text>' : ""}
       <g>${routes.filter(({ moved }) => !moved).map((route) => mapRoute(route)).join("")}${routes.filter(({ moved }) => moved).map((route) => mapRoute(route)).join("")}</g>
       <g>${pins}</g>
     </svg>
+    ${expandedNorth ? northernMap(nodes, routes) : ""}
     ${expandedNortheast ? northeastMap(nodes, routes) : ""}
     <figcaption>
-      <ul class="market-map-key"><li data-key="moving">Food shipped</li><li data-key="idle">Idle route</li><li data-key="connected">Your neighbor</li>${routes.some(({ mode }) => mode === "road") ? '<li data-key="road">Road freight</li>' : ""}</ul>
+      <ul class="market-map-key"><li data-key="moving">Food shipped</li><li data-key="idle">Idle route</li><li data-key="connected">Your neighbor</li>${routes.some(({ mode }) => mode === "road") ? '<li data-key="road">Road freight</li>' : ""}${routes.some(({ mode }) => mode === "rail") ? '<li data-key="rail">Rail freight</li>' : ""}</ul>
       ${fundedDepartments.size ? `<div class="market-department-key"><span>Funded works</span>${Object.keys(departmentIdentity).filter((department) => fundedDepartments.has(department)).map((department) => departmentBadge(department)).join("")}</div>` : ""}
       <span>${outlines.length ? `${census} census reference · ` : ""}Schematic connections</span>
     </figcaption>
@@ -125,9 +153,9 @@ function marketMap(nodes, routes, year) {
 }
 
 function routeRows(routes) {
-  return `<ul class="market-route-list">${routes.map(({ from, to, moved, capacity, local, mode }) => `<li data-connected="${local}"${mode === "road" ? ' data-mode="road"' : ""}>
+  return `<ul class="market-route-list">${routes.map(({ from, to, moved, capacity, local, mode }) => `<li data-connected="${local}"${mode === "road" || mode === "rail" ? ` data-mode="${mode}"` : ""}>
     <div class="market-route-label"><strong>${escapeText(from.market)} <span class="sr-only">${moved ? "to" : "and"}</span><span aria-hidden="true">${moved ? "→" : "·"}</span> ${escapeText(to.market)}</strong>
-      <span>${mode === "road" ? '<b class="market-mode">Road</b> ' : ""}${moved ? `${moved} of ${units(capacity)}` : `${units(capacity)} capacity`}</span></div>
+      <span>${mode === "road" || mode === "rail" ? `<b class="market-mode">${mode === "rail" ? "Rail" : "Road"}</b> ` : ""}${moved ? `${moved} of ${units(capacity)}` : `${units(capacity)} capacity`}</span></div>
     ${moved && capacity ? `<progress max="${capacity}" value="${moved}" aria-hidden="true"></progress>` : ""}
   </li>`).join("")}</ul>`;
 }
@@ -164,12 +192,12 @@ function marketBalances(nodes) {
   return `<details class="market-detail"><summary>Reserves and treasuries</summary>
     <div class="market-table-wrap" tabindex="0" role="region" aria-label="Administration balances and investments"><table class="market-table">
       <thead><tr><th scope="col">Administration</th><th scope="col">Food reserve</th><th scope="col">Shortfall</th><th scope="col">Treasury</th>${hasFreight ? '<th scope="col">Freight earnings</th>' : ''}</tr></thead>
-      <tbody>${nodes.map(({ name, market, reserve, shortage, cash, local, freight, freightContract, loadingYard, works, development }) => `<tr data-connected="${local === true}">
+      <tbody>${nodes.map(({ id, name, market, reserve, shortage, cash, local, freight, freightContract, loadingYard, works, development, funding }) => `<tr data-market="${escapeText(id)}" data-connected="${local === true}">
         <th scope="row">${escapeText(name)} <small>${escapeText(market)}${local ? " · Neighbor" : ""}</small>
           ${!works && loadingYard ? `<small>Loading yard ${loadingYard.open ? "operating" : `due ${quantity(loadingYard.completionYear)}`}</small>` : ""}
           ${freightContract ? `<small>Freight contract earned ${Fiscal.lakh(quantity(freightContract))}</small>` : ""}</th>
         <td>${units(quantity(reserve))}</td><td>${shortage > 0 ? units(quantity(shortage)) : "Covered"}</td><td>${Fiscal.lakh(quantity(cash))}</td>${hasFreight ? `<td>${Fiscal.lakh(quantity(freight))}</td>` : ''}
-      </tr>${Array.isArray(works) && works.length ? `<tr class="market-investment-row"><td colspan="${hasFreight ? 5 : 4}">${investmentRows(works, name)}${developmentResults(development)}</td></tr>` : ""}`).join("")}</tbody>
+      </tr>${funding || Array.isArray(works) && works.length ? `<tr class="market-investment-row" data-market="${escapeText(id)}"><td colspan="${hasFreight ? 5 : 4}">${marketFundingMarkup(funding)}${Array.isArray(works) && works.length ? investmentRows(works, name) : ""}${developmentResults(development)}</td></tr>` : ""}`).join("")}</tbody>
     </table></div>
   </details>`;
 }

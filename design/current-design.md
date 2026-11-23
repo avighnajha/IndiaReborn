@@ -1,6 +1,6 @@
 # India Alternate Futures Current Design
 
-Updated 22 November 2026. The original design and [implementation handoff](India_Alternate_Futures_Codex_Handoff.md) are the baseline. The decisions below record where subsequent play and feedback have changed the approach. Items marked proposed are ready for discussion before implementation.
+Updated 23 November 2026. The original design and [implementation handoff](India_Alternate_Futures_Codex_Handoff.md) are the baseline. The decisions below record where subsequent play and feedback have changed the approach. Items marked proposed are ready for discussion before implementation.
 
 ## Design commitments
 
@@ -15,7 +15,9 @@ Updated 22 November 2026. The original design and [implementation handoff](India
 
 ## National coverage
 
-The atlas and Domestic market distinguish playable starts, annual market accounts and contextual territories. The atlas previews the actual graph by year; archived reports use only their saved accounts. Manipur and Tripura have separate annual economies from 1950, with limited roads to Imphal from 1950 and Agartala from 1955. Arunachal Pradesh enters the market model in 1972 through Bomdila. These are modeled market economies, with dated primary references for administrative transitions and road access. Northern territories, Sikkim, coastal enclaves and islands still have explicit coverage gaps. See the [national coverage review](national-coverage.md).
+The atlas and Domestic market distinguish playable starts, annual market accounts and contextual territories. The atlas previews the actual graph by year; archived reports use only their saved accounts. Manipur and Tripura have separate annual economies from 1950, with limited roads to Imphal from 1950 and Agartala from 1955. Arunachal Pradesh enters the market model in 1972 through Bomdila. Himachal enters in 1948, the scoped Jammu exchange in 1949 and domestic Sikkim in 1975. Jammu gains rail capacity in 1973 after the station opens in 1972. These are modeled market economies, with dated primary references for administrative transitions and access. Coastal enclaves, islands and territory beyond the Jammu exchange still have explicit coverage gaps. See the [national coverage review](national-coverage.md).
+
+Nearby and domestic AI use a market share of historical fiscal references where available. Revenue receipts and annual Plan outlays retain separate measures and model rates. Allowances post once, before works commitments; operating and trade receipts stay separate. No future-year reference funds an earlier turn. The ledger exposes the year and source and identifies modeled allowances in missing periods. Opening cash, portfolio shares and prices remain game values. [AI fiscal model](market-fiscal-research.md)
 
 ## Why the brief separates causes
 

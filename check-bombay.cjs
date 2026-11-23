@@ -67,7 +67,7 @@ test("Bombay's two successors keep their inherited works and have playable endin
     const firstReport = resolveYear(game).reports.at(-1);
     const initialNeighbor = firstReport.regional.partners.find(({ id }) => id === other);
     assert.ok(initialNeighbor.inherited.workshops > 0);
-    assert.equal(initialNeighbor.cash, initialNeighbor.openingCash + 1 + initialNeighbor.freight + initialNeighbor.inherited.receipts +
+    assert.equal(initialNeighbor.cash, initialNeighbor.openingCash + initialNeighbor.funding.allocation + initialNeighbor.freight + initialNeighbor.inherited.receipts +
       (initialNeighbor.competitionCash ?? 0) - initialNeighbor.developmentSpend - initialNeighbor.inherited.upkeepPaid +
       initialNeighbor.sold * firstReport.buyPrice - initialNeighbor.bought + (initialNeighbor.national?.sold ?? 0) - (initialNeighbor.national?.bought ?? 0));
     const terminal = choice === "gujarat" ? "gj_tradeFreightTerminal" : "tradeFreightTerminal";

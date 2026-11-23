@@ -1,4 +1,5 @@
-import { campaignStorageKey, World } from "./scenario.js";
+import { campaignStorageKey, territories, World } from "./scenario.js";
+import { compressedSave, decodeSave, encodeSave } from "./save-codec.js";
 import { Fiscal } from "./fiscal.js";
 import { campaignEnd, campaignLengths, campaignName, foundingSaveKey, journeySettings, settlement, successorKey, successorRegion, targets } from "./journey.js";
 import { fundJointProject, jointProjectOffers, neighborsFor, partnerOffers, resolveNeighbors, settleFreight, settleNationalTrade, settleNeighborTrade, signPartnerOffer } from "./interregional.js";
@@ -713,17 +714,40 @@ export const Campaign = (() => {
   function load(storage, founding = false) {
     const data = storage.getItem(founding ? foundingSaveKey(World.key) : saveKey);
     if (!data) return null;
-    const game = JSON.parse(data);
+    const game = decodeSave(data);
     if (!validSave(game, World.key, founding)) return null;
     return { ...game, grantAwards: game.grantAwards ?? {}, programmes: game.programmes ?? [] };
   }
 
   function save(storage, game) {
-    storage.setItem(game.journey ? foundingSaveKey(World.key) : saveKey, JSON.stringify(game));
+    storage.setItem(game.journey ? foundingSaveKey(World.key) : saveKey, encodeSave(game));
+  }
+
+  function compactSaves(storage) {
+    let updated = 0;
+    for (const region of Object.keys(territories)) {
+      for (const founding of [false, true]) {
+        const key = founding ? foundingSaveKey(region) : campaignStorageKey(region);
+        try {
+          const raw = storage.getItem(key);
+          if (!raw || compressedSave(raw)) continue;
+          const saved = decodeSave(raw);
+          if (!validSave(saved, region, founding)) continue;
+          const packed = encodeSave(saved);
+          if (packed.length >= raw.length) continue;
+          storage.setItem(key, packed);
+          updated++;
+        } catch {
+          // Web Storage keeps the existing value when a replacement fails.
+          // Unreadable saves remain available for an explicit user decision.
+        }
+      }
+    }
+    return updated;
   }
 
   return {
-    saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, grantWindow, grantOffers, acceptGrant, advance, score, load, save,
+    saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
     training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve,
     partnerOffers: (game) => partnerOffers(game, World),
     jointProjectOffers: (game) => jointProjectOffers(game, World),

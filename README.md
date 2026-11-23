@@ -8,6 +8,8 @@ Double-click **Play India.cmd**. The **Campaign atlas** offers nine 1946 starts,
 
 Each founding start autosaves separately at that local address. Reopen the launcher in the same browser profile and select the region to resume. Earlier Bihar and Orissa saves appear as separate archive choices. Starting over in a region asks for confirmation before replacing its founding save.
 
+Campaign saves are compacted so multiple long campaigns fit on the device. Existing readable saves migrate automatically without losing reports or decisions. Damaged or unwritable saves are retained. The current build reads earlier JSON saves; compact saves require a build with compact-save support. [Save format and capacity checks](design/save-storage.md)
+
 Use the **Regional programmes** agenda to preview a programme's footprint and commit its budget. The works office delivers one programme at a time and places the individual projects. The treasury and programme costs are in lakh rupees. The **Budget office** shows the historical revenue behind your development allocation and opens Union funding negotiations in 1952, 1957 and 1962. Select a hex to inspect it. Zoom in and drag to pan.
 
 New campaigns open with a visual cabinet briefing. **First turns** guides you from funding a programme to reading your first annual report. **How to play → Cabinet briefing** reopens the briefing in an existing save. In **Development trees**, each icon identifies the same type of work across campaigns. Select a card for its local name, footprint and terms.
@@ -33,6 +35,10 @@ Open **Technical training intake** from the Cabinet or the Education tree. Commi
 Under Standard politics, check **Neighbors** and **Domestic market** to follow rival investment. From 1956, states can protect harvests, train workers and open processing workshops using their own funds. Department colours identify their funded priorities on the market map. Expand **Reserves and treasuries** for costs, reasons and delivery dates. Their resulting food supplies and freight capacity can change your trading opportunities. [Rival development rules](design/interregional-model.md#rival-investment-priorities)
 
 Expand **Beyond your borders** in the Campaign atlas to preview market coverage by year. It distinguishes playable starts, independently simulated markets and places outside the annual economy. Domestic market uses the accounts saved in that report. Manipur and Tripura keep separate treasuries from 1950; Imphal connects by road then, Agartala in 1955. Bomdila joins the network in 1972 under Arunachal Pradesh. The new roads carry at most one food unit each year. [National coverage and remaining work](design/national-coverage.md)
+
+The northern market grows through Mandi in 1948, Jammu in 1949 and Gangtok in 1975. Jammu's road becomes a larger rail connection in the 1973 planning year, after Jammu Tawi's 1972 opening. The market map expands northern labels into a separate schematic. In Punjab, Neighbors shows direct Mandi and Jammu agreements; after a Haryana choice these exchanges remain linked through Punjab. [Northern connections and sources](design/northern-market-sources.md)
+
+AI markets receive different annual allocations based on period fiscal references. Expand **market budget** in Neighbors or the market treasury table to see the source year, historical amount and modeled share. A missing period keeps an explicitly modeled allowance. Existing cash and saved reports are preserved. [Funding rules and fiscal observations](design/market-fiscal-research.md)
 
 Open **Emergency food plan** in the Cabinet to see how the expected harvest and reserves would cover food needs under typical conditions and the current weather warning. The latest flood report opens the **Monsoon** layer and highlights the growing sites that lost food or benefited from protection.
 

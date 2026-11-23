@@ -13,6 +13,9 @@ export const inlandActors = {
   manipur: { name: "Manipur", harvest: 6, demand: 6, flood: 2, dry: 2, seed: 811 },
   tripura: { name: "Tripura", harvest: 6, demand: 6, flood: 3, dry: 1, seed: 478 },
   arunachal: { name: "Arunachal Pradesh", harvest: 5, demand: 5, flood: 2, dry: 1, seed: 754 },
+  himachal: { name: "Himachal Pradesh", harvest: 6, demand: 6, flood: 2, dry: 2, seed: 468 },
+  jammu: { name: "Jammu exchange", harvest: 6, demand: 7, flood: 2, dry: 2, seed: 974 },
+  sikkim: { name: "Sikkim", harvest: 5, demand: 5, flood: 2, dry: 1, seed: 575 },
   travancore: { name: "Travancore and Cochin markets", later: "Travancore–Cochin", renamed: 1949, harvest: 7, demand: 8, flood: 2, dry: 1, seed: 312 },
 };
 
@@ -23,7 +26,15 @@ export const marketHubs = {
   travancore: "Ernakulam", hyderabad: "Secunderabad",
   nagaland: "Dimapur", meghalaya: "Shillong", mizoram: "Aijal",
   manipur: "Imphal", tripura: "Agartala", arunachal: "Bomdila",
+  himachal: "Mandi", jammu: "Jammu", sikkim: "Gangtok",
 };
+
+export function marketConnection(id, year) {
+  const starts = { manipur: 1950, tripura: 1955, arunachal: 1972, himachal: 1948, jammu: 1949, sikkim: 1975 };
+  if (!(year >= starts[id])) return {};
+  if (id === "himachal" && year >= 1958) return { routeCapacity: 2, mode: "road" };
+  return id === "jammu" && year >= 1973 ? { routeCapacity: 3, mode: "rail" } : { routeCapacity: 1, mode: "road" };
+}
 
 const corridors = [
   ["punjab", "delhi", 4], ["delhi", "up", 3], ["delhi", "rajasthan", 2],
@@ -54,10 +65,14 @@ function domesticLinks(year) {
   if (year >= 1972) assam.push(["assam", "meghalaya", 2], ["assam", "mizoram", 1], ["assam", "arunachal", 1, "road"]);
   const hyderabad = year >= 1953 && year < 1956 ? [["hyderabad", "andhra", 2], ["hyderabad", "central", 2]] : [];
   const central = year >= 1956 ? [["central", "rajasthan", 2]] : [];
-  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central].map(([from, to, capacity, mode]) => {
+  const northernMarkets = [];
+  if (year >= 1948) northernMarkets.push(["punjab", "himachal", marketConnection("himachal", year).routeCapacity, "road"]);
+  if (year >= 1949) { const { routeCapacity, mode } = marketConnection("jammu", year); northernMarkets.push(["punjab", "jammu", routeCapacity, mode]); }
+  if (year >= 1975) northernMarkets.push(["bengal", "sikkim", 1, "road"]);
+  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets].map(([from, to, capacity, mode]) => {
     const southernPool = year >= 1965 && (from === "andhra" || from === "madras");
     const northernDispatch = year >= 1968 && (from === "punjab" || from === "haryana");
-    return [from, to, capacity + Number(southernPool || northernDispatch), ...(mode ? [mode] : [])];
+    return [from, to, capacity + Number(!mode && (southernPool || northernDispatch)), ...(mode ? [mode] : [])];
   });
 }
 
@@ -98,14 +113,19 @@ export function seedSouthernTransitions(partners, game, world) {
 
 const marketChapters = {
   1947: "Partition interrupts the Bengal–Assam route.",
+  1948: "Himachal Pradesh keeps a separate market account, with limited road trade through Mandi.",
+  1949: "Jammu enters the network through the Pathankot road opened the previous year.",
   1950: "Assam reconnects to the domestic rail network. Manipur and Tripura have separate market accounts; Imphal trades over a limited road link.",
   1953: "Andhra opens a separate market after the division of Madras.",
   1955: "The completed Assam–Agartala road connects Tripura’s market. Road freight remains limited.",
   1956: "Andhra Pradesh and Kerala enter the reorganized network. Madhya Pradesh gains a route to Rajasthan.",
+  1958: "The Mandi–Kullu transport corporation supports a larger Himachal road connection.",
   1960: "Bombay’s markets divide between Maharashtra and Gujarat.",
   1963: "Nagaland becomes a separate state.",
   1966: "Haryana opens a separate market from Punjab.",
-  1972: "Meghalaya, Mizoram and Arunachal Pradesh enter as separate markets. Manipur and Tripura become states; their existing accounts continue.",
+  1972: "The northeastern reorganization creates new markets. Jammu Tawi railway station opens; expanded freight capacity begins next year.",
+  1973: "Jammu’s rail connection can now carry three food units a year, up from one by road.",
+  1975: "Sikkim joins the domestic market. Gangtok trades through a limited Bengal road connection.",
 };
 
 export function seedBombayDivision(partners, game, world) {

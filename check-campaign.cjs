@@ -228,7 +228,7 @@ test("a connected terminal wins freight without changing signed payments", async
   assert.equal(improved.regionalCash, baseline.regionalCash);
   assert.equal(improved.income, improved.tax + improved.baselineTransfers + improved.regionalCash + competition.player.earnings);
   for (const row of improved.regional.partners) {
-    assert.equal(row.cash, row.openingCash + 1 + row.freight + row.competitionCash +
+    assert.equal(row.cash, row.openingCash + row.funding.allocation + row.freight + row.competitionCash +
       (row.development?.trainingReceipts ?? 0) + (row.development?.processingReceipts ?? 0) - row.developmentSpend +
       row.sold * improved.buyPrice - row.bought + (row.national?.sold ?? 0) - (row.national?.bought ?? 0));
   }
@@ -441,7 +441,8 @@ test("rival schools graduate before processing pays and receipts enter each trea
     const local = resolveNeighbors(game, { key: "orissa" }, { harvest: 20, demand: 5, towns: 5, monsoon: "Normal monsoon" });
     const central = local.report.partners.find(({ id }) => id === "central");
     assert.deepEqual(central.development, { harvestSaved: 0, trainingReceipts: training, processingReceipts: receipts });
-    assert.equal(central.cash, 41 + training + receipts);
+    assert.equal(central.funding.allocation, 4);
+    assert.equal(central.cash, 44 + training + receipts);
     const extraCapacity = training + Number(receipts > 0);
     assert.equal(local.freight.partners.find(({ id }) => id === "central").capacity, 3 + extraCapacity);
     assert.equal(contractRivalBid(central).capacity, 3 + extraCapacity);
@@ -449,7 +450,7 @@ test("rival schools graduate before processing pays and receipts enter each trea
     const domestic = settleNationalTrade(traded, game, { key: "orissa" });
     const final = settleFreight(domestic, game);
     for (const row of final.report.partners) {
-      assert.equal(row.cash, row.openingCash + 1 + row.freight +
+      assert.equal(row.cash, row.openingCash + row.funding.allocation + row.freight +
         row.development.trainingReceipts + row.development.processingReceipts - row.developmentSpend +
         row.sold * 2 - row.bought + (row.national?.sold ?? 0) - (row.national?.bought ?? 0) +
         (row.competitionCash ?? 0) + (row.contractCash ?? 0), row.id);
@@ -461,7 +462,7 @@ test("rival schools graduate before processing pays and receipts enter each trea
     const remote = inland.partners.central;
     assert.equal(remote.development.trainingReceipts, training);
     assert.equal(remote.development.processingReceipts, receipts);
-    assert.equal(remote.cash, 41 + training + receipts - remote.developmentSpend +
+    assert.equal(remote.cash, 44 + training + receipts - remote.developmentSpend +
       (remote.national?.sold ?? 0) - (remote.national?.bought ?? 0));
     // An uncongested gateway isolates workforce capacity from route limits.
     const hauled = settleFreight({
@@ -525,7 +526,8 @@ test("rivals fund one justified department project with actual money and complet
   assert.equal(processing.developmentSpend, 16);
   assert.equal(processing.works.processing.started, 1960);
   assert.equal(processing.works.processing.completionYear, 1963);
-  assert.equal(processing.cash, 51 + 1 - 16);
+  assert.equal(processing.funding.allocation, 4);
+  assert.equal(processing.cash, 50 + 4 + 1 - 16);
   const inProgress = simulate({ year: 1961, cash: processing.cash, works: processing.works });
   assert.equal(inProgress.developmentSpend, 0);
   assert.deepEqual(inProgress.works.processing, processing.works.processing);

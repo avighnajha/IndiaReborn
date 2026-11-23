@@ -185,7 +185,7 @@ test("Central Provinces develops through the Vidarbha transfer and both Chambal 
           assert.equal(award.winner.id, "maharashtra");
           assert.equal(rival.contractCash, 6);
           assert.equal(report.regional.nationalMarket.nodes.find(({ id }) => id === rival.id).cash, rival.cash);
-          assert.equal(rival.cash, rival.openingCash + 1 + rival.freight + rival.competitionCash + rival.contractCash +
+          assert.equal(rival.cash, rival.openingCash + rival.funding.allocation + rival.freight + rival.competitionCash + rival.contractCash +
             rival.inherited.receipts - rival.inherited.upkeepPaid - rival.developmentSpend + rival.sold * report.buyPrice - rival.bought +
             (rival.national?.sold ?? 0) - (rival.national?.bought ?? 0));
           assert.equal(Campaign.earnedReceipts(report).contract, 0);

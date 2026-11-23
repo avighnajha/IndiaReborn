@@ -1,6 +1,6 @@
 # National campaign coverage
 
-Reviewed 22 November 2026 against the [original handoff, V0.7–V1.0](India_Alternate_Futures_Codex_Handoff.md#v09--india-wide-campaign-beta). The candidate beta roster contains nine authored 1946 starts. This inventory records the remaining work toward national coverage; it does not close the national beta or release gates.
+Reviewed 23 November 2026 against the [original handoff, V0.7–V1.0](India_Alternate_Futures_Codex_Handoff.md#v09--india-wide-campaign-beta). The candidate beta roster contains nine authored 1946 starts. This inventory records the remaining work toward national coverage; it does not close the national beta or release gates.
 
 ## What is simulated
 
@@ -12,11 +12,11 @@ The atlas's **Beyond your borders** panel previews the actual market graph by ye
 | --- | --- | --- | --- |
 | East | Bihar; Orissa; Mayurbhanj; West Bengal | Bihar, Orissa, Bengal; Mayurbhanj and an alternate southern council through local rules | Cooch Behar and Chandernagore enter territorial history without separate AI. |
 | West | Bombay, then Maharashtra or Gujarat | Bombay, Maharashtra, Gujarat, Rajasthan; Saurashtra locally | Kutch is aggregated. Goa, Daman, Diu and Dadra and Nagar Haveli have no independent annual economy. |
-| North | Eastern Punjab, then Punjab or Haryana | Punjab, Haryana, Delhi, United Provinces/Uttar Pradesh; PEPSU and Lahore locally | Himachal has terrain on the Punjab map but no AI. Jammu and Kashmir has no market model. |
+| North | Eastern Punjab, then Punjab or Haryana | Punjab, Haryana, Delhi, United Provinces/Uttar Pradesh, Himachal and the scoped Jammu exchange; PEPSU and Lahore locally | The Jammu exchange does not simulate all Jammu and Kashmir. Smaller hill administrations remain aggregated before 1948. |
 | Central | Central Provinces and Berar, then Madhya Pradesh | Central administration and Hyderabad before dissolution | Madhya Bharat, Vindhya Pradesh and Bhopal enter ownership changes without separate pre-integration economies. |
 | South | Madras, then Madras/Tamil Nadu or Andhra | Madras, Andhra, Mysore/Karnataka, Travancore–Cochin/Kerala | Coorg is aggregated. Pondicherry and other coastal enclaves have no independent AI. |
 | Northeast | Assam | Assam, Naga Hills–Tuensang/Nagaland, Meghalaya, Mizoram, Manipur, Tripura, Arunachal Pradesh on their entry dates | Smaller administrations are market actors rather than playable campaigns. NEFA is contextual before 1972. |
-| Himalayan east | None | None | Sikkim has no market model. It must not be presented as an Indian domestic state before 1975. |
+| Himalayan east | None | Sikkim joins the domestic graph in 1975 through Gangtok | Before 1975 the kingdom remains contextual; no earlier bilateral market is claimed. |
 | Islands | None | None | Andaman and Nicobar, and the Laccadive, Minicoy and Amindivi Islands/Lakshadweep have no shipping or independent market. |
 | Other subcontinent neighbors | None | Eastern Bengal/East Pakistan/Bangladesh and Lahore participate through selected bilateral rules | Nepal, Bhutan, Burma and Ceylon have no full state simulation. Broader subcontinent coverage remains open. |
 
@@ -32,12 +32,12 @@ The nine starts are a candidate roster, rather than a final reviewed launch rost
 
 Manipur and Tripura retain their existing accounts and works when they become states in 1972. Their balances are not reset. Each road clears at most one food unit in either direction in a year, with the existing food priority, reserve floor and buyer cash constraints. Households consume delivered relief; other deliveries enter stocks. Each delivered unit transfers money between the two governments. All three administrations can develop through the existing rival investment rules. Added markets appear on the next resolved turn of an older save; archived reports remain unchanged.
 
-Harvests, food units, road capacities, AI development envelopes and investment prices are gameplay values. These small market accounts are not representations of a state's complete historical budget. The separately sourced playable-state fiscal model continues to govern player allocations. Further fiscal calibration for these new actors remains part of national balance review.
+Harvests, food units, road capacities, AI development envelopes and investment prices are gameplay values. These small market accounts are not representations of a state's complete historical budget. The separately sourced playable-state fiscal model continues to govern player allocations. Market allocations now use period fiscal references where recorded, with explicit modeled shares and labeled missing periods. See the [AI fiscal notes](market-fiscal-research.md). Historical calibration and national balance review remain open.
 
 ## Remaining national beta work
 
-1. Add sourced northern connections for Himachal and a clearly scoped Jammu market. Review historical control and avoid implying that a Jammu exchange simulates all disputed territory.
-2. Review a period-appropriate Sikkim trade model, distinguishing the kingdom/protectorate from its 1975 entry as an Indian state.
+1. Review the remaining geographic scope beyond the Jammu exchange and the aggregation of early hill administrations. Himachal, Jammu and domestic Sikkim now have sourced entry dates and transport progression. See the [northern notes](northern-market-sources.md).
+2. Extend early fiscal observations for the smaller administrations and review the effects of varied AI funding on campaign choices.
 3. Add coastal enclaves and island shipping with their actual administration and access dates. Goa remains a Union territory within this campaign; statehood is in 1987. Pondicherry has Indian administration from 1954 and de jure transfer in 1962. [Goa Assembly](https://www.goavidhansabha.gov.in/infrastructure_detail.php?i_id=6), [Puducherry government](https://www.py.gov.in/node/1780), [Lakshadweep history](https://lakshadweep.gov.in/about-lakshadweep/history/)
 4. Review whether aggregated princely administrations need separate pre-integration economies. Do not infer completed simulation from the territorial integration events.
 5. Review the candidate roster and multiple victory paths through fresh player sessions. Measure campaign pace, supported-browser performance, keyboard flows and save recovery. Resolve map licensing and historical review before release.
@@ -51,4 +51,4 @@ The original roughly one-to-four-hour human playtime goal cannot be established 
 3. Check Neighbors after 1950, 1955 and 1972. Imphal, Agartala and Bomdila become direct partners at the recorded dates. Each road shows its one-unit annual food limit. Agreements and depots preserve that limit. Reload after the 1972 reorganization and continue through the ending.
 4. In a Standard central campaign, resolve through 1972 and open Domestic market. The expanded northeastern schematic separates the seven market labels. Active and idle road routes identify their type and one-unit capacity. Saved-report coverage lists only that year's accounts. Review at desktop and narrow widths.
 
-The focused checks in `check-national-coverage.cjs`, included in `npm test`, cover dates, cash and food conservation, direct and domestic account transitions, treaty and shared-reserve caps, freight bids, descriptions and deterministic resume. Installed production Chrome completed the Assam and central review paths. Human pacing, northern and maritime coverage, map rights and the remaining release gates are still open.
+The focused checks in `check-national-coverage.cjs`, included in `npm test`, cover dates, cash and food conservation, direct and domestic account transitions, treaty and shared-reserve caps, freight bids, descriptions and deterministic resume. Installed production Chrome completed the Assam and central review paths. The northern continuation adds further checks and review paths in the [northern notes](northern-market-sources.md). Human pacing, remaining territorial and maritime coverage, map rights and the release gates are still open.

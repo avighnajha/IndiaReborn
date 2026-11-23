@@ -2,6 +2,7 @@ import { briefContent, briefHeadline } from "./annual-brief.js";
 import "./annual-brief.css";
 import { campaignStorageKey, territories, World } from "./scenario.js";
 import { Campaign } from "./campaign.js";
+import { decodeSave } from "./save-codec.js";
 import { charterOpening } from "./training.js";
 import { trainingComparisonMarkup, trainingStatusMarkup } from "./training-view.js";
 import { developmentTrees } from "./department-tree.js";
@@ -10,6 +11,7 @@ import { departmentBadge, departmentIdentity, programmeDepartment } from "./depa
 import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
+import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
@@ -67,6 +69,7 @@ const successorNames = { gujarat: "Gujarat", maharashtra: "Maharashtra", punjab:
 const openingPrefix = (game) => successorPrefixes[successorKey(game)] ?? "";
 
 try {
+  Campaign.compactSaves(localStorage);
   if (!newJourney) game = Campaign.load(localStorage, founding);
   openingSeen = !newJourney && localStorage.getItem(openingKey) === "1";
   guideDismissed = !newJourney && localStorage.getItem(guideKey) === "1";
@@ -121,7 +124,7 @@ function savedAt(region, journey) {
   try {
     const key = journey ? foundingSaveKey(region) : campaignStorageKey(region);
     raw = localStorage.getItem(key);
-    const saved = JSON.parse(raw);
+    const saved = decodeSave(raw);
     if (Campaign.validSave(saved, region, journey)) return { saved, exists: true };
   } catch {
     // Keep the option to replace unreadable data explicit.
@@ -1079,7 +1082,8 @@ function showNeighbors() {
     ${freightContractMarkup(forecast)}${freight}
     <div class="journey-choices">${neighbors.map((neighbor) => `<section class="journey-choice" data-neighbor="${neighbor.id}">
       <p class="kicker">${neighbor.access}</p><h3>${neighbor.name}</h3><p>${neighbor.status}</p>
-      ${neighbor.routeCapacity ? `<p>Road connection · up to ${neighbor.routeCapacity} food unit per year</p>` : ""}
+      ${neighbor.routeCapacity ? `<p>${neighbor.mode === "rail" ? "Rail" : "Road"} connection · up to ${neighbor.routeCapacity} food ${neighbor.routeCapacity === 1 ? "unit" : "units"} per year</p>` : ""}
+      ${marketFundingMarkup(neighbor.funding)}
       ${neighbor.offer === null ? "" : `<p>${neighbor.offer} food available · ${neighbor.request} sought<br>${money(neighbor.cash)} modeled treasury</p>`}
       ${neighbor.national ? `<p>Domestic routes · ${neighbor.national.bought} food bought · ${neighbor.national.sold} sold</p>` : ""}
       ${neighbor.inherited ? `<p>Inherited works · ${money(neighbor.inherited.receipts)} in workshop receipts · ${money(neighbor.inherited.upkeepPaid)} upkeep</p>` : ""}

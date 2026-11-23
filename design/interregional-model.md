@@ -49,6 +49,12 @@ The ₹6 lakh yearly fee is a modeled payment for keeping capacity available. Th
 
 ## Domestic food market
 
+### Market funding and northern access
+
+AI administrations now use period fiscal references for their annual market allocations, replacing the flat ₹1 lakh allowance where a reference is recorded. The model takes one tenth of the existing regional works envelope, or a declared share of direct revenue and Union territory Annual Plan observations. A missing earlier reference keeps a labeled modeled allowance. Cash carries forward and each year's allowance posts once. Expand the market budget in Neighbors or the treasury table to inspect the source, year and modeled share. [Fiscal definitions, observations and gaps](market-fiscal-research.md)
+
+Himachal trades through Mandi from 1948, with capacity increasing from one to two units in 1958. The scoped Jammu exchange joins through the Pathankot road in 1949 and gains a three-unit rail route in 1973 after Jammu Tawi's 1972 inauguration. Sikkim joins the domestic graph through Gangtok in 1975. Transport limits bound direct food relief, purchases, sales and freight bids. In a Haryana continuation, the northern exchanges remain distant through Punjab rather than gaining an invented direct route to Jammu. Inherited hill works continue to serve Himachal. [Northern chronology and model limits](northern-market-sources.md)
+
 ### Rival investment priorities
 
 From 1956 under Standard politics, nearby and domestic market administrations can fund water and crop protection, a technical school and food processing workshops alongside their existing depots, exchanges and loading yards. Every administration uses its own carried treasury and keeps money available for food purchases. It can deliver one investment at a time. A project must finish before the campaign ends.

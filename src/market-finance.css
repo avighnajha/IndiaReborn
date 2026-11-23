@@ -1,0 +1,7 @@
+.market-funding { min-width: 0; max-width: min(320px, calc(100vw - 100px)); margin-top: 5px; font-weight: 400; }
+.market-funding summary { color: #d7dfc1; font-size: .73rem; font-weight: 600; cursor: pointer; padding: 4px 0; }
+.market-table .market-funding summary { padding: 4px 0; font-size: .73rem; }
+.market-funding p { color: var(--subtle); font-size: .73rem; line-height: 1.45; margin: 5px 0; }
+.market-funding a { font-size: .73rem; color: #e6ce92; }
+.market-funding summary:focus-visible, .market-funding a:focus-visible { outline: 2px solid #edd69a; outline-offset: 3px; }
+.journey-choice .market-funding { padding-bottom: 6px; border-bottom: 1px solid var(--line); }

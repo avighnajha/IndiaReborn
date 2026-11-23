@@ -79,7 +79,7 @@ test("new northeastern AI preserves legacy reports and resumes with its own carr
   for (const id of ["manipur", "tripura", "arunachal"]) {
     const partner = uninterrupted.partners[id];
     const traded = partner.national ?? {};
-    assert.equal(partner.cash, partner.openingCash + 1 + partner.development.trainingReceipts +
+    assert.equal(partner.cash, partner.openingCash + partner.funding.allocation + partner.development.trainingReceipts +
       partner.development.processingReceipts - partner.developmentSpend + (traded.sold ?? 0) - (traded.bought ?? 0));
     assert.equal(uninterrupted.report.nationalMarket.nodes.filter((node) => node.id === id).length, 1);
     assert.equal(partner.routeCapacity, 1);
