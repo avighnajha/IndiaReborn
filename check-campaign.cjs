@@ -140,7 +140,7 @@ test("one school network supports distinct food and industrial paths", async () 
   while (shared.year < 1954) shared = year(shared);
   function finish(id) {
     let game = Campaign.adoptTraining(shared, id);
-    assert.equal(game.cash, shared.cash - 18);
+    assert.equal(game.cash, shared.cash - 17);
     assert.equal(Campaign.training(game).status, "preparing");
     assert.equal(Campaign.adoptTraining(game, "extension"), game);
     const data = new Map();
@@ -428,7 +428,7 @@ test("rival schools graduate before processing pays and receipts enter each trea
   const cases = [
     { school: { completionYear: year }, processing: { opened: 1961 }, training: 0, receipts: 0 },
     { school: { opened: year }, processing: { opened: 1961 }, training: 0, receipts: 0 },
-    { school: { opened: year - 1 }, processing: { opened: 1961 }, training: 1, receipts: 2 },
+    { school: { opened: year - 1 }, processing: { opened: 1961 }, training: 1, receipts: 3 },
     { school: { opened: year - 1 }, processing: { completionYear: year + 1 }, training: 1, receipts: 0 },
     { school: { completionYear: year + 1 }, processing: { opened: 1961 }, training: 0, receipts: 0 },
     { school: null, processing: { opened: 1961 }, training: 0, receipts: 0 },
@@ -440,10 +440,10 @@ test("rival schools graduate before processing pays and receipts enter each trea
       journey: { end: 1985, preset: "standard", partners: { central: { cash: 40, reserve: 6, works } } } };
     const local = resolveNeighbors(game, { key: "orissa" }, { harvest: 20, demand: 5, towns: 5, monsoon: "Normal monsoon" });
     const central = local.report.partners.find(({ id }) => id === "central");
-    assert.deepEqual(central.development, { harvestSaved: 0, trainingReceipts: training, processingReceipts: receipts });
+    const extraCapacity = Number(training > 0) + Number(receipts > 0);
+    assert.deepEqual(central.development, { harvestSaved: 0, workforceCapacity: extraCapacity, trainingReceipts: training, processingReceipts: receipts });
     assert.equal(central.funding.allocation, 4);
     assert.equal(central.cash, 44 + training + receipts);
-    const extraCapacity = training + Number(receipts > 0);
     assert.equal(local.freight.partners.find(({ id }) => id === "central").capacity, 3 + extraCapacity);
     assert.equal(contractRivalBid(central).capacity, 3 + extraCapacity);
     const traded = settleNeighborTrade(local, { bought: 2, sold: 1, buyPrice: 2 });
@@ -497,8 +497,8 @@ test("rival schools graduate before processing pays and receipts enter each trea
   assert.deepEqual(Campaign.advance(loaded), advanced);
   assert.deepEqual(Campaign.advance(Campaign.advance(loaded)), Campaign.advance(advanced));
   assert.equal(advanced.journey.partners.up.development.trainingReceipts, 1);
-  assert.equal(advanced.journey.partners.up.development.processingReceipts, 2);
-  assert.equal(advanced.journey.partners.central.development.processingReceipts, 2);
+  assert.equal(advanced.journey.partners.up.development.processingReceipts, 3);
+  assert.equal(advanced.journey.partners.central.development.processingReceipts, 3);
 });
 
 test("rivals fund one justified department project with actual money and completion times", async () => {

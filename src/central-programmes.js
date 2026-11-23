@@ -83,7 +83,7 @@ export const centralProgrammes = {
     next: "Bombay inherits these sites and works in the 1956 reorganization.",
   }),
   centralBastarMarkets: programme("trade", 2, "Bastar Cooperative Markets", "Kanker, Kondagaon and Jagdalpur", {
-    era: 1949,
+    era: 1949, priceYear: 1949,
     requires: "trade",
     cost: 43,
     works: [work("road", 14, 13, 1), work("road", 14, 12, 2), work("mill", 14, 12, 3)],
@@ -100,7 +100,7 @@ export const centralProgrammes = {
     next: "Qualifies the state for a larger cooperative food depot.",
   }),
   centralMalwaMarkets: programme("trade", 2, "Malwa Market Links", "Indore, Dhar and Ujjain", {
-    era: 1956,
+    era: 1956, priceYear: 1956,
     centralReorganized: true,
     requires: "trade",
     cost: 52,
@@ -110,7 +110,7 @@ export const centralProgrammes = {
     next: "The western corridor can qualify for a freight terminal.",
   }),
   chambal: programme("food", 2, "Chambal Distribution Agreement", "The Chambal valley and Gwalior", {
-    era: 1957,
+    era: 1957, priceYear: 1957,
     centralReorganized: true,
     requires: "food",
     works: centralBasinAgreements.focused.works,

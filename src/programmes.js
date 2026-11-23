@@ -9,6 +9,7 @@ import { punjabBasinAgreements, punjabProgrammes } from "./punjab-programmes.js"
 import { andhraBasinAgreements, madrasBasinAgreements, madrasProgrammes } from "./madras-programmes.js";
 import { assamBasinAgreements, assamProgrammes } from "./assam-programmes.js";
 import { centralBasinAgreements, centralProgrammes } from "./central-programmes.js";
+import { campaignPriceYear, openingPriceYear, periodAmount } from "./period-prices.js";
 
 const work = (kind, q, r, year) => ({ kind, hex: World.id(q, r), year });
 
@@ -92,14 +93,14 @@ const northIndustry = {
 const longBihar = {
   floodplainRenewal: {
     title: "Eastern Floodplain Renewal", district: "Saharsa, Purnea and the Ganga plain", theme: "Food and water", color: 0x9fc783, layer: "weather",
-    era: 1966, cost: 112, pitch: "Reinforce the eastern food supply as demand grows.",
+    era: 1966, priceYear: 1966, cost: 112, pitch: "Reinforce the eastern food supply as demand grows.",
     outcome: "Add two growing areas and reserve storage in Purnea, with further flood protection.",
     next: "The added capacity helps preserve reserves between poor monsoons.",
     works: [work("irrigation", 8, 5, 1), work("granary", 14, 3, 2), work("levee", 12, 5, 3), work("irrigation", 9, 6, 4)],
   },
   apprenticeshipNetwork: {
     title: "Provincial Apprenticeship Network", district: "Motihari, Darbhanga and Bhagalpur", theme: "Skills and prosperity", color: 0x8fcac0, layer: "terrain",
-    era: 1973, cost: 154, pitch: "Spread industrial training to three more centres.",
+    era: 1973, priceYear: 1973, cost: 154, pitch: "Spread industrial training to three more centres.",
     outcome: "Add three technical schools and place a second industrial centre in the east.",
     next: "This is a longer investment in skills and production capacity.",
     works: [work("school", 3, 4, 2), work("school", 8, 3, 3), work("school", 13, 6, 4), work("mill", 13, 6, 4)],
@@ -108,14 +109,14 @@ const longBihar = {
 const longOrissa = {
   deltaRenewal: {
     title: "Delta Water Security", district: "Lower Mahanadi and Bhadrak", theme: "Food and water", color: 0x9fc783, layer: "weather",
-    era: 1966, cost: 96, pitch: "Strengthen the delta harvest and increase emergency storage.",
+    era: 1966, priceYear: 1966, cost: 96, pitch: "Strengthen the delta harvest and increase emergency storage.",
     outcome: "Extend flood defences and irrigated land, with reserve capacity at Bhadrak.",
     next: "Reserve capacity helps during successive bad seasons.",
     works: [work("irrigation", 13, 5, 1), work("granary", 12, 4, 2), work("levee", 13, 6, 3), work("irrigation", 12, 7, 4)],
   },
   coastalApprenticeships: {
     title: "Coastal Apprenticeship Network", district: "Balasore, Bhadrak and Bhubaneswar", theme: "Skills and prosperity", color: 0x8fcac0, layer: "terrain",
-    era: 1973, cost: 147, pitch: "Train coastal workers as industry spreads beyond Cuttack.",
+    era: 1973, priceYear: 1973, cost: 147, pitch: "Train coastal workers as industry spreads beyond Cuttack.",
     outcome: "Open three schools and a workshop in Balasore.",
     next: "A connected workshop can benefit from Hirakud power.",
     works: [work("school", 10, 7, 2), work("school", 12, 4, 3), work("school", 14, 2, 4), work("mill", 14, 2, 4)],
@@ -123,7 +124,7 @@ const longOrissa = {
 };
 const localRenewal = {
   title: "Similipal Rural Services", district: "Jashipur and Udala", theme: "Skills and prosperity", color: 0x8fcac0, layer: "terrain",
-  era: 1966, cost: 28, pitch: "Use local revenues to reach settlements beyond Baripada.",
+  era: 1966, priceYear: 1966, cost: 28, pitch: "Use local revenues to reach settlements beyond Baripada.",
   outcome: "Add training at Jashipur and storage at Udala.",
   next: "Food and workforce capacity support continued local autonomy.",
   works: [work("granary", 12, 2, 1), work("school", 10, 1, 3)],
@@ -144,7 +145,19 @@ const regionalProgrammes = World.key === "mayurbhanj"
     [id, plan.madrasSuccessor ? plan : { ...plan, madrasBeforeSplit: true }]))
   : World.key === "central" ? centralProgrammes
   : World.key === "assam" ? assamProgrammes : { ...biharProgrammes, northSkills, northIndustry, ...longBihar };
-export const programmes = { ...regionalProgrammes, ...departmentProgrammes(World) };
+function regionalPriceYear(plan) {
+  if (plan.priceYear) return plan.priceYear;
+  if (plan.punjabSuccessor) return 1966;
+  if (plan.bombaySuccessor) return 1960;
+  if (plan.split || plan.bombayEnlarged || plan.punjabEnlarged || plan.madrasReorganized || plan.centralReorganized) return 1956;
+  if (plan.madrasSuccessor) return 1953;
+  return openingPriceYear;
+}
+
+export const programmes = {
+  ...Object.fromEntries(Object.entries(regionalProgrammes).map(([id, plan]) => [id, { ...plan, priceYear: regionalPriceYear(plan) }])),
+  ...departmentProgrammes(World),
+};
 const regionalAgreements = World.key === "bihar" ? kosiAgreements : World.key === "west-bengal" ? damodarAgreements
   : World.key === "bombay" ? bombayBasinAgreements : World.key === "punjab" ? punjabBasinAgreements
     : World.key === "central" ? centralBasinAgreements : World.key === "assam" ? assamBasinAgreements : mahanadiAgreements;
@@ -239,8 +252,16 @@ export function programmeQuote(game, id, agreement = "focused") {
   const category = (plan.requires ?? id).replace("orissa_", "");
   const preferred = category === (priority === "roads" ? "trade" : priority);
   const proportion = works.length / footprint.length;
-  const union = Math.floor((terms?.union ?? 0) * proportion);
-  const cost = Math.max(0, Math.ceil((terms?.total ?? plan.cost) * proportion) - union - (game.year <= 1951 && preferred ? 3 : 0));
+  const priceYear = terms?.priceYear ?? plan.priceYear;
+  const year = campaignPriceYear(game);
+  const subsidy = game.year <= 1951 && preferred ? 3 : 0;
+  const financed = (terms?.total ?? plan.cost) * proportion;
+  const unionShare = (terms?.union ?? 0) * proportion;
+  const union = periodAmount(unionShare, priceYear, year, Math.floor);
+  const cost = Math.max(0, periodAmount(financed, priceYear, year, Math.ceil) - union - subsidy);
+  const pricing = game.journey ? {
+    year, priceYear, baseCost: Math.max(0, Math.ceil(financed) - Math.floor(unionShare) - subsidy),
+  } : null;
   const missing = programmeRequirements(game, id).find(({ met }) => !met);
   let reason;
   if (game.year > campaignEnd(game)) reason = "Campaign complete.";
@@ -254,7 +275,7 @@ export function programmeQuote(game, id, agreement = "focused") {
   else if (World.mapKey === "orissa" && id === World.basinProgramme && agreement === "union" &&
     game.decisions[World.key === "mayurbhanj" ? 1951 : 1948] !== "survey") reason = "The basin and resettlement survey is required.";
   else if (game.cash < cost) reason = "The treasury cannot cover this commitment yet.";
-  return { works, duration, cost, union, reason };
+  return { works, duration, cost, union, pricing, reason };
 }
 
 export function approveProgramme(game, id, agreement = "focused") {
@@ -262,6 +283,7 @@ export function approveProgramme(game, id, agreement = "focused") {
   if (quote.reason) return game;
   const assets = quote.works.map(({ kind, hex, year }) => ({ id: `${hex}:${kind}`, hex, kind, started: game.year, remaining: year, programme: id }));
   const record = { id, approved: game.year, finish: game.year + quote.duration - 1, cost: quote.cost };
+  if (quote.pricing) record.pricing = quote.pricing;
   const agreementTerms = basinAgreementsFor(id)?.[agreement];
   if (agreementTerms) record.terms = {
     agreement, union: quote.union,
@@ -287,7 +309,8 @@ export function basinFloodDecision(game) {
   const record = records(game).find(({ id, terms, floodResponse, approved }) => terms && !floodResponse && last.year >= approved &&
     remainingWorks(game, id).some(({ kind }) => kind === "levee"));
   if (!record) return null;
-  return { id: record.id, cost: World.key === "bihar" ? 8 : 6, finish: record.finish, delayedFinish: record.finish + 1 };
+  const cost = periodAmount(World.key === "bihar" ? 8 : 6, openingPriceYear, campaignPriceYear(game));
+  return { id: record.id, cost, finish: record.finish, delayedFinish: record.finish + 1 };
 }
 
 export function respondToBasinFlood(game, response) {

@@ -7,6 +7,12 @@ const departments = {
     description: "Connect towns, grow workshops, and open a freight terminal before building an industrial park." },
 };
 
+// Authored capital amounts have a separate price vintage from unlock rules.
+const departmentPriceYears = {
+  educationColleges: 1956, educationUniversity: 1961, educationTechnology: 1966, educationAgriculture: 1966,
+  foodDepot: 1961, foodWaterNetwork: 1966, tradeFreightTerminal: 1961, tradeIndustrialPark: 1966,
+};
+
 const tracks = {
   bihar: { food: ["kosi"], trade: ["industry", "applied", "northIndustry"] },
   orissa: { food: ["mahanadi"], trade: ["industry", "applied"] },
@@ -190,7 +196,7 @@ const plans = {
   tradeFreightTerminal: {
     department: "trade", tier: 3, kind: "freightTerminal",
     pitch: "Give the workshop network a place to consolidate freight and reach larger markets.",
-    effect: "Earns ₹1 lakh per connected town beyond the first two, up to ₹8 lakh a year. The terminal also adds capacity to buy 3 more food units when supplies are available.",
+    effect: "Earns market receipts for up to 8 towns beyond the first two. The terminal also adds capacity to buy 3 more food units when supplies are available.",
     next: "The terminal unlocks an industrial park.",
   },
   tradeIndustrialPark: {
@@ -213,6 +219,7 @@ export function departmentProgrammes(world) {
       const works = locations.map(([q, r, year]) => ({ kind, hex: world.id(q, r), year }));
       return [prefix + id, {
         ...definition, title, district, theme, color, layer, cost, works, prerequisiteGroups: prerequisites[id], opening: false, treeOnly: true, outcome: plan.effect,
+        priceYear: Math.max(departmentPriceYears[id], { gj_: 1960, hr_: 1966, ap_: 1953 }[prefix] ?? 1952),
         requires: plan.requires ? prefix + plan.requires : undefined,
         ...(world.key === "bombay" && (prefix ? { bombaySuccessor: "gujarat" } : { bombayExcludes: "gujarat" })),
         ...(world.key === "punjab" && (prefix ? { punjabSuccessor: "haryana" } : { punjabExcludes: "haryana" })),

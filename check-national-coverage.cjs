@@ -90,8 +90,9 @@ test("new northeastern AI preserves legacy reports and resumes with its own carr
     assert.equal(route.capacity, 1);
     assert.equal(route.mode, "road");
   }
-  assert.equal(uninterrupted.partners.manipur.development.trainingReceipts, 1);
-  assert.equal(uninterrupted.partners.manipur.development.processingReceipts, 2);
+  assert.equal(uninterrupted.partners.manipur.development.trainingReceipts, 3);
+  assert.equal(uninterrupted.partners.manipur.development.processingReceipts, 5);
+  assert.equal(uninterrupted.partners.manipur.development.workforceCapacity, 2);
   const next = { ...game, year: 1973, journey: { ...game.journey, partners: uninterrupted.partners } };
   assert.deepEqual(settle(next), settle(JSON.parse(JSON.stringify(next))));
   const light = { ...game, journey: { ...game.journey, preset: "light" } };

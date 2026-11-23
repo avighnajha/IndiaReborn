@@ -63,7 +63,7 @@ export const assamProgrammes = {
     next: "Unlocks degree colleges and machine repair workshops.",
   }),
   brahmaputra: programme("food", 2, "Brahmaputra Investment Agreement", "The Brahmaputra valley", {
-    era: 1954,
+    era: 1954, priceYear: 1954,
     requires: "food",
     works: floodplain,
     pitch: "Commit to direct flood protection or keep food moving through the river markets.",
@@ -71,7 +71,7 @@ export const assamProgrammes = {
     next: "Either commitment supports a larger regional food reserve.",
   }),
   assamRailLink: programme("trade", 2, "Assam Rail Link Feeders", "Fakiragram, Bongaigaon and Pandu", {
-    era: 1948,
+    era: 1948, priceYear: 1948,
     requires: "trade",
     cost: 34,
     works: [work("road", 2, 5, 1), work("road", 3, 5, 1), work("road", 4, 5, 2), work("mill", 5, 5, 3)],
@@ -97,7 +97,7 @@ export const assamProgrammes = {
     next: "Apprenticeships can help the workshops produce more.",
   }),
   assamBarakStores: programme("food", 2, "Barak Valley Reserve Works", "Silchar and the Barak plain", {
-    era: 1966,
+    era: 1966, priceYear: 1966,
     requires: "food",
     cost: 53,
     works: [work("irrigation", 10, 10, 1), work("granary", 10, 9, 2), work("levee", 11, 9, 3)],

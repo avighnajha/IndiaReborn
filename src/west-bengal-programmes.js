@@ -84,7 +84,7 @@ export const bengalProgrammes = {
   },
   puruliaIndustry: {
     title: "Purulia Industrial Links", district: "Purulia and the western plateau", theme: "Transport and industry", color: 0xe7bc73,
-    era: 1957, cost: 57, layer: "access", requires: "industry", bengalTransfer: true,
+    era: 1957, priceYear: 1957, cost: 57, layer: "access", requires: "industry", bengalTransfer: true,
     pitch: "Extend the Asansol market into the districts gained in the 1956 settlement.",
     outcome: "Links Purulia to Asansol and opens two plateau workshops.",
     next: "Schools and connected markets raise workshop production.",
@@ -92,7 +92,7 @@ export const bengalProgrammes = {
   },
   bengalDeltaRenewal: {
     title: "Lower Delta Food Security", district: "Basirhat and the lower river plains", theme: "Food and water", color: 0x9fc783,
-    era: 1966, cost: 96, layer: "weather",
+    era: 1966, priceYear: 1966, cost: 96, layer: "weather",
     pitch: "Build reserves and protect more lowland fields as demand grows.",
     outcome: "Adds storage at Basirhat and opens two irrigated growing areas. The second phase includes a new embankment.",
     next: "The new growing areas benefit from agricultural extension and regional water works.",

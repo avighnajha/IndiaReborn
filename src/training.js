@@ -1,6 +1,7 @@
 import { campaignEnd, settlement } from "./journey.js";
 import { Fiscal } from "./fiscal.js";
 import { World } from "./scenario.js";
+import { periodAmount } from "./period-prices.js";
 
 export const charterOpening = 1953;
 export const apprenticeshipOutput = 3;
@@ -46,7 +47,11 @@ export function trainingModel(game, schools = [], works = {}) {
   const adoptionReason = game.year >= end ? "A new charter needs a year to prepare."
     : game.year < charterOpening ? `Charters open in ${charterOpening}.`
       : territoryReason;
-  const price = fees(game);
+  const base = fees(game);
+  const price = {
+    cost: periodAmount(base.cost, charterOpening, game.year),
+    upkeep: periodAmount(base.upkeep, charterOpening, game.year),
+  };
   const options = Object.entries(paths).map(([id, path]) => {
     const selected = charter?.id === id;
     const terms = selected ? { cost: charter.cost, upkeep: charter.upkeep } : price;

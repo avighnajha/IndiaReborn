@@ -49,13 +49,13 @@ const localSchedule = (works) => works.map((item) => ({ ...item, year: Math.min(
 
 export const bombayProgrammes = {
   bombayKutchLinks: programme("trade", "Kandla Port Links", "Kandla and the Gulf of Kutch", {
-    era: 1956, bombayEnlarged: true, requires: "trade", cost: 42, works: kutchLinks,
+    era: 1956, priceYear: 1956, bombayEnlarged: true, requires: "trade", cost: 42, works: kutchLinks,
     pitch: "Commit the works office to a western port before the successor settlement.",
     outcome: "Open two links and a workshop around Kandla. Gujarat takes over these works after reorganization.",
     next: "These works reduce the cost of a larger port programme in a Gujarat campaign.",
   }),
   bombayVidarbhaLinks: programme("trade", "Nagpur Inland Links", "Nagpur, Wardha and Amravati", {
-    era: 1956, bombayEnlarged: true, requires: "trade", cost: 45, works: vidarbhaLinks,
+    era: 1956, priceYear: 1956, bombayEnlarged: true, requires: "trade", cost: 45, works: vidarbhaLinks,
     pitch: "Commit the works office to inland manufacturing before the successor settlement.",
     outcome: "Open two links and a workshop around Nagpur. Maharashtra takes over these works after reorganization.",
     next: "These works reduce the cost of a larger inland programme in a Maharashtra campaign.",
@@ -134,7 +134,7 @@ export const bombayProgrammes = {
       next: "Market links and apprenticeships can raise workshop output.",
     }),
     mh_inlandIndustry: programme("trade", "Vidarbha Cotton and Engineering", "Nagpur, Wardha and Amravati", {
-      era: 1966, cost: 78, requires: "mh_industry",
+      era: 1966, priceYear: 1966, cost: 78, requires: "mh_industry",
       works: [...vidarbhaLinks, work("mill", 14, 8, 3), work("mill", 14, 7, 3)],
       pitch: "Build an inland industrial base around Nagpur and its cotton-producing hinterland.",
       outcome: "Adds three mills and two road links in Vidarbha.",
@@ -179,7 +179,7 @@ export const bombayProgrammes = {
       next: "A freight terminal can help coastal workshops reach larger markets.",
     }),
     gj_coastalIndustry: programme("trade", "Kutch and Saurashtra Port Workshops", "Kandla, Bhuj and Jamnagar", {
-      era: 1966, cost: 72, requires: "gj_industry",
+      era: 1966, priceYear: 1966, cost: 72, requires: "gj_industry",
       works: [...kutchLinks, work("mill", 2, 1, 3), work("mill", 3, 3, 3)],
       pitch: "Create a coastal base for manufacturing and port services around the Gulf of Kutch.",
       outcome: "Adds three workshops and two road links near Kandla.",

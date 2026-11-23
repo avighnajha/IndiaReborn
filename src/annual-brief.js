@@ -1,7 +1,7 @@
 import { Campaign } from "./campaign.js";
 import { departmentBadge, programmeDepartment } from "./department-presentation.js";
 import { Fiscal } from "./fiscal.js";
-import { fundingReferenceMarkup } from "./fiscal-view.js";
+import { fundingReferenceMarkup, priceReferenceMarkup } from "./fiscal-view.js";
 import { basinAgreementsFor, basinNameFor, programmes } from "./programmes.js";
 import { World } from "./scenario.js";
 import { mandateProgressMarkup } from "./regional-mandate-view.js";
@@ -100,15 +100,17 @@ function metricStrip(report, previous) {
     ["Workshop output", "trade", report.output, previous?.output],
     ["Skills", "education", report.skills, previous?.skills],
     ["Connected towns", "trade", report.towns, previous?.towns],
-    ["Earned receipts", "trade", earned.total, previous && Campaign.earnedReceipts(previous).total, true],
+    [report.prices ? "Earned receipts · nominal" : "Earned receipts", "trade", earned.total, previous && Campaign.earnedReceipts(previous).total, true],
   ];
   return `<dl class="brief-metrics" aria-label="Development indicators">${metrics.map(([label, sector, current, earlier, currency]) => {
     const change = Number.isFinite(current) && Number.isFinite(earlier) ? current - earlier : null;
     const trend = change === null ? "first" : change === 0 ? "same" : change > 0 ? "up" : "down";
     const value = Number.isFinite(current) ? (currency ? money(current) : number.format(current)) : "—";
     const delta = change === null ? "First report" : change === 0 ? "Steady" : currency ? signedMoney(change) : signed(change);
+    const fromPrices = currency && report.prices?.receiptEffect;
     return `<div data-sector="${sector}"><dt>${label}</dt><dd><b>${value}</b>
-      <span class="brief-metric-change" data-trend="${trend}">${delta}</span></dd></div>`;
+      <span class="brief-metric-change" data-trend="${trend}">${delta}</span>
+      ${fromPrices ? `<small class="brief-price-change">Prices ${signedMoney(fromPrices)}</small>` : ""}</dd></div>`;
   }).join("")}</dl>`;
 }
 
@@ -184,6 +186,11 @@ function whyContent(report, previous) {
     ["Workshop output", report.output],
   ]);
   const planningChange = report.openingCash - previous?.cash;
+  const activityReceipts = Campaign.earnedReceipts(report);
+  const earlierActivity = previous && Campaign.earnedReceipts(previous);
+  const change = earlierActivity ? activityReceipts.workshops + activityReceipts.markets - earlierActivity.workshops - earlierActivity.markets : null;
+  const receiptEffect = report.prices?.receiptEffect;
+  const activityEffect = Number.isFinite(change) && Number.isFinite(receiptEffect) ? change - receiptEffect : null;
   const cash = detailRows([
     ...(Number.isFinite(planningChange) && planningChange ? [["Cash carried in", money(previous.cash)], ["Planning commitments and grants", signedMoney(planningChange)]] : []),
     ["Cash after planning", money(report.openingCash)], ...revenueRows(report),
@@ -193,7 +200,7 @@ function whyContent(report, previous) {
     ...(report.regional?.jointFreightCash ? [["Joint freight projects", money(report.regional.jointFreightCash)]] : []),
     ...(competition ? [["Competitive freight receipts", money(competition.player.earnings)]] : []),
     ...(contract?.winner?.id === "player" ? [["Freight contract payment", money(contract.payment)]] : []),
-    ["Works upkeep", money(report.maintenance - (report.training?.upkeep ?? 0) - (report.cabinetPriority?.spent ?? 0))],
+    ["Works upkeep", money(report.prices?.worksUpkeep ?? (report.maintenance - (report.training?.upkeep ?? 0) - (report.cabinetPriority?.spent ?? 0)))],
     ...(report.training?.upkeep ? [["Training charter upkeep", money(report.training.upkeep)]] : []),
     ...(report.cabinetPriority?.spent ? [["Five-year priority services", money(report.cabinetPriority.spent)]] : []),
     ...(report.upkeepShortfall ? [["Unfunded upkeep", money(report.upkeepShortfall)]] : []), ["Cash carried forward", money(report.cash)]]);
@@ -209,7 +216,10 @@ function whyContent(report, previous) {
     <section><h3>Food supply · ${escapeText(report.monsoon)}</h3>${food}</section>
     <section><h3>Investment and output</h3>${production}${works.length ? `<ul class="brief-works">${works.map((work) => `<li>${escapeText(work)}</li>`).join("")}</ul>` : ""}
       ${training ? `<p class="brief-note">${escapeText(training.title)} · ${served.length ? `Served ${escapeText(names.format(served))}.` : escapeText(training.message)}</p>` : ""}</section>
-    <section><h3>Treasury</h3>${cash}${fundingReferenceMarkup(Campaign.reportFunding(report))}${grant ? `<p class="brief-note">${escapeText(grant.title)} awarded ${money(grant.grant)} with a ${money(grant.match)} local match. Already included in cash after planning.</p>` : ""}
+    <section><h3>Treasury</h3>${cash}
+    ${activityEffect !== null && receiptEffect ? `<p class="brief-note">Price changes account for ${signedMoney(receiptEffect)} in workshop and market receipts.${activityEffect ? ` Changes in activity contributed ${signedMoney(activityEffect)}.` : " Activity contributed no change."}</p>` : ""}
+    ${report.prices ? priceReferenceMarkup(report.year) : ""}
+    ${fundingReferenceMarkup(Campaign.reportFunding(report))}${grant ? `<p class="brief-note">${escapeText(grant.title)} awarded ${money(grant.grant)} with a ${money(grant.match)} local match. Already included in cash after planning.</p>` : ""}
     ${training?.setup ? `<p class="brief-note">The charter’s ${money(training.setup)} setup cost is included in cash after planning.</p>` : ""}
     ${report.technicalIntake?.state ? `<p class="brief-note">The state’s ${money(report.technicalIntake.state)} technical intake share is included in cash after planning. The Union paid ${money(report.technicalIntake.union)} directly for equipment.</p>` : ""}
     ${report.relief ? `<p class="brief-note">Emergency purchase authorization was ${money(report.relief.budget)}. Purchases used ${money(report.relief.spent)}.</p>` : ""}

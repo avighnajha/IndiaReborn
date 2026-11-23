@@ -57,14 +57,14 @@ test("Punjab routes, Haryana transit and inherited Himachal works preserve separ
   assert.ok(jammu.sold + jammu.bought + jammu.emergencyFood <= 3);
   assert.equal(contractRivalBid(jammu).capacity, 3);
   const himachal = settled.report.partners.find(({ id }) => id === "himachal");
-  assert.equal(himachal.inherited.receipts, 1);
+  assert.equal(himachal.inherited.receipts, 3);
   const national = settleNationalTrade(settled, initial, world);
   assert.equal(national.partners.himachal.cash, settled.partners.himachal.cash);
   const haryana = { ...initial, journey: { ...initial.journey, jurisdiction: { punjabSuccessor: "haryana" } } };
   assert.ok(neighborsFor(world, haryana).every(({ id }) => !["jammu", "himachal"].includes(id)));
   const distant = settleNationalTrade({ partners: haryana.journey.partners, report: { partners: [], developments: [] } }, haryana, world);
   assert.equal(distant.partners.himachal.openingCash, 41);
-  assert.equal(distant.partners.himachal.inherited.receipts, 1);
+  assert.equal(distant.partners.himachal.inherited.receipts, 3);
   assert.ok(distant.report.nationalMarket.links.some(({ from, to }) => [from, to].includes("jammu")));
   const west = { ...initial, year: 1975, journey: { ...initial.journey, jurisdiction: {} } };
   assert.ok(neighborsFor({ key: "west-bengal" }, west).some(({ id }) => id === "sikkim"));

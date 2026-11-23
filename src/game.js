@@ -11,7 +11,7 @@ import { departmentBadge, departmentIdentity, programmeDepartment } from "./depa
 import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
-import { fundingReferenceMarkup } from "./fiscal-view.js";
+import { fundingReferenceMarkup, priceReferenceMarkup } from "./fiscal-view.js";
 import { cabinetPlanMarkup } from "./cabinet-plan-view.js";
 import { mandateOptionsMarkup, mandateProgressMarkup } from "./regional-mandate-view.js";
 import "./regional-mandate-view.css";
@@ -423,6 +423,8 @@ function renderProgrammes() {
     ${isBasin && !record ? '<div id="kosi-options" class="kosi-options" role="group" aria-label="Compare basin agreements"></div>' : `<p class="programme-next">${plan.next}</p>`}
     ${requirements.length ? `<ul class="programme-prerequisites" aria-label="Prerequisites">${requirements.map(({ text, met }) => `<li>${met ? "Met" : "Requires"} · ${text}</li>`).join("")}</ul>` : ""}
     ${inherited ? "" : `<div class="programme-terms"><b>${money(funded)}</b><span>${period}</span></div>`}
+    ${!inherited && record && game.journey ? `<p class="fiscal-note">Committed in ${record.approved}</p>`
+      : !inherited && quote.pricing && quote.cost !== quote.pricing.baseCost ? `<p class="fiscal-note">${quote.pricing.year} quote · ${money(quote.pricing.baseCost)} at ${quote.pricing.priceYear} prices</p>` : ""}
     ${terms ? basinTermsContent(terms, quote, record, union) : ""}
     <p class="programme-status">${summary}</p>`;
   const priority = !record && Number.isFinite(funded) ? Campaign.cabinetPriority({ ...game, cash: game.cash - funded }) : null;
@@ -945,6 +947,7 @@ function showFinance() {
     <p class="fiscal-note">${carry} The campaign assigns a modeled share of revenue to development works. <a href="${historic.url}" target="_blank" rel="noopener">View period source</a></p>
     ${developmentRecord ? `<p class="fiscal-note">FY ${Fiscal.yearLabel(game.year)} development spending reference: ${money(developmentRecord.lakh)} (${developmentRecord.basis}). <a href="${developmentRecord.url}" target="_blank" rel="noopener">View programme source</a></p>` : ""}
     ${historic.transferNote ? `<p class="fiscal-note">${historic.transferNote}</p>` : historic.transferYear !== historic.fiscalYear ? `<p class="fiscal-note">The modeled split uses the FY ${Fiscal.yearLabel(historic.transferYear)} transfer mix.</p>` : ""}
+    ${game.journey ? priceReferenceMarkup(Math.min(game.year, campaignEnd(game))) : ""}
     <section class="union-funding"><h3>Union funding</h3><p>${fundingNote}</p><div id="grant-offers"></div></section>`, [
     choiceButton("Compare states", showComparison), choiceButton("Economy breakdown", showEconomy),
     ...(reserveWindow(game) ? [choiceButton("Union food reserve", () => showUnionReserve(showFinance, "Back to budget office"))] : []),
@@ -986,15 +989,16 @@ function showEconomy() {
     ${report ? fundingReferenceMarkup(funding) : ""}
     <ul class="economy-cause">
       ${report?.cabinetPriority ? `<li><b>Five-year priorities.</b> ${report.cabinetPriority.skills} Skills and ${report.cabinetPriority.trainingOutput} direct workshop output from earlier training; ${report.cabinetPriority.tradeOutput} output from the production priority. This year’s extra services cost ${money(report.cabinetPriority.spent)}.</li>` : ""}
-      <li><b>Schools → skills → workshop output.</b> Every 6 skill points adds 1 output to each operating workshop, up to 3 per workshop. Workshop receipts are 80% of output, rounded down in lakh rupees.</li>
-      <li><b>Market links → production and trade.</b> Market access adds 4 output to each workshop it serves. Each connected town after the first two adds ₹1 lakh a year. More links also raise the food purchase limit.</li>
+      <li><b>Schools → skills → workshop output.</b> Every 6 skill points adds 1 output to each operating workshop, up to 3 per workshop. More output earns higher receipts at that year’s modeled rate.</li>
+      <li><b>Market links → production and trade.</b> Market access adds 4 output to each workshop it serves. Each connected town after the first two adds annual market receipts. More links also raise the food purchase limit.</li>
       ${report?.development ? `<li><b>Advanced programmes.</b> This year higher education and industrial parks added ${report.development.researchOutput + report.development.parkOutput} workshop output. Freight terminals contributed ${money(report.development.marketReceipts)} in market receipts.</li>` : ""}
       ${report?.bhilai?.output ? `<li><b>Bhilai supplier contracts.</b> Connected workshops in the Chhattisgarh plain produced ${report.bhilai.output} extra output this year.</li>` : ""}
       ${report?.assam?.teaOutput ? `<li><b>Assam rail feeders.</b> Connected tea workshops produced ${report.assam.teaOutput} extra output this year.</li>` : ""}
       ${freightReceipts ? `<li><b>Freight competition.</b> Orders carried this year earned ${money(freightReceipts)} in addition to workshop and market receipts.</li>` : ""}
       <li><b>Harvest and reserves → food security.</b> Rain changes the harvest. Irrigation, flood protection, stored food and emergency purchases cover demand. Sales add cash and purchases use it.</li>
     </ul>
-    <p class="fiscal-note">The treasury also reflects public allocations, one-off grants, food purchases and upkeep. Workshop output is in production units and earnings are in rupees.</p>`,
+    <p class="fiscal-note">The treasury also reflects public allocations, one-off grants, food purchases and upkeep. Workshop output is in production units and earnings are in rupees.</p>
+    ${report?.prices ? priceReferenceMarkup(report.year) : ""}`,
   [choiceButton("Budget office", showFinance), choiceButton("Economy map", showEconomyMap), choiceButton("Return to map", returnToMap, true)]);
 }
 

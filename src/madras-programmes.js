@@ -110,7 +110,7 @@ export const madrasProgrammes = {
       next: "The schools qualify the state for colleges and a teaching charter.",
     }),
     cauvery: programme("food", 2, "Madras Water and Power Commitment", "The Cauvery delta and Neyveli", {
-      era: 1957, madrasReorganized: true, requires: "tn_food", works: madrasBasinAgreements.focused.works,
+      era: 1957, priceYear: 1957, madrasReorganized: true, requires: "tn_food", works: madrasBasinAgreements.focused.works,
       pitch: "Commit the next development allocation to delta resilience or industrial electricity.",
       outcome: "Choose between early canal protection and a longer industrial power build.",
       next: "Either commitment unlocks a larger state food reserve.",
@@ -128,7 +128,7 @@ export const madrasProgrammes = {
       next: "Power and market access raise their output.",
     }),
     tn_southMarkets: programme("trade", 2, "Southern District Market Links", "Nagercoil and Kanyakumari", {
-      era: 1956, madrasReorganized: true, requires: "tn_trade", cost: 44,
+      era: 1956, priceYear: 1956, madrasReorganized: true, requires: "tn_trade", cost: 44,
       works: [work("road", 6, 16, 1), work("road", 7, 16, 2), work("mill", 6, 16, 2)],
       pitch: "Link the new southern districts to their local market.",
       outcome: "Improves two market links and opens a Nagercoil workshop.",
@@ -155,7 +155,7 @@ export const madrasProgrammes = {
       next: "The schools qualify the state for colleges and a teaching charter.",
     }),
     krishna: programme("food", 2, "Andhra Water and Power Commitment", "The Krishna–Godavari deltas and Rayalaseema", {
-      era: 1956, madrasReorganized: true, requires: "ap_food", works: andhraBasinAgreements.focused.works,
+      era: 1956, priceYear: 1956, madrasReorganized: true, requires: "ap_food", works: andhraBasinAgreements.focused.works,
       pitch: "Use the next development allocation to protect the deltas or grow the interior economy.",
       outcome: "Choose feeder canals and pumps or an inland industrial power link.",
       next: "Either commitment unlocks a larger state food reserve.",
@@ -173,14 +173,14 @@ export const madrasProgrammes = {
       next: "Power and market access raise their output.",
     }),
     ap_telanganaLinks: programme("trade", 2, "Telangana Market Links", "Hyderabad and Nalgonda", {
-      era: 1956, madrasReorganized: true, requires: "ap_trade", cost: 48,
+      era: 1956, priceYear: 1956, madrasReorganized: true, requires: "ap_trade", cost: 48,
       works: [work("road", 9, 3, 1), work("road", 9, 4, 2), work("mill", 8, 3, 2)],
       pitch: "Connect the incoming Telangana markets to the expanded economy.",
       outcome: "Improves two market links and opens a Hyderabad workshop.",
       next: "Skills and power strengthen the new production base.",
     }),
     ap_nagarjunaCanals: programme("food", 2, "Nagarjunasagar Canal Distribution", "Nalgonda and the Krishna right bank", {
-      era: 1967, madrasReorganized: true, requires: "krishna", cost: 81,
+      era: 1967, priceYear: 1967, madrasReorganized: true, requires: "krishna", cost: 81,
       works: [work("irrigation", 9, 4, 2), work("irrigation", 10, 5, 3), work("granary", 9, 3, 3)],
       pitch: "Distribute new canal supplies beyond the established delta.",
       outcome: "Irrigates two growing areas and opens a reserve at Nalgonda.",

@@ -57,7 +57,7 @@ export const punjabProgrammes = {
     next: "Operating schools support degree colleges and engineering workshops.",
   }),
   bhakra: programme("food", 2, "Bhakra–Nangal Distribution Agreement", "Nangal and the Sutlej plain", {
-    era: 1953, requires: "food", works: punjabBasinAgreements.focused.works,
+    era: 1953, priceYear: 1953, requires: "food", works: punjabBasinAgreements.focused.works,
     pitch: "Commit Punjab's share of the distribution works.",
     outcome: "Compare early canal distribution and powered pumps with earlier industrial power.",
     next: "The distribution works support a larger food reserve.",
@@ -75,13 +75,13 @@ export const punjabProgrammes = {
     next: "Apprenticeships can raise workshop output further.",
   }),
   punjabCotton: programme("trade", 2, "Bhatinda Cotton Workshops", "Bhatinda and Barnala", {
-    era: 1956, punjabEnlarged: true, requires: "trade", cost: 41, works: cottonWorks,
+    era: 1956, priceYear: 1956, punjabEnlarged: true, requires: "trade", cost: 41, works: cottonWorks,
     pitch: "Invest in the cotton markets of the former PEPSU districts.",
     outcome: "Opens two processing workshops. Both pass to Punjab in 1966.",
     next: "Punjab can expand the cotton belt after reorganization.",
   }),
   punjabCanalBelt: programme("food", 2, "Western Canal and Reserve Works", "Sirsa, Fatehabad and Jind", {
-    era: 1956, punjabEnlarged: true, requires: "food", cost: 38, works: canalBelt,
+    era: 1956, priceYear: 1956, punjabEnlarged: true, requires: "food", cost: 38, works: canalBelt,
     pitch: "Strengthen food supplies in the dry western districts.",
     outcome: "Adds two irrigated areas and a store in Jind. Haryana inherits all three works.",
     next: "The works count toward Haryana's local canal programme.",

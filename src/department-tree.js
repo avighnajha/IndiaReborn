@@ -5,6 +5,7 @@ import { Fiscal } from "./fiscal.js";
 import { activeProgramme, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes } from "./programmes.js";
 import { World } from "./scenario.js";
 import { apprenticeshipOutput, charterOpening, extensionYield } from "./training.js";
+import { campaignPriceYear, openingPriceYear, periodAmount } from "./period-prices.js";
 
 const money = Fiscal.lakh;
 const years = (count) => `${count} ${count === 1 ? "year" : "years"}`;
@@ -29,15 +30,15 @@ const facilityMetrics = {
   workshop: (count) => quantity(count("mill"), "new workshop"),
   jute: () => "Restores output at jute mills",
   trainingWorkshop: (count) => pair(quantity(count("mill"), "new workshop"), quantity(count("school"), "technical school")),
-  freight: () => "Up to ₹8 lakh per year · +3 food import capacity",
+  freight: (_count, year) => `Up to ${money(periodAmount(8, openingPriceYear, year))} at current rates · +3 food import capacity`,
   industrialPark: () => "+3 output per linked workshop",
 };
 
-function facilityPresentation(id, footprint = []) {
+function facilityPresentation(id, footprint = [], year = openingPriceYear) {
   const facility = departmentFacility(id);
   if (!facility) return {};
   const count = (kind) => footprint.filter((work) => work.kind === kind).length;
-  return { facility: facility.label, icon: facility.icon, metric: facility.metric ?? facilityMetrics[facility.icon](count) };
+  return { facility: facility.label, icon: facility.icon, metric: facility.metric ?? facilityMetrics[facility.icon](count, year) };
 }
 
 const programmeLockHints = {
@@ -103,7 +104,7 @@ function programmeNode(game, id, tier, current) {
   const duration = quote.duration ?? Math.max(...plan.works.map(({ year }) => year));
   const time = status === "active" ? `${years(record.finish - game.year + 1)} left` : record || delivered || !duration ? "" : years(duration);
   const detail = delivered ? (record ? `Delivered ${record.finish}.` : "The required works are operating.") : status === "active" ? `Final phase due ${record.finish}.` : quote.reason ?? `${money(game.cash - quote.cost)} stays in the treasury after approval.`;
-  const facility = facilityPresentation(id, programmeFootprint(game, id));
+  const facility = facilityPresentation(id, programmeFootprint(game, id), campaignPriceYear(game));
   if (facility.icon === "freight" && game.journey?.preset === "standard") facility.metric += " · +3 bid capacity when linked";
   return {
     id, tier, title: plan.title, district: plan.district, ...facility,

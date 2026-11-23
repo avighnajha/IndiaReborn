@@ -18,6 +18,8 @@ From 1951, **Five-year priority** adds a continuing department choice alongside 
 
 In a campaign ending in 1985, **Regional mandate** opens in 1974. Choose food resilience, a trained workforce or a strong workshop economy by 1979. The annual brief tracks progress and the ending judges the outcome you chose. [Regional mandate rules](design/regional-mandates.md)
 
+Founding campaigns now price new works and ordinary operating results in the turn’s rupees. Open **Budget office** to see the historical price source and **Why this happened** in the annual brief to see when higher prices changed receipts. [Period price rules](design/period-prices.md)
+
 Advance through 1947 to choose a development priority and a separate response to Partition displacement. In 1949, Mayurbhanj and Orissa can integrate or agree to maintain separate works offices. Bihar can face a southern reorganization in 1956 if the plateau received less than one third of investment starts. The border choices show the proposed outline and explain who receives works and funds. **Chronicle** records choices alongside historical census snapshots. **Neighbors** opens treaty offers. The annual brief reports trade, migration, freight revenue and political decisions.
 
 From 1953, two schools that have each taught for a full year unlock a technical school charter. In the cabinet sidebar, use **Compare specializations** to preview sites and choose Industrial Apprenticeships or Agricultural Extension. You commit to one charter for the rest of the campaign. Each has setup and annual costs, and the annual brief records its effects after service begins. Neighbors spend their own funds on reserve depots and freight exchanges. Check **Neighbors** for delivery dates and the effects on trade.

@@ -11,6 +11,7 @@ import { reservePlan, reserveWindow, resolveReserve, signReserve } from "./union
 import { enrollIntake, intakeEffects, intakePlan, intakeStatus, matureSchools, placementOutput } from "./technical-intake.js";
 import { adoptCabinetPlan, cabinetPlan, resolveCabinetPlan } from "./cabinet-plan.js";
 import { adoptRegionalMandate, recordRegionalMandate, regionalMandate } from "./regional-mandate.js";
+import { campaignPriceYear, openingPriceYear, periodAmount, priceBasis } from "./period-prices.js";
 
 export const Campaign = (() => {
   const projects = {
@@ -28,7 +29,7 @@ export const Campaign = (() => {
     agriculturalInstitute: { name: "Agricultural institute", summary: "Adds 4 Skills and 3 food each year through agricultural research." },
     foodDepot: { name: "Cooperative food depot", summary: "Stores 18 more units of food for lean years." },
     waterNetwork: { name: "Regional water network", summary: "Adds 2 food each year and recovers up to 4 weather losses that remain after existing protection." },
-    freightTerminal: { name: "Freight terminal", summary: "Adds ₹1 lakh per connected town beyond the first two, up to ₹8 lakh, and raises food purchase capacity by 3." },
+    freightTerminal: { name: "Freight terminal", summary: "Earns market receipts from up to eight connected towns beyond the first two and adds capacity to buy three more food units." },
     industrialPark: { name: "Industrial park", summary: "Adds 3 output per market-connected workshop through shared services." },
   };
   const policies = { hold: "Store surplus", import: "Buy in a shortage", export: "Sell surplus" };
@@ -118,7 +119,7 @@ export const Campaign = (() => {
     if (game.year <= 1951 && ((subsidy === "food" && kind === "irrigation") || (subsidy === "roads" && kind === "road"))) {
       return projects[kind].cost - 3;
     }
-    return projects[kind].cost;
+    return periodAmount(projects[kind].cost, openingPriceYear, campaignPriceYear(game));
   }
 
   function buildStatus(game, hex, kind) {
@@ -225,8 +226,11 @@ export const Campaign = (() => {
     return { ...game, cash: game.cash + grant - match, grantAwards: { ...game.grantAwards, [game.year]: { title, grant, match } } };
   }
 
-  function localReceipts(output, towns, terminalReceipts = 0) {
-    return { workshops: Math.floor(output * 0.8), markets: Math.max(0, towns - 2) + terminalReceipts };
+  function localReceipts(output, towns, terminalReceipts = 0, year = openingPriceYear) {
+    return {
+      workshops: periodAmount(output * 0.8, openingPriceYear, year, Math.floor),
+      markets: periodAmount(Math.max(0, towns - 2), openingPriceYear, year) + terminalReceipts,
+    };
   }
 
   function earnedReceipts(report) {
@@ -569,6 +573,7 @@ export const Campaign = (() => {
     const { assets, completed } = yearWorks(game);
     const { relief, ...planning } = game;
     const state = { ...planning, assets };
+    const priceYear = campaignPriceYear(game);
     const priority = resolveCabinetPlan(game, finance(game), cabinetContext(game, assets, charterUpkeep));
     const priorityCost = priority.report?.spent ?? 0;
     const { reached, towns } = access(state);
@@ -587,10 +592,12 @@ export const Campaign = (() => {
     const freightTerminals = active(state, "freightTerminal");
     const terminals = freightTerminals.length;
     const parks = active(state, "industrialPark").length;
+    const terminalActivity = terminals * Math.min(8, Math.max(0, towns - 2));
     const development = {
       skills: colleges * 6 + universities * 8 + (technical + agricultural) * 4,
       researchOutput: 0, parkOutput: 0, researchFood,
-      waterYield, waterRecovery, storage: depots * 18, marketReceipts: terminals * Math.min(8, Math.max(0, towns - 2)), importCapacity: terminals * 3,
+      waterYield, waterRecovery, storage: depots * 18,
+      marketReceipts: periodAmount(terminalActivity, openingPriceYear, priceYear), importCapacity: terminals * 3,
     };
     const mills = active(state, "mill");
     const linkedMills = mills.filter(({ hex }) => isConnected(reached, hex));
@@ -682,9 +689,11 @@ export const Campaign = (() => {
     const capacity = 5 + active(state, "granary").length * 10 + development.storage;
     const reserve = Math.min(capacity, foodAfterShipment - sold);
     const funding = finance(game);
-    const receipts = localReceipts(output, towns, development.marketReceipts);
+    const receipts = localReceipts(output, towns, development.marketReceipts, priceYear);
     const tax = funding.local + receipts.markets + receipts.workshops;
-    const maintenance = Math.ceil(assets.filter((asset) => asset.remaining === 0 && game.owners[asset.hex] === World.key).length / 4) + charterUpkeep + priorityCost;
+    const operatingAssets = assets.filter(({ remaining, hex }) => remaining === 0 && game.owners[hex] === World.key).length;
+    const worksUpkeep = periodAmount(Math.ceil(operatingAssets / 4), openingPriceYear, priceYear);
+    const maintenance = worksUpkeep + charterUpkeep + priorityCost;
     const competitiveReceipts = regionalSettlement?.report.freightCompetition?.player.earnings ?? 0;
     const contractReceipts = playerContractReceipts(regionalSettlement?.report.freightContract);
     const income = tax + funding.transfers + sold - bought * buyPrice + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts + (union?.proceeds ?? 0);
@@ -717,6 +726,16 @@ export const Campaign = (() => {
       attribution: { food: foodEffects, industry, newlyConnected, programme: delivery },
       siteEconomy: { workshops: workshopSites, irrigation: irrigationSites },
     };
+    if (game.journey) {
+      const { index, referenceYear } = priceBasis(priceYear);
+      const previous = game.reports.at(-1);
+      const comparisonYear = previous?.prices?.referenceYear ?? openingPriceYear;
+      const atEarlierPrices = localReceipts(output, towns, periodAmount(terminalActivity, openingPriceYear, comparisonYear), comparisonYear);
+      report.prices = {
+        index, referenceYear, worksUpkeep,
+        receiptEffect: previous ? receipts.workshops + receipts.markets - atEarlierPrices.workshops - atEarlierPrices.markets : null,
+      };
+    }
     if (World.key === "assam" && (railCapacity || earthquakeLoss || game.year === 1950)) {
       report.assam = { railCapacity, teaOutput, earthquakeLoss, bankRepairs };
     }
@@ -730,13 +749,13 @@ export const Campaign = (() => {
     if (union) report.unionReserve = { ...union, reserve };
     if (intake) {
       const skillOutput = mills.length * (skillBonus - workshopSkillBonus(ordinarySkills + priority.effects.skills));
-      report.technicalIntake = { ...intake, skillOutput, receipts: receipts.workshops - localReceipts(output - intake.output - skillOutput, towns).workshops };
+      report.technicalIntake = { ...intake, skillOutput, receipts: receipts.workshops - localReceipts(output - intake.output - skillOutput, towns, 0, priceYear).workshops };
     }
     if (priority.report) {
       const extraOutput = industry.workforce + industry.priority;
       report.cabinetPriority = { ...priority.report, food: priorityFood, recovered: priorityRecovery,
         output: extraOutput, trainingOutput: industry.workforce, tradeOutput: industry.priority,
-        receipts: receipts.workshops - localReceipts(output - extraOutput, towns).workshops };
+        receipts: receipts.workshops - localReceipts(output - extraOutput, towns, 0, priceYear).workshops };
     }
     if (juteMills) report.jute = { source: juteSource, mills: juteMills, lost: juteMills * juteLoss };
     if (colleges || universities || technical || agricultural || depots || water || terminals || parks) report.development = development;
@@ -745,7 +764,7 @@ export const Campaign = (() => {
         id: service.id, title: service.title, status: charter.status, message: charter.message, upkeep: charterUpkeep,
         setup: game.journey.training.authorized === game.year ? service.cost : 0,
         sites: operating?.sites ?? [],
-        output: extraOutput, receipts: receipts.workshops - localReceipts(output - extraOutput, towns).workshops,
+        output: extraOutput, receipts: receipts.workshops - localReceipts(output - extraOutput, towns, 0, priceYear).workshops,
         food: extraFood, recovered: extensionRecovery,
       };
     }

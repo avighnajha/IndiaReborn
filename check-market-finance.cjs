@@ -34,7 +34,7 @@ test("market budgets retain historical units, measures and fiscal dates", async 
 test("different sourced allowances change affordable AI commitments", async () => {
   const { resolveNeighbors } = await import("./src/interregional.js");
   const game = { year: 1955, seed: 1946, reserve: 10, assets: [], owners: {}, reports: [],
-    journey: { preset: "standard", end: 1985, partners: { up: { cash: 10, reserve: 10 }, bengal: { cash: 10, reserve: 10 } } } };
+    journey: { preset: "standard", end: 1985, partners: { up: { cash: 9, reserve: 10 }, bengal: { cash: 9, reserve: 10 } } } };
   const regional = resolveNeighbors(game, { key: "bihar" }, { harvest: 30, demand: 10, towns: 5, monsoon: "Typical monsoon" });
   const up = regional.report.partners.find(({ id }) => id === "up");
   const bengal = regional.report.partners.find(({ id }) => id === "bengal");

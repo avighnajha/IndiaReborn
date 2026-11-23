@@ -82,7 +82,7 @@ test("matched public-action priorities have different timing, recorded costs and
     assert.equal(food(year).cabinetPriority.food, 2);
     const residualLoss = Math.max(0, food(year).attribution.food.weatherLoss - food(year).attribution.food.protection - (food(year).training?.recovered ?? 0) - (food(year).development?.waterRecovery ?? 0));
     assert.ok(food(year).cabinetPriority.recovered <= residualLoss);
-    const ordinaryUpkeep = Math.ceil(shared.assets.filter(({ remaining }) => !remaining).length / 4);
+    const ordinaryUpkeep = baseline(year).maintenance;
     assert.equal(trade(year).maintenance, ordinaryUpkeep + trade(year).cabinetPriority.spent, "Priority appropriation posts once");
   }
   assert.equal(food(1954).harvest - baseline(1954).harvest, 2);

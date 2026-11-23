@@ -1,0 +1,22 @@
+# Prices across the campaign
+
+The budget office and programme quotes use nominal lakh rupees. During the founding campaigns, the year affects new works quotes, ordinary upkeep and receipts from workshops and connected towns. Workshop output and food are still physical game units. More expensive output can earn additional rupees even when a workshop produces the same amount.
+
+The model uses the annual all-commodity wholesale price series published in the RBI's 3 March 2006 archive. The series links the overlapping fiscal years beginning in 1961, 1970 and 1981 and displays an index with 1970–71 equal to 100. The fiscal year is identified by its starting year, as in the budget office. The campaign holds the 1952–53 index through the early years before the first annual observation. This keeps the original opening offers affordable everywhere, including Orissa and Mayurbhanj. The RBI notes changes in commodity classification between the series bases. These figures set a broad modeled price scale. [RBI annual wholesale price table](https://www.rbi.org.in/scripts/PublicationsView.aspx?id=8241)
+
+| Amount | Rules |
+| --- | --- |
+| New programmes | Each authored price has a reference year. Opening standard quotes use the 1952 scale. Period projects and successor offers use their own campaign year. Higher education, reserve depots, freight terminals, research institutes and final tier works have separate authored price years. The approval charges only the remaining scope. Basin costs and new Union contributions move together. |
+| Signed works and teaching charters | Saved programme costs and the Union share carry through to delivery. Acceleration uses the amount originally committed. New charter offers use period setup and annual fees, which stay fixed once chosen. Emergency repairs use the price level when authorized. |
+| Ordinary operating results | Local workshop receipts, market receipts and upkeep adjust at the year’s modeled rate. Rivals have period priced construction, school and processing receipts, and inherited workshop receipts and upkeep. Freight capacity follows operational facilities and trained workers. |
+| Budgets and contracts | Historical fiscal references, modeled allocation shares, cash carried forward, and signed amounts keep their face values. Five-year priorities already use a share of the current year's works allocation. Food, freight and procurement tariffs still follow the existing terms. |
+
+Bihar's Eastern Floodplain Renewal is quoted at ₹112 lakh in its 1966 price year and ₹237 lakh if commissioned in 1974. A 1966 approval continues to show the amount paid. Delaying a project may cost less in a year when prices fall. The budget comparison shows the price level relative to opening rates, and the programme panel shows the current quote alongside the original price for the same outstanding works when those amounts differ.
+
+The annual brief records actual receipts and separates the effect of changing prices from changing activity for workshops and market links. It values the current activity at the preceding year’s rates for that comparison. Earlier builds used opening rates throughout, so legacy reports keep their original receipts and serve as the opening rate in the first comparison. The detailed ledger shows treasury sources and ordinary upkeep separately from charter fees and departmental appropriations.
+
+## Balance and verification
+
+All nine opening price sets were checked. Matched focused public-action runs still reach the three regional mandates across 14 tested administrations using seed 1946. The price change affects procurement timing and nominal cash flow. Larger operating receipts can also increase nominal surpluses. A further balance pass will need to address the cost and benefit of sustaining large operating portfolios, and cross-government trading needs explicit matching payment amounts before its prices change.
+
+In a complete Standard Bihar run in the production browser, the 1978 Muzaffarpur Industrial Park quote was ₹216 lakh against its ₹96 lakh at 1966 prices. After delivery it still showed ₹216 lakh committed in 1978. Workshop output held at 106 in 1982 and 1983, while combined workshop and market receipts rose from ₹620 lakh to ₹667 lakh. The brief attributed the ₹47 lakh increase to prices. The run reached its industrial mandate, and the storage check held approximately 1.85 MB for nine complete campaigns with five-year priorities.

@@ -1,6 +1,7 @@
 import { competitiveFreight, contractPlayerBid, contractRivalBid, domesticContractRival, freightCompetitionOpening, maxFreightCapacity, resolveFreightContract, upcomingFreightContract } from "./neighbor-competition.js";
 import { clearNationalMarket, inlandActors, marketConnection, marketHubs, nationalMarketActive, nationalMarketActors, seedBombayDivision, seedPunjabDivision, seedSouthernTransitions } from "./national-market.js";
 import { marketFunding } from "./market-finance.js";
+import { openingPriceYear, periodAmount } from "./period-prices.js";
 
 const actors = {
   ...inlandActors,
@@ -26,10 +27,10 @@ const reserveLimit = 12;
 const workPlans = {
   storage: { title: "Reserve depots", department: "food", cost: 7, years: 2, effect: "Holds 6 more food units and can offer one more unit to a priority buyer." },
   freight: { title: "Freight exchange", department: "trade", cost: 10, years: 2, effect: "Handles more food trade and adds ₹1 lakh for each side when a signed corridor is open." },
-  loadingYard: { title: "Freight loading yards", department: "trade", cost: 14, years: 2, effect: "Adds capacity for 3 competitive freight loads each year while the route is open." },
-  protection: { title: "Water and crop protection", department: "food", cost: 9, years: 2, effect: "Prevents up to 2 food units of flood or dry-season losses each year." },
-  trainingSchool: { title: "Technical school", department: "education", cost: 12, years: 2, effect: "After a year of teaching, adds ₹1 lakh in annual receipts and 1 freight bid capacity at an operating exchange." },
-  processing: { title: "Food processing workshops", department: "trade", cost: 16, years: 3, effect: "With a trained workforce, adds ₹2 lakh in annual receipts and 1 freight bid capacity at an operating exchange." },
+  loadingYard: { title: "Freight loading yards", department: "trade", cost: 14, priceYear: 1957, years: 2, effect: "Adds capacity for 3 competitive freight loads each year while the route is open." },
+  protection: { title: "Water and crop protection", department: "food", cost: 9, priceYear: 1956, years: 2, effect: "Prevents up to 2 food units of flood or dry-season losses each year." },
+  trainingSchool: { title: "Technical school", department: "education", cost: 12, priceYear: 1956, years: 2, effect: "After a year of teaching, earns annual receipts and adds 1 freight bid capacity at an operating exchange." },
+  processing: { title: "Food processing workshops", department: "trade", cost: 16, priceYear: 1960, years: 3, effect: "With a trained workforce, earns annual receipts and adds 1 freight bid capacity at an operating exchange." },
 };
 const jointProjectPlans = {
   supply: {
@@ -225,8 +226,8 @@ function workSummary(kind, work, routeCapacity, mode = "road") {
     storage: `Holds 6 more food units. Food ${mode} limit: ${routeCapacity} ${routeCapacity === 1 ? "unit" : "units"}/year.`,
     freight: `Adds ₹1 lakh yearly for each side of an open signed corridor. ${transport} freight limit: ${routeCapacity} ${routeCapacity === 1 ? "load" : "loads"}/year.`,
     loadingYard: `Loading yards operate within the ${mode} freight limit of ${routeCapacity} ${routeCapacity === 1 ? "load" : "loads"}/year.`,
-    trainingSchool: `After a year of teaching, adds ₹1 lakh in annual receipts. ${transport} freight limit: ${routeCapacity} ${routeCapacity === 1 ? "load" : "loads"}/year.`,
-    processing: `With a trained workforce, adds ₹2 lakh in annual receipts. ${transport} freight limit: ${routeCapacity} ${routeCapacity === 1 ? "load" : "loads"}/year.`,
+    trainingSchool: `After a year of teaching, earns annual receipts. ${transport} freight limit: ${routeCapacity} ${routeCapacity === 1 ? "load" : "loads"}/year.`,
+    processing: `With a trained workforce, earns annual receipts. ${transport} freight limit: ${routeCapacity} ${routeCapacity === 1 ? "load" : "loads"}/year.`,
   } : {};
   return { id: kind, title, effect: boundedEffects[kind] ?? effect, department, status: work.opened ? "open" : "building",
     started: work.started, completionYear: work.completionYear, cost: work.cost, reason: work.reason ?? null };
@@ -236,10 +237,12 @@ function developmentEffects(prior, year, shock) {
   const opening = (kind) => prior?.works?.[kind]?.opened ?? prior?.works?.[kind]?.completionYear;
   const operates = (kind) => opening(kind) <= year;
   const trained = opening("trainingSchool") < year;
+  const processing = trained && operates("processing");
   return {
     harvestSaved: operates("protection") ? Math.min(2, shock) : 0,
-    trainingReceipts: trained ? 1 : 0,
-    processingReceipts: trained && operates("processing") ? 2 : 0,
+    workforceCapacity: Number(trained) + Number(processing),
+    trainingReceipts: trained ? periodAmount(1, openingPriceYear, year) : 0,
+    processingReceipts: processing ? periodAmount(2, openingPriceYear, year) : 0,
   };
 }
 
@@ -296,9 +299,11 @@ function developNeighbor(game, actor, prior, { shortage, balance, towns, agreeme
     const uncommittedCash = openingCash + allocation - (standard ? 3 + Math.min(2, shortage) : 3);
     for (const kind of priorities) {
       const plan = workPlans[kind];
-      if (works[kind] || !justified[kind] || uncommittedCash < plan.cost || game.year + plan.years > game.journey.end) continue;
-      works[kind] = { started: game.year, completionYear: game.year + plan.years, cost: plan.cost, reason: reasons[kind] };
-      developmentSpend = plan.cost;
+      if (works[kind] || !justified[kind] || game.year + plan.years > game.journey.end) continue;
+      const cost = periodAmount(plan.cost, plan.priceYear ?? openingPriceYear, game.year);
+      if (uncommittedCash < cost) continue;
+      works[kind] = { started: game.year, completionYear: game.year + plan.years, cost, reason: reasons[kind] };
+      developmentSpend = cost;
       changed.push(kind);
       break;
     }
@@ -321,8 +326,13 @@ function inheritedSuccessorWorks(game, world, id) {
   const campuses = new Set(operating.filter(({ kind }) => ["school", "college", "university", "technicalInstitute", "agriculturalInstitute"].includes(kind)).map(({ hex }) => hex));
   const trainedCohorts = [...campuses].reduce((sum, hex) => sum + Math.floor((game.journey?.cabinet?.education?.[hex]?.years ?? 0) / 5), 0);
   const workforceOutput = count("mill") * trainedCohorts;
-  return { workshops: count("mill"), storage: count("granary"), irrigation: count("irrigation"), terminals: count("freightTerminal"), upkeep: Math.ceil(operating.length / 4),
-    trainedCohorts, workforceOutput, workforceReceipts: Math.floor(workforceOutput * .8) };
+  const upkeep = periodAmount(Math.ceil(operating.length / 4), openingPriceYear, game.year);
+  return { workshops: count("mill"), storage: count("granary"), irrigation: count("irrigation"), terminals: count("freightTerminal"), upkeep,
+    trainedCohorts, workforceOutput, workforceReceipts: periodAmount(workforceOutput * .8, openingPriceYear, game.year, Math.floor) };
+}
+
+function inheritedOperatingReceipts(inherited, year) {
+  return inherited ? periodAmount(inherited.workshops, openingPriceYear, year) + inherited.workforceReceipts : 0;
 }
 
 export function settleNationalTrade(regional, game, world) {
@@ -348,7 +358,7 @@ export function settleNationalTrade(regional, game, world) {
       const { works, openingCash, developmentSpend, changed } = developNeighbor(game, actor, prior, {
         shortage, balance, towns: 3, standard: true, routeCapacity: connection.routeCapacity, allocation: funding.allocation,
       });
-      const inheritedReceipts = (inherited?.workshops ?? 0) + (inherited?.workforceReceipts ?? 0);
+      const inheritedReceipts = inheritedOperatingReceipts(inherited, game.year);
       const cashBeforeUpkeep = openingCash + funding.allocation + development.trainingReceipts + development.processingReceipts + inheritedReceipts - developmentSpend;
       const inheritedUpkeep = Math.min(inherited?.upkeep ?? 0, cashBeforeUpkeep);
       partners[id] = {
@@ -395,7 +405,7 @@ function inlandCarriers(market, partners, nearby) {
     const { works } = partners[id];
     if (node.local || node.shortage || !works?.freight?.opened) continue;
     const development = partners[id].development;
-    const workforce = (development?.trainingReceipts ?? 0) + Number(development?.processingReceipts > 0);
+    const workforce = development?.workforceCapacity ?? 0;
     const capacity = Math.min(routeLimit, gateway.capacity, (works.loadingYard?.opened ? 4 : 2) + workforce);
     if ((carriers.get(id)?.capacity ?? 0) >= capacity) continue;
     carriers.set(id, { id, name: node.name, via: gateway.name, capacity });
@@ -487,7 +497,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
       const reason = restricted ? "Route restricted after a shortfall."
         : !hasFreightFacility ? "Freight exchange has yet to open."
           : !localExchange ? "Needs a connection to your market." : null;
-      const addedCapacity = (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3 + development.trainingReceipts + Number(development.processingReceipts > 0);
+      const addedCapacity = (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3 + development.workforceCapacity;
       freightRivals.push({ id, name, reason, ...(routeCapacity ? { routeCapacity, mode } : {}),
         capacity: reason ? 0 : Math.min(maxFreightCapacity, routeCapacity ?? maxFreightCapacity, 3 + (works.loadingYard?.opened ? 3 : 0) + addedCapacity) });
     }
@@ -497,7 +507,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const offer = restricted ? 0 : clamp(reserve - reserveTarget, 0, Math.min(remainingRoadCapacity, baselineCapacity + compactCapacity));
     const jointFreightCash = jointFreight ? 2 : 0;
     const freight = corridor ? (towns >= 5 ? 2 : 1) + (exchangeOpen ? 1 : 0) + jointFreightCash : 0;
-    const inheritedReceipts = (inherited?.workshops ?? 0) + (inherited?.workforceReceipts ?? 0);
+    const inheritedReceipts = inheritedOperatingReceipts(inherited, game.year);
     const cashBeforeUpkeep = openingCash + funding.allocation + freight + inheritedReceipts + development.trainingReceipts + development.processingReceipts - developmentSpend;
     const inheritedUpkeep = Math.min(inherited?.upkeep ?? 0, cashBeforeUpkeep);
     const cash = cashBeforeUpkeep - inheritedUpkeep;

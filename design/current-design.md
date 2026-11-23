@@ -65,7 +65,7 @@ Example summary for 1948 with the network as the opening investment:
 
 The annual brief’s **Earned receipts** adds workshop, market, freight and food sale receipts in nominal rupees. Public allocations, grants, emergency food purchases and upkeep appear in the treasury ledger. The brief compares the latest closing balance with the previous one and itemizes net planning changes before turn resolution. When Skills increase the output each workshop receives, the brief identifies the extra output from the higher rate.
 
-Workshop output is an industrial production indicator in game units. The economy view separates earned receipts from the modeled public allocation. Workshops earn receipts equal to 80% of output, rounded down to whole lakh. Each connected town after the first two adds ₹1 lakh. Market access adds four output to served workshops and more links can raise the emergency food purchase limit. Regional GDP would require comparable value-added measures for agriculture, industry and services.
+Workshop output measures industrial production in game units. The economy view separates earned receipts from the modeled public allocation. At opening rates, workshop receipts use ₹0.8 lakh per output and connected towns after the first two use ₹1 lakh each. The founding campaign scales those rates to the current price year. Market access adds four output to served workshops and more links can raise the emergency food purchase limit. Regional GDP would require comparable value-added measures for agriculture, industry and services. [Period price rules](period-prices.md)
 
 ## Technical school charters
 

@@ -88,6 +88,8 @@ test("resolved reports freeze fiscal provenance and monetary receipts with legac
   const legacy = structuredClone(report);
   delete legacy.funding;
   delete legacy.receipts;
+  delete legacy.prices;
+  legacy.tax = report.funding.local + Math.floor(report.output * .8) + Math.max(0, report.towns - 2);
   const inferred = Campaign.reportFunding(legacy);
   assert.equal(inferred.total, 494);
   assert.equal(inferred.historic, null);

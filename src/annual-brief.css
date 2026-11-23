@@ -155,6 +155,7 @@ dialog.brief-dialog {
 .brief-metric-change { color: #c2cabc; font-size: .72rem; font-variant-numeric: tabular-nums; }
 .brief-metric-change[data-trend="up"] { color: #cee8a2; }
 .brief-metric-change[data-trend="down"] { color: #ffbf9f; }
+.brief-price-change { flex-basis: 100%; color: #e4d2a9; font-size: .69rem; }
 
 .brief-dialog .brief-investment { margin-top: 13px; }
 .brief-dialog .brief-investment h3 { color: #f4ebd0; font-size: .93rem; }
