@@ -66,7 +66,7 @@ function foodCoverage(report) {
 function weatherCard(report) {
   const season = report.monsoon === "Severe flood" ? "flood" : report.monsoon === "Dry monsoon" ? "dry" : "typical";
   const effect = report.attribution?.food;
-  const recovered = (effect?.protection ?? 0) + (report.training?.recovered ?? 0) + (report.development?.waterRecovery ?? 0);
+  const recovered = (effect?.protection ?? 0) + (report.training?.recovered ?? 0) + (report.development?.waterRecovery ?? 0) + (report.cabinetPriority?.recovered ?? 0);
   const lost = Math.max(0, (effect?.weatherLoss ?? 0) - recovered);
   const details = effect ? [
     lost ? `${units(lost)} lost` : "No net harvest loss",
@@ -145,6 +145,8 @@ function whyContent(report, previous) {
     ...(effect.protection ? [["Losses avoided by protection", `+${effect.protection}`]] : []),
     ...(report.training?.recovered ? [["Weather losses recovered by extension", `+${report.training.recovered}`]] : []),
     ...(development?.waterRecovery ? [["Weather losses recovered by water network", `+${development.waterRecovery}`]] : []),
+    ...(report.cabinetPriority?.food ? [["Five-year food priority", `+${report.cabinetPriority.food}`]] : []),
+    ...(report.cabinetPriority?.recovered ? [["Weather losses recovered by food priority", `+${report.cabinetPriority.recovered}`]] : []),
   ] : [["Baseline after seasonal effects", report.baseline], ["Irrigation after seasonal effects", `+${report.farms}`]];
   const food = detailRows([...harvestRows, ["Harvest delivered", report.harvest], ["Drawn from reserves", report.fromReserve],
     ...(report.regional?.emergencyFood ? [["Shared reserve deliveries", report.regional.emergencyFood]] : []),
@@ -169,6 +171,8 @@ function whyContent(report, previous) {
     ...(industry?.workshops ? [["Workshop base output", industry.base], ["From mineral sites", `+${industry.minerals}`], ["From market access", `+${industry.marketAccess}`], ["From technical training", `+${industry.skills}`]] : []),
     ...(report.bhilai?.output ? [["Bhilai supplier contracts", `+${report.bhilai.output}`]] : []),
     ...(industry?.power ? [["From power supply", `+${industry.power}`]] : []),
+    ...(industry?.workforce ? [["From trained workforce", `+${industry.workforce}`]] : []),
+    ...(industry?.priority ? [["From production priority", `+${industry.priority}`]] : []),
     ...(report.training?.output ? [["From apprenticeships", `+${report.training.output}`]] : []),
     ...(report.technicalIntake?.output ? [["From technical intake placements", `+${report.technicalIntake.output}`]] : []),
     ...(development?.researchOutput ? [["From higher education and research", `+${development.researchOutput}`]] : []),
@@ -188,8 +192,9 @@ function whyContent(report, previous) {
     ...(report.regional?.jointFreightCash ? [["Joint freight projects", money(report.regional.jointFreightCash)]] : []),
     ...(competition ? [["Competitive freight receipts", money(competition.player.earnings)]] : []),
     ...(contract?.winner?.id === "player" ? [["Freight contract payment", money(contract.payment)]] : []),
-    ["Works upkeep", money(report.maintenance - (report.training?.upkeep ?? 0))],
+    ["Works upkeep", money(report.maintenance - (report.training?.upkeep ?? 0) - (report.cabinetPriority?.spent ?? 0))],
     ...(report.training?.upkeep ? [["Training charter upkeep", money(report.training.upkeep)]] : []),
+    ...(report.cabinetPriority?.spent ? [["Five-year priority services", money(report.cabinetPriority.spent)]] : []),
     ...(report.upkeepShortfall ? [["Unfunded upkeep", money(report.upkeepShortfall)]] : []), ["Cash carried forward", money(report.cash)]]);
   const grant = report.grantAward;
   const delivery = report.attribution?.programme;
@@ -432,13 +437,37 @@ function changeList(changes) {
   </li>`).join("")}</ul>`;
 }
 
-export function briefContent(report, previous, nextDecision) {
+function priorityCard(report, allowMap) {
+  const plan = report.cabinetPriority;
+  if (!plan) return "";
+  const sector = plan.id ?? "education";
+  const duration = plan.ends ? plan.ends - plan.starts + 1 : 0;
+  const heading = plan.id ? `${plan.label} priority` : "Trained workforce";
+  const status = plan.status === "paused" ? "Paused" : plan.id ? "Funded" : "Lasting benefit";
+  const effectLabel = plan.id === "trade" ? "Production priority" : plan.id === "food" ? "Food added / saved" : "Training this term";
+  const effectValue = plan.id === "trade" ? `+${plan.tradeOutput} output` : plan.id === "food" ? `+${plan.food} / +${plan.recovered}`
+    : plan.newGraduates ? `${plan.newGraduates} ready next year` : plan.id ? plan.status === "paused" ? "No teaching funded" : "Teaching in progress" : "No new commitment";
+  return `<section class="brief-priority" data-sector="${sector}" data-status="${plan.status}" aria-label="Five-year priority results">
+    <div class="brief-card-header"><h3>${departmentBadge(sector, heading)}</h3><b>${status}</b></div>
+    <dl><div><dt>Extra services</dt><dd>${money(plan.spent)}</dd></div>
+      <div><dt>${effectLabel}</dt><dd>${effectValue}</dd></div>
+      <div><dt>Earlier trained workforce</dt><dd>+${plan.trainingOutput} output</dd></div></dl>
+    ${duration ? `<p>${plan.starts}–${plan.ends} · ${plan.paidYears} / ${duration} years funded${report.year === plan.ends ? " · Term ended" : ""}</p>` : ""}
+    ${plan.newGraduates ? `<p class="brief-priority-graduation">${plan.newGraduates} trained ${plan.newGraduates === 1 ? "cohort enters" : "cohorts enter"} service in ${report.year + 1}.</p>` : ""}
+    ${plan.skills ? `<p>Earlier training added ${plan.skills} Skills and ${plan.trainingOutput} direct workshop output.</p>` : ""}
+    ${plan.status === "paused" ? `<p>${escapeText(plan.message)}</p>` : ""}
+    ${allowMap ? '<button type="button" class="brief-programme-link" id="brief-priority-map">Locate priority sites <span aria-hidden="true">↗</span></button>' : ""}
+  </section>`;
+}
+
+export function briefContent(report, previous, nextDecision, latest = true) {
   const changes = changeRows(report, previous);
   return `<div class="brief-outcomes">
     ${foodCoverage(report)}
     <div class="brief-year-facts">${weatherCard(report)}${treasuryCard(report, previous)}</div>
   </div>
   ${metricStrip(report, previous)}
+  ${priorityCard(report, latest)}
   ${changes.length ? `<section class="brief-investment"><h3>What changed</h3>${changeList(changes.slice(0, 4))}
     ${changes.length > 4 ? `<details class="brief-more"><summary>${changes.length - 4} more ${changes.length === 5 ? "change" : "changes"}</summary>${changeList(changes.slice(4))}</details>` : ""}</section>` : ""}
   ${report.regional?.freightCompetition ? '<button type="button" class="brief-programme-link" id="brief-freight">View freight results <span aria-hidden="true">↗</span></button>' : ""}

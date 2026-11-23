@@ -318,7 +318,11 @@ function inheritedSuccessorWorks(game, world, id) {
   const operating = game.assets.filter(({ hex, remaining }) => !remaining && game.owners[hex] === owner);
   if (!operating.length) return null;
   const count = (kind) => operating.filter((asset) => asset.kind === kind).length;
-  return { workshops: count("mill"), storage: count("granary"), irrigation: count("irrigation"), terminals: count("freightTerminal"), upkeep: Math.ceil(operating.length / 4) };
+  const campuses = new Set(operating.filter(({ kind }) => ["school", "college", "university", "technicalInstitute", "agriculturalInstitute"].includes(kind)).map(({ hex }) => hex));
+  const trainedCohorts = [...campuses].reduce((sum, hex) => sum + Math.floor((game.journey?.cabinet?.education?.[hex]?.years ?? 0) / 5), 0);
+  const workforceOutput = count("mill") * trainedCohorts;
+  return { workshops: count("mill"), storage: count("granary"), irrigation: count("irrigation"), terminals: count("freightTerminal"), upkeep: Math.ceil(operating.length / 4),
+    trainedCohorts, workforceOutput, workforceReceipts: Math.floor(workforceOutput * .8) };
 }
 
 export function settleNationalTrade(regional, game, world) {
@@ -344,7 +348,7 @@ export function settleNationalTrade(regional, game, world) {
       const { works, openingCash, developmentSpend, changed } = developNeighbor(game, actor, prior, {
         shortage, balance, towns: 3, standard: true, routeCapacity: connection.routeCapacity, allocation: funding.allocation,
       });
-      const inheritedReceipts = inherited?.workshops ?? 0;
+      const inheritedReceipts = (inherited?.workshops ?? 0) + (inherited?.workforceReceipts ?? 0);
       const cashBeforeUpkeep = openingCash + funding.allocation + development.trainingReceipts + development.processingReceipts + inheritedReceipts - developmentSpend;
       const inheritedUpkeep = Math.min(inherited?.upkeep ?? 0, cashBeforeUpkeep);
       partners[id] = {
@@ -493,7 +497,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const offer = restricted ? 0 : clamp(reserve - reserveTarget, 0, Math.min(remainingRoadCapacity, baselineCapacity + compactCapacity));
     const jointFreightCash = jointFreight ? 2 : 0;
     const freight = corridor ? (towns >= 5 ? 2 : 1) + (exchangeOpen ? 1 : 0) + jointFreightCash : 0;
-    const inheritedReceipts = inherited?.workshops ?? 0;
+    const inheritedReceipts = (inherited?.workshops ?? 0) + (inherited?.workforceReceipts ?? 0);
     const cashBeforeUpkeep = openingCash + funding.allocation + freight + inheritedReceipts + development.trainingReceipts + development.processingReceipts - developmentSpend;
     const inheritedUpkeep = Math.min(inherited?.upkeep ?? 0, cashBeforeUpkeep);
     const cash = cashBeforeUpkeep - inheritedUpkeep;

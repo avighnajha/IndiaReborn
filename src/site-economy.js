@@ -26,6 +26,7 @@ const workshopSources = {
   base: "base production",
   market: "market access", skills: "Skills", research: "education and research", apprenticeship: "apprenticeships", placement: "technical training intake",
   minerals: "mineral deposits", power: "power", park: "industrial park", supplier: "Bhilai contracts", rail: "rail feeders",
+  workforce: "trained workforce", priority: "five-year production priority",
   materialLoss: "raw material disruption",
 };
 

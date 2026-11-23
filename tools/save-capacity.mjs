@@ -20,6 +20,9 @@ if (regionFlag >= 0) {
       assert.ok(choice, `${region}: ${decision.title}`);
       game = Campaign.decide(game, choice);
     }
+    const priority = Campaign.cabinetPriority(game);
+    const focus = priority.options.find(({ id, reason }) => id !== "services" && !reason);
+    if (focus) game = Campaign.chooseCabinetPriority(game, focus.id);
     const next = Campaign.advance(game);
     assert.equal(next.year, game.year + 1, `${region}: advance`);
     game = next;

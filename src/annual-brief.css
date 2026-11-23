@@ -127,6 +127,15 @@ dialog.brief-dialog {
 .brief-allocation { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 6px; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line); font-size: .75rem; color: #cfd7c7; }
 .brief-allocation b { color: #ead49d; font-variant-numeric: tabular-nums; }
 .brief-dialog .brief-allocation-change { margin-top: 2px; color: #e2c88c; font-size: .72rem; }
+.brief-priority { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-inline-start: 3px solid var(--brief-sector); border-radius: 5px; background: #24332b; }
+.brief-priority .brief-card-header b { font-size: .75rem; color: var(--brief-sector); }
+.brief-priority[data-status="paused"] .brief-card-header b { color: #e9b591; }
+.brief-priority dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin: 8px 0; }
+.brief-priority dt { font-size: .73rem; color: #d0dac8; }
+.brief-priority dd { font-size: .95rem; font-weight: 700; color: var(--brief-sector); }
+.brief-priority p { margin: 4px 0; font-size: .77rem; color: #d0dac8; }
+.brief-priority .brief-priority-graduation { color: #f0dfac; }
+@media (max-width: 440px) { .brief-priority dl { grid-template-columns: minmax(0,1fr); } }
 
 .brief-metrics {
   display: grid;

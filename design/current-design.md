@@ -77,6 +77,10 @@ The 1950 Craftsmen Training Scheme and the 1953 National Extension Service infor
 
 In a matched 1954 Bihar start, extension secured all five final years and apprenticeships secured three. Apprenticeships added 12 workshop output in 1965. Extension mattered because the cabinet deferred the larger basin programme.
 
+## Five-year priorities
+
+From 1951, the Cabinet can commit to an optional five-year operating focus alongside construction. Education trains campus-bound cohorts whose Skills and workshop productivity begin the following year and persist. Food & Water adds harvest and recovers remaining weather losses; Trade & Industry raises linked workshop production while funded. Each uses the same department identity as its tree and regional programmes. Costs reserve a modeled share of the annual works allocation, and insufficient cash pauses extra services without removing baseline works. The brief and Economy map trace the saved spending and site effects. [Full rules and review](cabinet-priorities.md)
+
 ## Department development trees
 
 Founding campaigns expose four tiers per department in the cabinet. The tree uses the same icons and facility labels across regions. Cards show the main effect, price or delivery date, and status. Selecting a card opens local names, map locations and prerequisites. Any domestic programme under construction occupies the works office across all departments. Training charters use their own fee and teaching capacity.

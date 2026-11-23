@@ -12,6 +12,7 @@ import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
 import { fundingReferenceMarkup } from "./fiscal-view.js";
+import { cabinetPlanMarkup } from "./cabinet-plan-view.js";
 import "./fiscal-view.css";
 import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
@@ -422,6 +423,13 @@ function renderProgrammes() {
     ${inherited ? "" : `<div class="programme-terms"><b>${money(funded)}</b><span>${period}</span></div>`}
     ${terms ? basinTermsContent(terms, quote, record, union) : ""}
     <p class="programme-status">${summary}</p>`;
+  const priority = !record && Number.isFinite(funded) ? Campaign.cabinetPriority({ ...game, cash: game.cash - funded }) : null;
+  if (priority?.current?.status === "paused" && Campaign.cabinetPriority(game).current?.status === "funded") {
+    const warning = document.createElement("p");
+    warning.className = "programme-status";
+    warning.textContent = "This commitment would pause your five-year priority this year.";
+    details.append(warning);
+  }
   if (isBasin && !record) renderBasinOffers(agreements);
   if (!record && !inherited) {
     const approve = choiceButton(`${isBasin ? "Sign agreement" : "Approve programme"} · ${money(funded)}`, () => {
@@ -511,6 +519,7 @@ function showDevelopmentTrees(focusDepartment = false, focusNode = null) {
   const overview = `${money(game.cash)} available · ${delivery ? `Works office occupied through ${delivery.finish}` : "Works office available"}`;
   showModal(`${Math.min(game.year, campaignEnd(game))} · Cabinet planning`, "Development trees",
     departmentTreeMarkup(developmentTrees(game), selectedDepartment, overview), [
+    ...(Campaign.cabinetPriority(game).available ? [choiceButton("Five-year priority", showCabinetPriority)] : []),
     ...(selectedDepartment === "food" && reserveWindow(game) ? [choiceButton("Union food reserve", () => showUnionReserve(showDevelopmentTrees, "Back to Food & Water"))] : []),
     choiceButton("Regional programmes →", () => {
       modal.close();
@@ -607,6 +616,34 @@ function showUnionReserve(back = null, label = "Return to map") {
   }
 }
 
+function showCabinetPriority() {
+  const model = Campaign.cabinetPriority(game);
+  showModal(`${game.year} · Cabinet planning`, "Five-year priority", cabinetPlanMarkup(model), [
+    choiceButton("Development trees", () => showDevelopmentTrees()),
+    choiceButton("Economy map", () => showPriorityMap()),
+    choiceButton("Return to map", returnToMap, true),
+  ]);
+  modal.classList.add("opening-dialog");
+  for (const button of byId("modal-content").querySelectorAll("[data-cabinet-plan]")) {
+    button.addEventListener("click", () => {
+      const next = Campaign.chooseCabinetPriority(game, button.dataset.cabinetPlan);
+      if (next === game) return;
+      game = next;
+      persist();
+      render();
+      showCabinetPriority();
+    });
+  }
+}
+
+function showPriorityMap(report = game.reports.at(-1)) {
+  const priority = report?.cabinetPriority;
+  const candidates = priority?.id === "food" ? priority.sites.food : priority?.id === "education" ? priority.sites.education : priority?.sites.trade;
+  const site = candidates?.find(({ hex }) => game.owners[hex] === World.key);
+  if (site) focusEconomySite(site.hex);
+  else showEconomyMap();
+}
+
 function showTechnicalIntake(fromTree = false) {
   const plan = Campaign.technicalIntake(game);
   if (!plan) return;
@@ -645,6 +682,11 @@ function render() {
   const terrain = World.terrain[tile.kind];
   const pending = pendingDecision();
   const training = Campaign.training(game);
+  const priority = Campaign.cabinetPriority(game);
+  byId("cabinet-priority").hidden = !priority.available;
+  byId("cabinet-priority").dataset.sector = priority.current?.id ?? "";
+  byId("cabinet-priority").querySelector("small").textContent = priority.current
+    ? `${priority.current.label} · ${priority.current.status === "paused" ? "Paused" : `to ${priority.current.ends}`}` : "Choose a focus →";
 
   byId("year").textContent = done ? "Complete" : game.year;
   document.title = `${name} · India: Alternate Futures`;
@@ -694,7 +736,9 @@ function render() {
   const resultsSummary = [production, harvest].filter(Boolean).join(" · ");
   const intakeSchool = owned && latest?.technicalIntake?.schools?.find(({ hex }) => hex === selected);
   const roleSummary = selectedRoles.map((role) => economyRoles[role].label).join(" · ");
-  const effects = results?.workshopEffects.length ? `<ul aria-label="Effects on workshop output">${results.workshopEffects.map(({ label, units }) => `<li><b>${units > 0 ? "+" : ""}${units}</b> ${label}</li>`).join("")}</ul>` : "";
+  const workforce = owned && game.journey?.cabinet?.education?.[selected];
+  const workforceNote = workforce ? `<p>${workforce.cohorts} trained ${workforce.cohorts === 1 ? "cohort" : "cohorts"} · ${workforce.years % 5}/5 funded years toward the next.</p>` : "";
+  const effects = (results?.workshopEffects.length ? `<ul aria-label="Effects on workshop output">${results.workshopEffects.map(({ label, units }) => `<li><b>${units > 0 ? "+" : ""}${units}</b> ${label}</li>`).join("")}</ul>` : "") + workforceNote;
   const floodSites = latest?.attribution?.food?.floodSites ?? [];
   const floodImpact = layer === "weather" && floodSites.find(({ hex }) => hex === selected);
   const floodSummary = floodImpact && [
@@ -800,6 +844,18 @@ function render() {
     key.push([`#${trainingTint.toString(16)}`, trainingPreview ? `Preview · ${trainingPath.title}` : `${trainingPath.title} sites`]);
     preview = { cells: trainingPath.sites.map(({ id }) => id), color: trainingTint };
   }
+  const served = latest?.cabinetPriority;
+  if (layer === "economy" && served) {
+    const focus = served.status === "funded" && served.id ? served.id : served.graduates ? "education" : null;
+    const sources = focus === "food" ? served.sites.food : focus === "trade" ? served.sites.trade
+      : focus ? served.sites.education.filter(({ cohorts }) => served.status === "funded" || cohorts) : [];
+    const cells = sources.filter(({ hex }) => game.owners[hex] === World.key).map(({ hex }) => hex);
+    if (focus && cells.length) {
+      const color = departmentIdentity[focus].color;
+      preview = { cells, color };
+      key.push([`#${color.toString(16).padStart(6, "0")}`, `${departmentIdentity[focus].label} priority · ${latest.year}`]);
+    }
+  }
   byId("legend").innerHTML = key.map(([color, label]) => `<span><i style="--swatch:${color}"></i>${label}</span>`).join("") + (layer === "weather" ? `<span>${weather}</span>` : "");
   const sitePicker = byId("economy-sites");
   sitePicker.hidden = !developedSites.length;
@@ -898,6 +954,7 @@ function showEconomy() {
     </div>
     ${report ? fundingReferenceMarkup(funding) : ""}
     <ul class="economy-cause">
+      ${report?.cabinetPriority ? `<li><b>Five-year priorities.</b> ${report.cabinetPriority.skills} Skills and ${report.cabinetPriority.trainingOutput} direct workshop output from earlier training; ${report.cabinetPriority.tradeOutput} output from the production priority. This year’s extra services cost ${money(report.cabinetPriority.spent)}.</li>` : ""}
       <li><b>Schools → skills → workshop output.</b> Every 6 skill points adds 1 output to each operating workshop, up to 3 per workshop. Workshop receipts are 80% of output, rounded down in lakh rupees.</li>
       <li><b>Market links → production and trade.</b> Market access adds 4 output to each workshop it serves. Each connected town after the first two adds ₹1 lakh a year. More links also raise the food purchase limit.</li>
       ${report?.development ? `<li><b>Advanced programmes.</b> This year higher education and industrial parks added ${report.development.researchOutput + report.development.parkOutput} workshop output. Freight terminals contributed ${money(report.development.marketReceipts)} in market receipts.</li>` : ""}
@@ -997,7 +1054,7 @@ function showReport(index = game.reports.length - 1) {
   const latest = index === game.reports.length - 1;
   const done = game.year > campaignEnd(game);
   const decision = latest && !done ? nextBriefDecision(report) : null;
-  showModal(`${report.year} · Annual brief`, briefHeadline(report, game.reports[index - 1]), briefContent(report, game.reports[index - 1], decision?.advice), [
+  showModal(`${report.year} · Annual brief`, briefHeadline(report, game.reports[index - 1]), briefContent(report, game.reports[index - 1], decision?.advice, latest), [
     choiceButton("Earlier", () => showReport(index - 1), false, index === 0),
     choiceButton("Later", () => showReport(index + 1), false, latest),
     ...(latest && report.monsoon !== "Typical monsoon" ? [choiceButton("View monsoon map", () => showMonsoonMap(report))] : []),
@@ -1019,6 +1076,7 @@ function showReport(index = game.reports.length - 1) {
     ]);
     modal.classList.add("opening-dialog");
   });
+  byId("brief-priority-map")?.addEventListener("click", () => showPriorityMap(report));
   for (const button of byId("modal-content").querySelectorAll("[data-brief-programme]")) {
     button.addEventListener("click", () => {
       modal.close();
@@ -1088,7 +1146,7 @@ function showNeighbors() {
       ${marketFundingMarkup(neighbor.funding)}
       ${neighbor.offer === null ? "" : `<p>${neighbor.offer} food available · ${neighbor.request} sought<br>${money(neighbor.cash)} modeled treasury</p>`}
       ${neighbor.national ? `<p>Domestic routes · ${neighbor.national.bought} food bought · ${neighbor.national.sold} sold</p>` : ""}
-      ${neighbor.inherited ? `<p>Inherited works · ${money(neighbor.inherited.receipts)} in workshop receipts · ${money(neighbor.inherited.upkeepPaid)} upkeep</p>` : ""}
+      ${neighbor.inherited ? `<p>Inherited works · ${money(neighbor.inherited.receipts)} in workshop receipts · ${money(neighbor.inherited.upkeepPaid)} upkeep${neighbor.inherited.trainedCohorts ? ` · ${neighbor.inherited.trainedCohorts} trained cohorts` : ""}</p>` : ""}
       ${neighbor.development?.harvestSaved ? `<p>${neighbor.development.harvestSaved} food saved by crop protection this year.</p>` : ""}
       ${(neighbor.development?.trainingReceipts ?? 0) + (neighbor.development?.processingReceipts ?? 0) ? `<p>School and processing receipts · ${money(neighbor.development.trainingReceipts + neighbor.development.processingReceipts)} this year</p>` : ""}
       ${neighbor.works?.length ? `<ul class="neighbor-works">${neighbor.works.map(({ title, status, completionYear, effect, department, reason }) =>
@@ -1329,6 +1387,7 @@ byId("development-trees").addEventListener("click", () => {
 byId("relief").addEventListener("click", showRelief);
 byId("union-reserve").addEventListener("click", () => showUnionReserve());
 byId("technical-intake").addEventListener("click", () => showTechnicalIntake());
+byId("cabinet-priority").addEventListener("click", showCabinetPriority);
 byId("cabinet-guide").addEventListener("click", (event) => {
   if (!event.target.closest("[data-guide-dismiss]")) return;
   guideDismissed = true;
