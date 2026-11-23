@@ -1,3 +1,5 @@
+import { stateRevenueReferences } from "./state-revenue-references.js";
+
 const firstCommission = "https://fincomindia.nic.in/asset/doc/commission-reports/1st-FC/digitized/1st%20FC%20-%20Digitised.pdf";
 const secondCommission = "https://fincomindia.nic.in/asset/doc/commission-reports/2nd-FC/digitized/2nd%20FC%20-Digitised.pdf";
 const thirdCommission = "https://fincomindia.nic.in/asset/doc/commission-reports/3rd-FC/digitized/3rd%20FC%20Scanned.pdf";
@@ -228,6 +230,14 @@ const crore = (value) => `₹${numberFormat.format(value / 100)} crore`;
 const yearLabel = (year) => `${year}–${String(year + 1).slice(-2)}`;
 const status = (year) => year === 1950 ? "accounts" : year === 1951 ? "provisional figures" : year === 1952 ? "budget estimate" : "reported figures";
 
+// Only final-period jurisdictions can use the later state observations.
+// Earlier profiles describe different territory, even if a saved branch holds them.
+const laterProfiles = {
+  bihar: "bihar", orissa: "orissa", "west-bengal": "bengal", up: "up",
+  maharashtra: "maharashtra", gujarat: "gujarat", punjab: "punjab", haryana: "haryana",
+  "tamil-nadu": "madras", "andhra-pradesh": "andhra", "assam-reorganized": "assam", "central-reorganized": "central",
+};
+
 function reference(region, year) {
   if (region === "mayurbhanj") return {
     name: "Mayurbhanj", fiscalYear: 1947, sourcePeriod: "1947 yearbook", revenue: mayurbhanjRevenue,
@@ -237,13 +247,18 @@ function reference(region, year) {
   const { name: profileName, page, rows } = profiles[region];
   const name = region === "tamil-nadu" && year < 1969 ? "Madras"
     : region === "central" && year < 1950 ? "Central Provinces and Berar" : profileName;
-  const [fiscalYear, revenue, sharedTax, grants, source = firstCommission, sourcePage = page, basis = status(fiscalYear), transferBasis] =
-    rows.findLast(([date]) => date <= year) ?? rows[0];
+  let selected = rows.findLast(([date]) => date <= year) ?? rows[0];
+  const extra = stateRevenueReferences[laterProfiles[region]]?.findLast(({ fiscalYear }) => fiscalYear <= year);
+  // Keep finer regional accounts when both sources describe the same fiscal year.
+  if (extra && extra.fiscalYear > selected[0]) {
+    selected = [extra.fiscalYear, extra.value, null, null, extra.url, null, extra.status];
+  }
+  const [fiscalYear, revenue, sharedTax, grants, source = firstCommission, sourcePage = page, basis = status(fiscalYear), transferBasis] = selected;
   const mix = rows.findLast(([date, , tax]) => date <= fiscalYear && tax !== null);
   const transferShare = mix ? (mix[2] + mix[3]) / mix[1] : 0;
   const transferYear = mix?.[0] ?? null;
   const transferNote = !mix ? "The budget source gives total receipts. The opening works allocation uses local funding for this turn."
-    : sharedTax === null && mix[7] ? `The modeled split carries forward the FY ${yearLabel(transferYear)} Finance Commission award share.`
+    : sharedTax === null && transferYear < fiscalYear ? `The modeled split carries forward the FY ${yearLabel(transferYear)} ${mix[7] ? "Finance Commission award share" : "recorded transfer mix"}.`
       : transferBasis;
   return { name, fiscalYear, revenue, sharedTax, grants, transferShare, transferYear, status: basis,
     url: sourcePage ? `${source}#page=${sourcePage}` : source, ...(transferNote ? { transferNote } : {}) };
@@ -258,7 +273,7 @@ function envelope(region, year, share = 1) {
   const developmentShare = region === "mayurbhanj" ? 0.10 : 0.005;
   const total = Math.round(Math.min(historic.revenue * developmentShare, limit) * share);
   const transfers = Math.round(total * historic.transferShare);
-  return { historic, developmentRecord, local: total - transfers, transfers, total };
+  return { historic, developmentRecord, share: developmentShare * share, local: total - transfers, transfers, total };
 }
 
 function openingBalance(region, year) {

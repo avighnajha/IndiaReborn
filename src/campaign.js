@@ -207,12 +207,22 @@ export const Campaign = (() => {
   }
 
   function earnedReceipts(report) {
-    const { workshops, markets } = localReceipts(report.output, report.towns, report.development?.marketReceipts);
+    const { workshops, markets } = report.receipts ?? localReceipts(report.output, report.towns, report.development?.marketReceipts);
     const freight = (report.regionalCash ?? 0) + (report.regional?.freightCompetition?.player.earnings ?? 0);
     const contract = playerContractReceipts(report.regional?.freightContract);
     const sales = report.sold ?? 0;
     const procurement = report.unionReserve?.proceeds ?? 0;
     return { workshops, markets, freight, contract, sales, procurement, total: workshops + markets + freight + contract + sales + procurement };
+  }
+
+  function reportFunding(report) {
+    if (report.funding) return report.funding;
+    if (report.baselineTransfers === undefined) return null;
+    const { workshops, markets } = report.receipts ?? localReceipts(report.output, report.towns, report.development?.marketReceipts);
+    const local = report.tax - workshops - markets;
+    // Older reports retain the allocation amounts, but not their historical source.
+    // Never attach today's fiscal reference to a previously resolved year.
+    return { local, transfers: report.baselineTransfers, total: local + report.baselineTransfers, historic: null };
   }
 
   function playerContractReceipts(contract) {
@@ -648,7 +658,7 @@ export const Campaign = (() => {
     const report = {
       year: game.year, monsoon, market, marketStock, harvest, baseline, farms, demand, shortage, reserve, fromReserve, bought, sold, buyPrice,
       skills, output, towns, completed, tax, maintenance, income, openingCash: game.cash, cash, upkeepShortfall: Math.max(0, maintenance - game.cash - income),
-      baselineTransfers: funding.transfers, grantAward: game.grantAwards?.[game.year] ?? null,
+      funding, receipts, baselineTransfers: funding.transfers, grantAward: game.grantAwards?.[game.year] ?? null,
       attribution: { food: foodEffects, industry, newlyConnected, programme: delivery },
       siteEconomy: { workshops: workshopSites, irrigation: irrigationSites },
     };
@@ -747,7 +757,7 @@ export const Campaign = (() => {
   }
 
   return {
-    saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
+    saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, reportFunding, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
     training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve,
     partnerOffers: (game) => partnerOffers(game, World),
     jointProjectOffers: (game) => jointProjectOffers(game, World),

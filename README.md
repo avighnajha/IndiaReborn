@@ -40,6 +40,8 @@ The northern market grows through Mandi in 1948, Jammu in 1949 and Gangtok in 19
 
 AI markets receive different annual allocations based on period fiscal references. Expand **market budget** in Neighbors or the market treasury table to see the source year, historical amount and modeled share. A missing period keeps an explicitly modeled allowance. Existing cash and saved reports are preserved. [Funding rules and fiscal observations](design/market-fiscal-research.md)
 
+The player and AI share later revenue references for the same administration. Your annual brief now shows the public allocation and its change beside the treasury; earned receipts remain separate. Expand **Budget source** under **Why this happened** or **Economy breakdown** for the saved fiscal year and source. Earlier reports keep their original amounts and identify missing source details. Late programme prices and continuing service choices remain under [balance review](design/late-campaign-balance.md).
+
 Open **Emergency food plan** in the Cabinet to see how the expected harvest and reserves would cover food needs under typical conditions and the current weather warning. The latest flood report opens the **Monsoon** layer and highlights the growing sites that lost food or benefited from protection.
 
 - **Bihar** opens with ₹34 lakh. The Ganga Market Corridor commits ₹32 lakh to a crossing north of Patna, a link to Darbhanga and a workshop. Northern Food Security costs ₹29 lakh and improves the first harvest. Once it finishes, compare three **Kosi Flood Compact** agreements.

@@ -1,0 +1,6 @@
+.fiscal-reference { margin-top: 9px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; background: #1b2822; }
+.fiscal-reference summary { color: #e8ce90; cursor: pointer; font-size: .8rem; font-weight: 650; }
+.fiscal-reference p { color: var(--subtle); font-size: .78rem; line-height: 1.5; margin-top: 7px; }
+.fiscal-reference b { color: #efe7cb; }
+.fiscal-reference a { display: inline-block; margin-top: 6px; color: #e8ce90; font-size: .78rem; }
+.fiscal-reference :is(summary, a):focus-visible { outline: 2px solid #ffdda0; outline-offset: 3px; }

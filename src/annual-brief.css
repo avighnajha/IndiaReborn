@@ -124,6 +124,9 @@ dialog.brief-dialog {
 .brief-weather[data-season="dry"] { --brief-weather: #eabd8e; }
 .brief-dialog .brief-weather strong { color: var(--brief-weather); }
 .brief-treasury { border-inline-start: 3px solid var(--gold); }
+.brief-allocation { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 6px; margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--line); font-size: .75rem; color: #cfd7c7; }
+.brief-allocation b { color: #ead49d; font-variant-numeric: tabular-nums; }
+.brief-dialog .brief-allocation-change { margin-top: 2px; color: #e2c88c; font-size: .72rem; }
 
 .brief-metrics {
   display: grid;

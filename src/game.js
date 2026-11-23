@@ -11,6 +11,8 @@ import { departmentBadge, departmentIdentity, programmeDepartment } from "./depa
 import { departmentIcon } from "./department-icons.js";
 import "./department-presentation.css";
 import { Fiscal } from "./fiscal.js";
+import { fundingReferenceMarkup } from "./fiscal-view.js";
+import "./fiscal-view.css";
 import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
@@ -885,9 +887,8 @@ function showEconomy() {
   const sources = [`${money(workshops)} workshops`, `${money(markets)} markets`, freight && `${money(freight)} freight`,
     contract && `${money(contract)} freight contract`, sales && `${money(sales)} food sales`,
     procurement && `${money(procurement)} Union food shipments`].filter(Boolean).join(" · ");
-  const recordedAllocation = report && report.baselineTransfers !== undefined
-    ? report.tax - workshops - markets + report.baselineTransfers
-    : null;
+  const funding = report && Campaign.reportFunding(report);
+  const recordedAllocation = funding?.total ?? null;
   const allocation = recordedAllocation ?? Campaign.finance(game).total;
   const label = recordedAllocation === null ? "Current public allocation" : "Public allocation that year";
   showModal(report ? `${report.year} · Last resolved year` : "Economy · Opening position", "How the economy earns revenue", `
@@ -895,6 +896,7 @@ function showEconomy() {
       <div><small>Earned receipts</small><strong>${money(total)}</strong><span>${sources}</span></div>
       <div><small>${label}</small><strong>${money(allocation)}</strong><span>Modeled share of historical public revenue</span></div>
     </div>
+    ${report ? fundingReferenceMarkup(funding) : ""}
     <ul class="economy-cause">
       <li><b>Schools → skills → workshop output.</b> Every 6 skill points adds 1 output to each operating workshop, up to 3 per workshop. Workshop receipts are 80% of output, rounded down in lakh rupees.</li>
       <li><b>Market links → production and trade.</b> Market access adds 4 output to each workshop it serves. Each connected town after the first two adds ₹1 lakh a year. More links also raise the food purchase limit.</li>

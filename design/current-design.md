@@ -19,6 +19,8 @@ The atlas and Domestic market distinguish playable starts, annual market account
 
 Nearby and domestic AI use a market share of historical fiscal references where available. Revenue receipts and annual Plan outlays retain separate measures and model rates. Allowances post once, before works commitments; operating and trade receipts stay separate. No future-year reference funds an earlier turn. The ledger exposes the year and source and identifies modeled allowances in missing periods. Opening cash, portfolio shares and prices remain game values. [AI fiscal model](market-fiscal-research.md)
 
+Player and AI final-period profiles now share later revenue observations, retaining more precise equal-year regional accounts. New player reports freeze allocation, fiscal provenance and monetary receipts. The brief shows public allocations separately from earned receipts; missing provenance in earlier reports is disclosed. The [late campaign balance review](late-campaign-balance.md) records existing surpluses and the next work on nominal prices, continuing departmental commitments and later objectives. Reference alignment does not establish strategic scarcity.
+
 ## Why the brief separates causes
 
 The earlier report put the weather label and food results in different places. Its baseline already included the weather adjustment. In a severe flood, new irrigation can lose part of its potential yield before the remainder reaches the harvest. The brief now separates the weather, investment, reserve and purchase contributions.

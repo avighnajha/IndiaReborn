@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-    "test": "node --test check-campaign.cjs check-bengal.cjs check-bombay.cjs check-punjab.cjs check-madras.cjs check-assam.cjs check-central.cjs check-mayurbhanj.cjs check-national-coverage.cjs check-northern-markets.cjs check-market-finance.cjs check-save-codec.cjs"
+    "test": "node --test check-campaign.cjs check-bengal.cjs check-bombay.cjs check-punjab.cjs check-madras.cjs check-assam.cjs check-central.cjs check-mayurbhanj.cjs check-national-coverage.cjs check-northern-markets.cjs check-market-finance.cjs check-save-codec.cjs check-fiscal.cjs"
   },
   "dependencies": {
     "lz-string": "1.5.0",

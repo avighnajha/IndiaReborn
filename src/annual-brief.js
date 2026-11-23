@@ -1,6 +1,7 @@
 import { Campaign } from "./campaign.js";
 import { departmentBadge, programmeDepartment } from "./department-presentation.js";
 import { Fiscal } from "./fiscal.js";
+import { fundingReferenceMarkup } from "./fiscal-view.js";
 import { basinAgreementsFor, basinNameFor, programmes } from "./programmes.js";
 import { World } from "./scenario.js";
 
@@ -78,12 +79,17 @@ function weatherCard(report) {
 }
 
 function treasuryCard(report, previous) {
+  const funding = Campaign.reportFunding(report);
+  const earlier = previous && Campaign.reportFunding(previous);
+  const allocationChange = funding && earlier ? funding.total - earlier.total : 0;
   const cashChange = report.cash - (previous?.cash ?? report.openingCash);
   const difference = Number.isFinite(cashChange) && cashChange !== 0
     ? `${signedMoney(cashChange)} ${previous ? "from last year" : "after planning"}`
     : "Closing balance";
   return `<section class="brief-card brief-treasury"><h3>Treasury</h3>
     <strong>${money(report.cash)}</strong><p>${difference}</p>
+    ${funding ? `<div class="brief-allocation"><span>Public allocation</span><b>${money(funding.total)}</b></div>
+      ${allocationChange ? `<p class="brief-allocation-change">${signedMoney(allocationChange)} vs ${previous.year}</p>` : ""}` : ""}
   </section>`;
 }
 
@@ -110,12 +116,13 @@ function detailRows(rows) {
 }
 
 function revenueRows(report) {
-  if (report.baselineTransfers === undefined) return [["Local revenue", money(report.tax)]];
+  const funding = Campaign.reportFunding(report);
+  if (!funding) return [["Local revenue", money(report.tax)]];
   const terminal = report.development?.marketReceipts ?? 0;
-  const { workshops, markets } = Campaign.localReceipts(report.output, report.towns, terminal);
+  const { workshops, markets } = Campaign.earnedReceipts(report);
   return [
-    ["Public allocation · local", money(report.tax - workshops - markets)],
-    ["Public allocation · Union", money(report.baselineTransfers)],
+    ["Public allocation · local", money(funding.local)],
+    ["Public allocation · Union", money(funding.transfers)],
     ["Workshop receipts", money(workshops)],
     ["Market link receipts", money(markets - terminal)],
     ...(terminal ? [["Freight terminal receipts", money(terminal)]] : []),
@@ -196,7 +203,7 @@ function whyContent(report, previous) {
     <section><h3>Food supply · ${escapeText(report.monsoon)}</h3>${food}</section>
     <section><h3>Investment and output</h3>${production}${works.length ? `<ul class="brief-works">${works.map((work) => `<li>${escapeText(work)}</li>`).join("")}</ul>` : ""}
       ${training ? `<p class="brief-note">${escapeText(training.title)} · ${served.length ? `Served ${escapeText(names.format(served))}.` : escapeText(training.message)}</p>` : ""}</section>
-    <section><h3>Treasury</h3>${cash}${grant ? `<p class="brief-note">${escapeText(grant.title)} awarded ${money(grant.grant)} with a ${money(grant.match)} local match. Already included in cash after planning.</p>` : ""}
+    <section><h3>Treasury</h3>${cash}${fundingReferenceMarkup(Campaign.reportFunding(report))}${grant ? `<p class="brief-note">${escapeText(grant.title)} awarded ${money(grant.grant)} with a ${money(grant.match)} local match. Already included in cash after planning.</p>` : ""}
     ${training?.setup ? `<p class="brief-note">The charter’s ${money(training.setup)} setup cost is included in cash after planning.</p>` : ""}
     ${report.technicalIntake?.state ? `<p class="brief-note">The state’s ${money(report.technicalIntake.state)} technical intake share is included in cash after planning. The Union paid ${money(report.technicalIntake.union)} directly for equipment.</p>` : ""}
     ${report.relief ? `<p class="brief-note">Emergency purchase authorization was ${money(report.relief.budget)}. Purchases used ${money(report.relief.spent)}.</p>` : ""}
