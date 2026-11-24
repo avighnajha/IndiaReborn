@@ -1,6 +1,18 @@
 # India Alternate Futures Current Design
 
-Updated 23 November 2026. The original design and [implementation handoff](India_Alternate_Futures_Codex_Handoff.md) are the baseline. The decisions below record where subsequent play and feedback have changed the approach. Items marked proposed are ready for discussion before implementation.
+Updated 24 November 2026. The original design and [implementation handoff](India_Alternate_Futures_Codex_Handoff.md) are the baseline. The decisions below record where subsequent play and feedback have changed the approach. Items marked proposed are ready for discussion before implementation.
+
+## Core thesis
+
+**Start with the India that existed before independence. Build the India that could have existed instead.** Choose a province or princely state in 1946 and guide it through independence, political reorganization and decades of development. Its rivers, terrain, towns and trading partners shape which futures are plausible. The choices should change what the region becomes by the end of the campaign.
+
+- **Geography gives each start a reason to play differently.** Show where programmes work, which places benefit, and how floodplains, markets and new boundaries change the result. Use the main map for the decision and reveal local detail as the player zooms in.
+- **The player sets direction at Cabinet scale.** Choose coverage, funding, partners and where to build lasting capability. Let the works office handle individual sites. Education, Food & Water and Trade & Industry each support deeper investment and combinations, with meaningful timing and opportunity costs.
+- **History supplies constraints and opportunities.** Independence and reorganization change responsibilities, assets and access. Ground offers and rupee amounts in the period. Give the player plausible terms, agency over the response and a visible result under either political preset.
+- **The map and brief show what changed and why.** Connect a decision to places, then to harvest, workforce, production or access, then to future choices. Headline the result and keep the calculation available on demand. Use the same department labels and icons throughout, with colour as reinforcement.
+- **The ending tells the story of the region.** Reward different, viable outcomes and show how earlier commitments helped or constrained them. Players can combine departments. A routine sequence through every affordable programme should still leave meaningful choices about the region's future.
+
+For every gameplay sprint, name the player's decision, the plausible alternative and what the player can observe after each. Review both routes from the same starting position in the production build when feasible. Capture an immediate cost, an outcome on the map or in the brief, and a later opportunity affected by the choice. Give modeling detail priority when it changes a decision, explains an outcome or resolves a release requirement. National coverage, historical and map rights review, accessibility, performance and human playtime retain their release gates.
 
 ## Design commitments
 
@@ -165,8 +177,8 @@ The completed station asks the player to prioritize workshops or irrigation. Ind
 
 ## Next delivery tasks
 
-1. **Annual brief playtest.** The short summary, optional detail and year-by-year outcomes are implemented. In a matched flood turn, check whether a player can tell what the rain did, what works or reserves changed, and what they can do next. Compare the first school opening, a mature school network with an operating workshop, and a trade corridor that adds market access.
-2. **Kosi playtest and food policy.** Compare protection delivered before a flood with wider protection delivered later. Check whether the financial and timing trade-off is legible in play. Use feedback on the brief to decide whether to add a reserve buffer or a capped emergency food policy.
-3. **Shared decisions.** Neighbors commission reserve and freight works and can co-fund a project under a signed agreement. Compare a shared reserve against relying on emergency purchases, and compare freight receipts with and without joint funding. [Interregional model](interregional-model.md).
+1. **Make a regional commitment change the long campaign.** Compare a Bihar floodplain resilience commitment with an education and market-led route, starting from common conditions. Reuse programme coverage, shared reserves, workforce and market access where they support the decision. Review the opportunities that open several years later and what the ending recognizes. Check a contrasting region before generalizing.
+2. **Teach and show the consequence in play.** Use the visual opening and short annual brief to connect investment, its footprint and the result. Compare a flood and a school-to-workshop payoff. Use existing emergency food planning to make a reserve versus spending decision tangible when weather threatens.
+3. **Deepen cross-border choices where they affect the plan.** Compare local protection and storage to financing a shared reserve or relying on purchases. Compare joint freight investment to competing for existing routes. Bring pricing into this work where it changes affordability, access or the explanation. [Interregional model](interregional-model.md).
 
 The [project record](../PROJECT.md) owns task status and feedback. The [campaign evolution brief](campaign-evolution.md) holds longer-term gameplay ideas.

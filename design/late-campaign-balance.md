@@ -1,6 +1,6 @@
 # Late campaign finance and strategic choices
 
-Reviewed 23 November 2026. This is an open production balance issue, separate from whether the historical revenue observations are correct.
+Reviewed 24 November 2026. This is an open production balance issue, separate from whether the historical revenue observations are correct.
 
 ## What the review found
 
@@ -18,6 +18,18 @@ Before sharing the missing later observations, the following planning positions 
 
 Bihar's previous resolved year earned ₹106 lakh against ₹10 lakh upkeep; West Bengal earned ₹133 lakh against ₹11 lakh. Madras earned ₹118 lakh against ₹7 lakh; Central earned ₹171 lakh against ₹10 lakh. Delivery capacity becomes more restrictive than money. The long campaign's cash target also rises much less than its nominal allocations.
 
+## Matched opening review
+
+Using the period-priced build, three Standard Bihar campaigns began from seed 1946 with one different opening approval. Every branch chose the first eligible political option and the first affordable visible programme each year. They retained the standing food policy and skipped optional priorities and mandates.
+
+| Opening | Food shortfall, 1946 | Workshop output, 1948 | Skills, 1948 | Workshop output / Skills, 1985 | Treasury, 1985 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Food & Water | 2 | 0 | 0 | 112 / 62 | ₹11,126 lakh |
+| Trade & Industry | 6 | 7 | 0 | 112 / 62 | ₹11,156 lakh |
+| Education | 6 | 0 | 5 | 112 / 62 | ₹11,132 lakh |
+
+All three reached six connected towns, approved 14 programmes and achieved both original goals. Each approved the industrial park in 1983. Food covered four more units of the opening flood deficit. Trade brought workshop output forward. Education had five Skills by 1948. These are three runs from one seed in one region using routine purchases. The separate [mandate review](regional-mandates.md) shows how focused late strategies can meet different requirements. Human feedback on whether the choices feel consequential remains open.
+
 ## Delivered foundation
 
 - Player and AI use the same later revenue observations for the same administration. More precise regional observations win when both sources cover the same year. Earlier jurisdictions never acquire a successor's budget automatically.
@@ -31,9 +43,9 @@ For example, Bihar's modeled envelope moves from ₹60 lakh using the older refe
 
 ## Next implementation sequence
 
-1. **Complete nominal cashflow rules.** Construction quotes and ordinary operations now use the linked wholesale price series. Define explicit unit prices and conserve buyer and seller payments before repricing food trade. Review freight and procurement terms separately. Compare treasury and upkeep at consistent prices when evaluating cash surplus.
-2. **Continuing policy balance.** Five-year priorities are implemented with explicit terms, annual costs, pauses and campus-bound education progress. Matched runs demonstrate different timing and food outcomes. Review large portfolios and later nominal budgets, teach the distinction from construction and charters, and consider matching rival policy commitments. The 30% rate and benefits remain candidate values; some small workshop portfolios do not recoup the Trade bill through receipts alone.
-3. **Later objectives and pacing.** Regional mandates are implemented. Compare second and later seeds, late signing, unlocked portfolios, and alternative ways of meeting each mandate. Review the original cash and prosperity goals by administration and duration. Keep food security, output and actual earned receipts distinct when calibrating targets.
+1. **Make a major commitment change the region's future.** Compare viable long-run directions under the same starting conditions. Give each route a later opportunity grounded in geography and earlier investment. Show the cost and impact on the map and in the brief. Review how the original victory paths and regional mandates reward sustained outcomes. [Sprint review](../PROJECT.md#next-gameplay-sprint)
+2. **Tune continuing policy and treasury around those choices.** Use the implemented five-year costs, campus-bound progress, capacity and programme timing. Compare outcomes across state sizes and seeds, including late mandates and portfolios developed in different orders. The 30% appropriation and benefits remain candidate values. Compare treasury and upkeep at consistent prices when assessing surplus.
+3. **Complete nominal cash flow where it supports a decision.** Construction and ordinary operations use the linked wholesale price series. If a food choice depends on buying or selling, show the effective price in planning and save matching seller and buyer payments. Review freight and procurement terms separately when they affect delivery or the value of a partnership.
 4. **Human review.** Measure whether a new player can explain what they gave up by choosing a department, trace the effect in the brief and map, and find a worthwhile choice in later years. Keep the existing national coverage, art, accessibility, performance and historical release gates open.
 
 Prices, outputs, portfolio shares and upkeep remain authored game values in the current build. The shared revenue update improves provenance; late campaign balance remains unapproved.

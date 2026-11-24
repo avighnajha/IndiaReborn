@@ -1,10 +1,10 @@
 # India Alternate Futures Project Record
 
-Updated 23 November 2026. The original design and handoff in `design` describe the long-term scope. The [current design](design/current-design.md) reconciles them with later decisions. This file tracks feedback, priorities, and delivery.
+Updated 24 November 2026. The original design and handoff in `design` describe the long-term scope. The [current design](design/current-design.md) reconciles them with later decisions. This file tracks feedback, priorities, and delivery.
 
 ## Product intent
 
-Build a release-quality strategy game about developing and governing historically grounded Indian territories. Geography should change the way a player plans. Terrain, water, transport and development should tell the story on the map. Players should spend their time comparing consequential choices and playing sustained campaigns.
+**Start with the India that existed before independence. Build the India that could have existed instead.** The player chooses a historical region in 1946 and leads it through independence, changes of jurisdiction and decades of development. Terrain, water, transport and new works should show what the player made of that region. The [core thesis and sprint review criteria](design/current-design.md#core-thesis) guide assignments and reviews.
 
 ## Feedback and decisions
 
@@ -30,6 +30,7 @@ Build a release-quality strategy game about developing and governing historicall
 | Development tree cards are too verbose. Give each type of work a recognizable icon across states. | Each card leads with a facility icon, a common label and a short effect. Review the card to see the local programme, footprint and prerequisites. |
 | The link between Regional programmes and Development trees is unclear. The annual brief needs more visual variety. | The cabinet, trees, map previews and annual brief share department colours and labels. Programme details link to the relevant tree node. The brief leads with food coverage, the monsoon, the treasury and changes since last year. |
 | Programme names and locations are specific to Bihar. | Bihar and Orissa share the programme rules and have distinct portfolios, geography and choices. Orissa's Hirakud agreement adds a power allocation decision that changes later production. |
+| Keep development aligned with the game's alternate-history thesis. | Prioritize consequential regional choices. Assign and review work against the decision it improves and what changes on the map, in the brief or at the ending. |
 
 ## Delivery and review
 
@@ -77,6 +78,14 @@ Commit each verified milestone to the playable project repository and push its s
 
 ## Next milestones
 
+### Next gameplay sprint
+
+Make regional investment change the long campaign. A matched Standard Bihar comparison through 1985 found distinct early results and convergence by the ending. All three openings approved 14 programmes and met both original goals by following the same purchasing rule without optional priorities or mandates. [Comparison and review scope](design/late-campaign-balance.md#matched-opening-review)
+
+Compare a floodplain resilience commitment with a workforce and market-access route. Start with existing programme, diplomacy and reporting systems. Review both routes on the same seed, then check a different seed and a contrasting region. Follow the choice from its geographic footprint to a later opportunity or outcome. Use the map, annual brief and ending to judge whether players can explain what each route gained and gave up. Record human playtester feedback alongside the simulation results when available.
+
+Bring forward food and freight pricing when it influences one of those choices. The broader fiscal and national coverage work continues under the release milestones. Research, UI and implementation assignments should each identify the decision they serve and the evidence needed for review.
+
 ### Founding campaign sprint
 
 | Assignment | Review |
@@ -96,4 +105,4 @@ Nine regional campaigns run from the 1946 selection to the ending, with starts i
 
 Open decisions are how much freedom to give players over programme coverage and terms, target hardware and frame rate, art asset strategy, and the remaining launch roster. Each release review should capture the installed build, a short playable path, changes to expectations, and the feedback that determines the next assignment.
 
-Player and AI reference coverage is aligned for shared late observations. Continuing department priorities and regional mandates give the late campaign different paths, with the same colours and icons across the Cabinet, trees, brief and map. The [balance review](design/late-campaign-balance.md) still records structural treasury surpluses. Next review nominal prices and operating receipts together, extend rival commitments, and check mandate pacing and thresholds with additional playthroughs.
+Player and AI reference coverage is aligned for shared late observations. Continuing department priorities and regional mandates give the late campaign different paths, with the same colours and icons across the Cabinet, trees, brief and map. The [balance review](design/late-campaign-balance.md) records structural treasury surpluses and the convergence of the tested opening routes. Use that evidence when tuning nominal costs, rival commitments and mandate pacing.
