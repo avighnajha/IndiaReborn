@@ -1,6 +1,6 @@
 import { departmentBadge } from "./department-presentation.js";
 import { Fiscal } from "./fiscal.js";
-import { crisisSource } from "./food-crisis.js";
+import { crisisSource, dispatchSource } from "./food-crisis.js";
 import "./food-plan-view.css";
 
 const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -36,7 +36,7 @@ function crisisOptions(crisis, forecast, reserve) {
   const { ordered, possible, rate, capacity, loading } = crisis;
   const reference = `<a class="crisis-reference" href="${crisisSource}" target="_blank" rel="noopener">Historical reference · Indian delegation report, April 1967</a>`;
   if (!forecast.reserveUsed && !forecast.gap && !ordered) return `<section class="crisis-options" data-sector="food">
-    <p class="crisis-ready"><strong>Harvest covers local needs.</strong> Your reserves can stay intact.</p>${reference}
+    <p class="crisis-ready"><strong>Harvest covers local needs.</strong></p>${reference}
   </section>`;
   const localClosing = reserve - forecast.reserveUsed;
   const reliefClosing = localClosing + Math.min(forecast.reserveUsed, Math.max(0, possible - forecast.gap));
@@ -66,7 +66,23 @@ function crisisOptions(crisis, forecast, reserve) {
   </section>`;
 }
 
-export function foodPlanMarkup({ outlook, demand, reserve, cases, cash, authorization, crisis }) {
+function dispatchOptions({ limit, floor, pledged, orderPlaced }, standard) {
+  const status = pledged ? "Offer filed. Dispatch depends on remaining shortfalls and route capacity."
+    : orderPlaced ? "Union deliveries are ordered for your own region."
+    : !limit ? "Dispatch needs connected stores and reserves above the home minimum."
+      : "Send food from storage where there’s a shortfall and room on the route.";
+  return `<section class="dispatch-options food-plan-case" data-selected="${pledged}" aria-labelledby="reserve-dispatch-title">
+    <div><h3 id="reserve-dispatch-title">Interstate drought relief</h3>
+      <p class="food-plan-case-note">${status}</p></div>
+    <dl class="dispatch-totals food-plan-sources"><div><dt>Keep at home · six months</dt><dd>${units(floor)}</dd></div>
+      <div><dt>Can offer</dt><dd>Up to ${units(orderPlaced ? 0 : limit)}</dd></div></dl>
+    <div class="dispatch-actions"><p class="food-plan-note">${standard ? "Each two units shipped use one spot freight slot, rounded up." : "Relief travels to nearby markets."} Home needs come first.</p>
+      <button type="button" data-reserve-dispatch aria-pressed="${pledged}"${!pledged && (!limit || orderPlaced) ? " disabled" : ""}>${pledged ? "Withdraw offer" : "Offer reserve food"}</button></div>
+    <a class="crisis-reference" href="${dispatchSource}" target="_blank" rel="noopener">Historical reference · Andhra Pradesh budget speech, 1967</a>
+  </section>`;
+}
+
+export function foodPlanMarkup({ outlook, demand, reserve, cases, cash, authorization, crisis, dispatch }, standard) {
   return `<section class="food-plan" data-sector="food" aria-label="Monsoon food scenarios">
     <header class="food-plan-outlook">
       ${departmentBadge("food")}
@@ -76,6 +92,7 @@ export function foodPlanMarkup({ outlook, demand, reserve, cases, cash, authoriz
     <div class="food-plan-cases">${cases.map((scenario) => scenarioCard(scenario, demand, reserve)).join("")}</div>
     <p class="food-plan-note">Each scenario includes works due this year. Gaps are shown before shared supplies and purchases.</p>
     ${crisis ? crisisOptions(crisis, cases.at(-1), reserve) : ""}
+    ${dispatch ? dispatchOptions(dispatch, standard) : ""}
     <div class="food-plan-purchases">
       <p><b>${Fiscal.lakh(cash)}</b> in treasury${authorization ? ` · ${Fiscal.lakh(authorization)} purchase cap` : ""}</p>
       <p>Local market purchases cost ₹1–2 lakh per unit. The treasury pays only for food bought.</p>

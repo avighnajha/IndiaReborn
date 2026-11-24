@@ -76,6 +76,15 @@
 .crisis-ready { padding: 9px 10px; border: 1px solid #667955; border-radius: 6px; font-size: .83rem; }
 .crisis-ready strong, .crisis-reference { color: var(--sector-accent); }
 .crisis-reference { font-size: .76rem; }
+.dispatch-options { display: grid; gap: 7px; border-inline-start: 3px solid var(--sector-accent); }
+.dispatch-options[data-selected="true"] { background: #29392d; }
+.dispatch-options .food-plan-case-note { margin-top: 3px; }
+.dispatch-totals { grid-template-columns: 1fr 1fr; }
+.dispatch-totals > div { border-color: #56674d; }
+.dispatch-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px; }
+.dispatch-actions p { flex: 1 1 220px; }
+.dispatch-actions button { min-height: 36px; }
+.dispatch-actions button[aria-pressed="true"] { background: #3d4b31; }
 
 @media (max-width: 440px) {
   .food-plan-outlook { grid-template-columns: 1fr; }

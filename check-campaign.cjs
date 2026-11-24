@@ -295,6 +295,76 @@ test("the drought plan settles forecast deliveries once and reduces spot freight
   assert.equal(Campaign.foodPlan(Campaign.newGame()).crisis, null);
 });
 
+test("reserve dispatch covers real shortages through finite routes and keeps the home buffer", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { domesticLinks } = await import("./src/national-market.js");
+  const { approveProgramme, basinFloodDecision, programmeQuote, respondToBasinFlood } = await import("./src/programmes.js");
+  const { decodeSave, encodeSave } = await import("./src/save-codec.js");
+  let game = Campaign.newGame(1947, { end: 1985, preset: "standard" });
+  assert.equal(Campaign.pledgeReserve(game, true), game);
+  const sequence = ["food", "kosi", "trade", "skills", "planFoodReserve"];
+  while (game.year <= 1966) {
+    for (let decision; (decision = Campaign.nextDecision(game));) {
+      const id = ["unified", ...Object.keys(decision.choices)].find((id) => decision.choices[id] && Campaign.decide(game, id) !== game);
+      assert.ok(id, decision.title);
+      game = Campaign.decide(game, id);
+    }
+    if (basinFloodDecision(game)) game = respondToBasinFlood(game, "delay");
+    if (game.year === 1966) break;
+    const candidate = sequence[0];
+    if (candidate && !programmeQuote(game, candidate).reason) game = approveProgramme(game, sequence.shift());
+    const next = Campaign.advance(game);
+    assert.equal(next.year, game.year + 1);
+    game = next;
+  }
+  assert.equal(sequence.length, 0);
+  const offered = Campaign.pledgeReserve(game, true);
+  assert.deepEqual(offered.reserveDispatch, { year: game.year });
+  assert.equal(offered.reserve, game.reserve);
+  assert.deepEqual(Campaign.pledgeReserve(offered, false), game);
+  const ordered = Campaign.orderCrisisFood(offered, true);
+  assert.equal(ordered.reserveDispatch, undefined);
+  assert.equal(Campaign.pledgeReserve(ordered, true), ordered);
+
+  const before = Campaign.advance(game).reports.at(-1);
+  const dispatched = Campaign.advance(decodeSave(encodeSave(offered)));
+  const after = dispatched.reports.at(-1);
+  const { sent, floor, deliveries, freightCapacityUsed } = after.reserveDispatch;
+  assert.equal(dispatched.reserveDispatch, undefined);
+  assert.equal(Campaign.pledgeReserve(dispatched, true), dispatched);
+  assert.ok(sent > 0 && sent <= game.reserve - floor);
+  assert.equal(after.shortage, before.shortage);
+  assert.ok(after.reserve >= floor);
+  const stockBeforeStorage = game.reserve + after.harvest - after.demand - after.sold;
+  assert.equal(after.reserve, Math.min(before.reserve, stockBeforeStorage - sent));
+  assert.equal(after.regional.freightCompetition.player.capacity, before.regional.freightCompetition.player.capacity - freightCapacityUsed);
+  assert.equal(after.cash - before.cash,
+    after.regional.freightCompetition.player.earnings - before.regional.freightCompetition.player.earnings);
+
+  const normal = before.regional.nationalMarket;
+  const market = after.regional.nationalMarket;
+  const key = ({ from, to }) => [from, to].sort().join("/");
+  const used = new Map(normal.links.map((link) => [key(link), link.units]));
+  const capacities = new Map(domesticLinks(game.year).map(([from, to, capacity]) => [key({ from, to }), capacity]));
+  for (const link of market.relief.routes) {
+    const path = key(link);
+    const usedByNeighbor = normal.nodes.find(({ id }) => id === link.to)?.local && link.from === market.relief.source.id
+      ? before.regional.partners.find(({ id }) => id === link.to) : null;
+    const amount = (used.get(path) ?? 0) + link.units + (usedByNeighbor ? usedByNeighbor.bought + usedByNeighbor.sold + usedByNeighbor.emergencyFood : 0);
+    assert.ok(amount <= capacities.get(path));
+    used.set(path, amount);
+  }
+  assert.equal(market.relief.routes.filter(({ from }) => from === market.relief.source.id).reduce((sum, { units }) => sum + units, 0), sent);
+  assert.equal(deliveries.reduce((total, { units }) => total + units, 0), sent);
+  assert.equal(normal.nodes.reduce((total, { shortage }) => total + shortage, 0) - market.nodes.reduce((total, { shortage }) => total + shortage, 0), sent);
+  assert.deepEqual(market.links, normal.links);
+  for (const { id, units, remaining } of deliveries) {
+    assert.equal(remaining, normal.nodes.find((node) => node.id === id).shortage - units);
+    assert.equal(dispatched.journey.partners[id].shortage, remaining);
+    assert.equal(dispatched.journey.partners[id].reserve, normal.nodes.find((node) => node.id === id).reserve);
+  }
+});
+
 test("a freight terminal requires both market links and industry", async () => {
   const { Campaign } = await import("./src/campaign.js");
   const { approveProgramme, programmeQuote, programmes } = await import("./src/programmes.js");

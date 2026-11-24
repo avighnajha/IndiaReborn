@@ -2,6 +2,7 @@ import { openingPriceYear, periodAmount } from "./period-prices.js";
 
 export const crisisYears = [1965, 1966];
 export const crisisSource = "https://thedocs.worldbank.org/en/doc/658351619025491246-0240021967/original/WorldBankGroupArchivesFolder1844626.pdf";
+export const dispatchSource = "https://apfinance.gov.in/pbs-1967-middle.html";
 
 export function crisisSeverity(game, region) {
   if (!game.journey || !crisisYears.includes(game.year)) return 0;
@@ -22,4 +23,10 @@ export function crisisDelivery(game, { harvest, demand, towns, terminals, cash }
   const loading = game.journey.preset === "standard";
   return { ordered, rate, capacity, possible, delivered, cost: delivered * rate,
     freightCapacityUsed: loading ? Math.ceil(delivered / 2) : 0, loading };
+}
+
+export function marketDroughtLoss(game, id, harvest, seasonalLoss) {
+  const severity = id === "up" && crisisYears.includes(game.year)
+    ? (game.year === 1965 ? .18 : .25) : crisisSeverity(game, id);
+  return severity ? Math.round(harvest * severity) : seasonalLoss;
 }

@@ -52,7 +52,7 @@ const westAfterDivision = [
 ];
 const northAfterDivision = [["punjab", "haryana", 3], ["haryana", "delhi", 3], ["haryana", "rajasthan", 2]];
 
-function domesticLinks(year) {
+export function domesticLinks(year) {
   const west = year < 1960 ? westBeforeDivision : westAfterDivision;
   const north = year < 1966 ? [] : northAfterDivision;
   const south = year < 1953 ? southBeforeDivision : southAfterDivision;
@@ -80,12 +80,16 @@ export function nationalMarketActive(game) {
   return game.journey?.preset === "standard";
 }
 
-export function nationalMarketActors(game, world) {
+export function playerMarketId(game, world) {
   const played = world.key === "west-bengal" ? "bengal"
     : world.key === "mayurbhanj" && game.journey.jurisdiction?.settlement === "merger" ? "orissa"
       : world.key === "bombay" ? game.journey.jurisdiction?.bombaySuccessor ?? "bombay" : world.key;
-  const playerMarket = world.key === "punjab" ? game.journey.jurisdiction?.punjabSuccessor ?? "punjab"
+  return world.key === "punjab" ? game.journey.jurisdiction?.punjabSuccessor ?? "punjab"
     : world.key === "madras" ? game.journey.jurisdiction?.madrasSuccessor ?? "madras" : played;
+}
+
+export function nationalMarketActors(game, world) {
+  const playerMarket = playerMarketId(game, world);
   // Tripura keeps its own economy before its metalled Assam road is available.
   const separateMarkets = game.year >= 1950 ? ["manipur", "tripura"] : [];
   return [...new Set(["assam", ...separateMarkets, ...domesticLinks(game.year).flatMap(([from, to]) => [from, to])])].filter((id) => id !== playerMarket);

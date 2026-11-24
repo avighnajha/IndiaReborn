@@ -12,6 +12,7 @@ const hubs = new Map([
   ["bengal", { x: 383, y: 276, dx: 11, dy: 4, census: "West Bengal" }],
   ["central", { x: 251, y: 266, dx: -10, dy: 3, align: "end", census: "Madhya Pradesh" }],
   ["orissa", { x: 344, y: 311, dx: 11, dy: 7, census: "Orissa" }],
+  ["mayurbhanj", { x: 359, y: 288, dx: 11, dy: 4 }],
   ["rajasthan", { x: 186, y: 204, dx: -11, dy: 4, align: "end", census: "Rajasthan" }],
   ["mysore", { x: 214, y: 436, dx: -11, dy: 4, align: "end", census: "Mysore" }],
   ["maharashtra", { x: 140, y: 334, dx: -10, dy: 3, align: "end", census: "Maharashtra" }],
@@ -63,7 +64,7 @@ const units = (value) => `${value} ${value === 1 ? "unit" : "units"}`;
 const investmentDepartments = (node) => [...new Set((node.works ?? []).map(({ department }) => department)
   .filter((department) => Object.hasOwn(departmentIdentity, department)))];
 
-function mapRoute({ from, to, moved, capacity, mode }, locations = hubs) {
+function mapRoute({ from, to, moved, capacity, mode, relief }, locations = hubs) {
   const source = locations.get(from.id);
   const destination = locations.get(to.id);
   if (!source || !destination) return "";
@@ -71,14 +72,15 @@ function mapRoute({ from, to, moved, capacity, mode }, locations = hubs) {
   const dy = destination.y - source.y;
   const length = Math.hypot(dx, dy);
   if (!length) return "";
-  const cx = (source.x + destination.x) / 2 - dy * .14;
-  const cy = (source.y + destination.y) / 2 + dx * .14;
+  const bend = relief ? -.21 : .14;
+  const cx = (source.x + destination.x) / 2 - dy * bend;
+  const cy = (source.y + destination.y) / 2 + dx * bend;
   const x = destination.x - 10 * dx / length;
   const y = destination.y - 10 * dy / length;
   const weight = capacity ? 2.2 + 2.3 * Math.min(1, moved / capacity) : 2.2;
   const transport = mode === "road" ? "road" : mode === "rail" ? "rail" : null;
-  const description = `${moved ? `${from.market} to ${to.market}, ${units(moved)} carried` : `${from.market} and ${to.market}, idle`}${transport ? `, ${transport} freight` : ""}`;
-  return `<path class="market-route" data-moving="${Boolean(moved)}"${transport ? ` data-mode="${transport}"` : ""} d="M${source.x} ${source.y} Q${cx} ${cy} ${x} ${y}"${moved ? ` style="--route-weight:${weight}px" marker-end="url(#market-direction)"` : ""}>
+  const description = `${moved ? `${from.market} to ${to.market}, ${units(moved)} of ${relief ? "relief food" : "food"}` : `${from.market} and ${to.market}, idle`}${transport ? `, ${transport} freight` : ""}`;
+  return `<path class="market-route" data-moving="${Boolean(moved)}"${relief ? ' data-relief="true"' : ""}${transport ? ` data-mode="${transport}"` : ""} d="M${source.x} ${source.y} Q${cx} ${cy} ${x} ${y}"${moved ? ` style="--route-weight:${weight}px" marker-end="url(#market-${relief ? "relief-direction" : "direction"})"` : ""}>
     <title>${escapeText(description)}</title>
   </path>`;
 }
@@ -87,8 +89,8 @@ function mapHub(node, hub, label = true) {
   const { x, y, dx, dy, align = "start" } = hub;
   const departments = investmentDepartments(node);
   const funded = departments.map((department) => departmentIdentity[department].label).join(", ");
-  return `<g class="market-hub" data-market="${escapeText(node.id)}" data-connected="${node.local === true}">
-    <title>${escapeText(node.name)} · ${escapeText(node.market)}${funded ? ` · Funded works in ${escapeText(funded)}` : ""}</title>
+  return `<g class="market-hub" data-market="${escapeText(node.id)}" data-connected="${node.local === true}"${node.reliefSource ? ' data-relief-source="true"' : ""}>
+    <title>${escapeText(node.name)} · ${escapeText(node.market)}${node.reliefSource ? " · Your relief dispatch" : ""}${funded ? ` · Funded works in ${escapeText(funded)}` : ""}</title>
     <circle cx="${x}" cy="${y}" r="4"/>${label ? `<text x="${x + dx}" y="${y + dy}" text-anchor="${align}">${escapeText(node.market)}</text>` : ""}
     ${departments.map((department, index) => `<circle class="market-investment-pip" data-sector="${department}" cx="${x + 5 * (index - (departments.length - 1) / 2)}" cy="${y + 9}" r="2"/>`).join("")}
   </g>`;
@@ -134,7 +136,8 @@ function marketMap(nodes, routes, year) {
   }).join("");
   return `<figure class="market-map">
     <svg viewBox="42 27 508 520" role="img" aria-label="Domestic food shipments${outlines.length ? ` on ${census} census outlines` : ""}. Route details follow the map.">
-      <defs><marker id="market-direction" markerWidth="6" markerHeight="6" viewBox="0 0 8 8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z"/></marker></defs>
+      <defs><marker id="market-direction" markerWidth="6" markerHeight="6" viewBox="0 0 8 8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z"/></marker>
+      <marker id="market-relief-direction" markerWidth="7" markerHeight="7" viewBox="0 0 8 8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L8 4L0 8Z"/></marker></defs>
       <g fill-rule="evenodd">${zones}</g>
       <g class="market-map-context"><text x="66" y="379">ARABIAN SEA</text><text x="323" y="417">BAY OF BENGAL</text></g>
       ${expandedNortheast ? '<rect class="market-ne-frame" x="415" y="186" width="99" height="100" rx="4"/><text class="market-ne-caption" x="415" y="299">Northeast · expanded below</text>' : ""}
@@ -145,7 +148,7 @@ function marketMap(nodes, routes, year) {
     ${expandedNorth ? northernMap(nodes, routes) : ""}
     ${expandedNortheast ? northeastMap(nodes, routes) : ""}
     <figcaption>
-      <ul class="market-map-key"><li data-key="moving">Food shipped</li><li data-key="idle">Idle route</li><li data-key="connected">Your neighbor</li>${routes.some(({ mode }) => mode === "road") ? '<li data-key="road">Road freight</li>' : ""}${routes.some(({ mode }) => mode === "rail") ? '<li data-key="rail">Rail freight</li>' : ""}</ul>
+      <ul class="market-map-key">${routes.some(({ relief }) => relief) ? '<li data-key="relief">Your relief shipments</li>' : ""}<li data-key="moving">Food traded</li><li data-key="idle">Idle route</li><li data-key="connected">Your neighbor</li>${routes.some(({ mode }) => mode === "road") ? '<li data-key="road">Road freight</li>' : ""}${routes.some(({ mode }) => mode === "rail") ? '<li data-key="rail">Rail freight</li>' : ""}</ul>
       ${fundedDepartments.size ? `<div class="market-department-key"><span>Funded works</span>${Object.keys(departmentIdentity).filter((department) => fundedDepartments.has(department)).map((department) => departmentBadge(department)).join("")}</div>` : ""}
       <span>${outlines.length ? `${census} census reference · ` : ""}Schematic connections</span>
     </figcaption>
@@ -205,21 +208,27 @@ function marketBalances(nodes) {
 export function nationalMarketMarkup(result) {
   if (!result?.nodes?.length) return `<p>Shipments appear here after the first resolved year in Standard politics.</p>`;
   const nodes = result.nodes.map((node) => ({ ...node, market: node.market || node.name }));
-  const byId = new Map(nodes.map((node) => [node.id, node]));
-  const routes = (result.links ?? []).flatMap(({ from, to, units: moved, capacity, mode }) => {
+  const origin = result.relief?.source && { ...result.relief.source, reliefSource: true };
+  const mapNodes = origin ? [...nodes, origin] : nodes;
+  const byId = new Map(mapNodes.map((node) => [node.id, node]));
+  const resolveRoutes = (links, relief) => links.flatMap(({ from, to, units: moved, capacity, mode }) => {
     const source = byId.get(from);
     const destination = byId.get(to);
-    return source && destination ? [{ from: source, to: destination, moved: quantity(moved), capacity: quantity(capacity), mode, local: Boolean(source.local || destination.local) }] : [];
+    return source && destination ? [{ from: source, to: destination, moved: quantity(moved), capacity: quantity(capacity), mode, local: Boolean(source.local || destination.local), relief }] : [];
   });
+  const routes = resolveRoutes(result.links ?? [], false);
+  const reliefRoutes = resolveRoutes(result.relief?.routes ?? [], true);
   const active = routes.filter(({ moved }) => moved > 0).sort((a, b) => Number(b.local) - Number(a.local) || b.moved - a.moved);
   const idle = routes.filter(({ moved }) => moved === 0);
   return `<section class="national-market" data-sector="trade">
-    <dl class="market-totals"><div><dt>Food shipped</dt><dd>${units(quantity(result.units))}</dd></div>
-      <div><dt>Involving your neighbors</dt><dd>${units(quantity(result.localUnits))}</dd></div>
-      <div><dt>Routes in use</dt><dd>${active.length} / ${routes.length}</dd></div></dl>
+    <dl class="market-totals"><div><dt>Food traded</dt><dd>${units(quantity(result.units))}</dd></div>
+      <div><dt>Trade involving neighbors</dt><dd>${units(quantity(result.localUnits))}</dd></div>
+      <div><dt>Commercial routes in use</dt><dd>${active.length} / ${routes.length}</dd></div></dl>
     <div class="market-layout">
-      ${marketMap(nodes, routes, result.year)}
-      <div class="market-shipments"><h3>Shipments in ${quantity(result.year)}</h3>
+      ${marketMap(mapNodes, [...routes, ...reliefRoutes], result.year)}
+      <div class="market-shipments">
+        ${reliefRoutes.length ? `<section class="market-relief" data-sector="food"><h3>Relief from your reserves</h3>${routeRows(reliefRoutes)}</section>` : ""}
+        <h3>Commercial shipments in ${quantity(result.year)}</h3>
         ${result.chapter ? `<p class="market-chapter">${escapeText(result.chapter)}</p>` : ""}
         ${active.length ? routeRows(active) : "<p>Domestic routes carried no food this year.</p>"}
         ${idle.length ? `<details class="market-detail"><summary>Idle routes (${idle.length})</summary>${routeRows(idle)}</details>` : ""}

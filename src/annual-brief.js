@@ -24,6 +24,7 @@ export function foodStatus(report) {
 
 export function briefHeadline(report, previous) {
   if (report.assam?.earthquakeLoss) return report.shortage ? "Earthquake damage left a food shortfall" : "Assam met food needs after the earthquake";
+  if (report.reserveDispatch?.sent) return "Your reserves helped cover interstate shortages";
   if (report.foodCrisis) {
     if (report.shortage) return "Drought left food needs unmet";
     if (report.foodCrisis.delivered) return "Union deliveries helped cover the drought";
@@ -311,6 +312,15 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const dispatch = report.reserveDispatch;
+  if (dispatch?.sent) {
+    const freight = dispatch.freightCapacityUsed ? ` ${dispatch.freightCapacityUsed} spot freight ${dispatch.freightCapacityUsed === 1 ? "slot" : "slots"} reassigned.` : "";
+    const destinations = names.format(dispatch.deliveries.map(({ name, units: delivered, remaining }) =>
+      `${name} received ${units(delivered)}${remaining ? ` (${units(remaining)} still needed)` : ""}`));
+    add("food", "Reserve food shipped", `${destinations}. ${units(dispatch.reserve)} left at home.${freight}`);
+  } else if (dispatch) {
+    add("food", "Reserve offer was unused", dispatch.available ? "Routes with spare capacity reached no remaining shortfall." : "Stocks were held for home needs.");
+  }
   const crisis = report.foodCrisis;
   if (crisis?.delivered) {
     const freight = crisis.freightCapacityUsed ? ` ${crisis.freightCapacityUsed} commercial freight slots reassigned.` : "";

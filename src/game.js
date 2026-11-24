@@ -20,6 +20,7 @@ import "./fiscal-view.css";
 import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
 import { crisisSeverity } from "./food-crisis.js";
+import { dispatchWindow } from "./reserve-dispatch.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
 import { intakeDeadline, intakeStatus } from "./technical-intake.js";
@@ -629,7 +630,7 @@ function showRelief() {
   const plan = Campaign.foodPlan(game);
   const { authorization } = plan;
   showModal(`${game.year} · Monsoon planning`, "Emergency food plan", `
-    ${foodPlanMarkup(plan)}
+    ${foodPlanMarkup(plan, game.journey.preset === "standard")}
     <p class="fiscal-note">A purchase cap replaces the standing food policy for ${game.year}.</p>
     <div id="relief-options" class="modal-actions" role="group" aria-label="Set purchase cap"></div>`,
   [choiceButton("Return to map", () => { returnToMap(); byId("relief").focus(); })]);
@@ -643,6 +644,14 @@ function showRelief() {
       byId("modal-content").querySelector(`[data-crisis-order="${crisisOrder}"]`).focus();
     });
   }
+  const dispatchToggle = byId("modal-content").querySelector("[data-reserve-dispatch]");
+  dispatchToggle?.addEventListener("click", () => {
+    game = Campaign.pledgeReserve(game, !plan.dispatch.pledged);
+    persist();
+    render();
+    showRelief();
+    byId("modal-content").querySelector("[data-reserve-dispatch]").focus();
+  });
   for (const budget of [0, 4, 8, 12]) {
     const button = choiceButton(budget ? money(budget) : "Use standing policy", () => {
       game = Campaign.authorizeRelief(game, budget);
@@ -885,8 +894,9 @@ function render() {
   const relief = game.relief?.year === game.year ? game.relief : null;
   byId("trade-note").textContent = relief ? `Purchase cap for ${game.year}` : "Applies each year";
   byId("relief").hidden = !game.journey || done;
-  byId("relief").textContent = crisisSeverity(game, World.key)
-    ? game.crisisOrder?.year === game.year ? "Drought plan · Union food ordered" : "Drought plan · Review supplies"
+  byId("relief").textContent = dispatchWindow(game)
+    ? game.crisisOrder?.year === game.year ? "Drought plan · Union food ordered"
+      : game.reserveDispatch?.year === game.year ? "Drought plan · Relief offered" : "Drought plan · Review supplies"
     : relief ? `Emergency purchases · ${money(relief.budget)} cap` : "Emergency food plan";
   const reserveAction = byId("union-reserve");
   const reserveOffer = reserveStatus(game);
@@ -1079,8 +1089,12 @@ function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
   if (crisisSeverity(game, World.key)) return {
-    advice: "Rainfall is failing. Compare your harvest and stores with what the Union can deliver this year.",
+    advice: "Rainfall is failing. Plan home supplies and see what your stores could spare for other regions.",
     label: "Plan drought supplies", open: showRelief,
+  };
+  if (dispatchWindow(game)) return {
+    advice: "Drought is affecting other regions. Review what your stores could spare for Union relief.",
+    label: "Review drought relief", open: showRelief,
   };
   const partnership = planningPartnership(game);
   if (partnership && !partnership.record && [partnershipWindow.notice, partnershipWindow.opens, partnershipWindow.closes].includes(game.year)) {
@@ -1181,7 +1195,7 @@ function showReport(index = game.reports.length - 1) {
       if (placement) focusEconomySite(placement.hex);
       else showEconomyMap();
     })] : []),
-    ...(report.regional?.nationalMarket ? [choiceButton("Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
+    ...(report.regional?.nationalMarket ? [choiceButton(report.reserveDispatch?.sent ? "View relief routes" : "Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
       else returnToMap();

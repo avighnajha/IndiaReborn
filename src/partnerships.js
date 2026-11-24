@@ -37,7 +37,7 @@ const shared = {
   planFoodReserve: {
     department: "food", layer: "weather",
     pitch: "Use earlier basin defences to develop protected farms and reserves.",
-    next: "The new farms and depot help the region carry food through bad monsoons.",
+    next: "Keep larger reserves through bad monsoons and offer surplus stocks in a national shortage.",
   },
   planSuppliers: {
     department: "trade", layer: "access", requires: "trade", minimumSchools: 2,

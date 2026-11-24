@@ -2,6 +2,7 @@ import { competitiveFreight, contractPlayerBid, contractRivalBid, domesticContra
 import { clearNationalMarket, inlandActors, marketConnection, marketHubs, nationalMarketActive, nationalMarketActors, seedBombayDivision, seedPunjabDivision, seedSouthernTransitions } from "./national-market.js";
 import { marketFunding } from "./market-finance.js";
 import { openingPriceYear, periodAmount } from "./period-prices.js";
+import { marketDroughtLoss } from "./food-crisis.js";
 
 const actors = {
   ...inlandActors,
@@ -349,10 +350,11 @@ export function settleNationalTrade(regional, game, world) {
       const prior = partners[id];
       const inherited = inheritedSuccessorWorks(game, world, id);
       const weather = yearlyRoll(game, actor.seed + 1925);
-      const shock = weather < 0.16 ? actor.flood : weather > 0.75 ? actor.dry : 0;
+      const harvest = actor.harvest + Math.floor(yearlyRoll(game, actor.seed) * 6) - 2;
+      const shock = marketDroughtLoss(game, id, harvest, weather < 0.16 ? actor.flood : weather > 0.75 ? actor.dry : 0);
       const expandedWheatHarvest = (id === "punjab" || id === "haryana") && game.year >= 1968 ? 2 : 0;
       const development = developmentEffects(prior, game.year, shock);
-      const balance = actor.harvest + expandedWheatHarvest + Math.floor(yearlyRoll(game, actor.seed) * 6) - 2 - shock + development.harvestSaved + (inherited?.irrigation ?? 0) +
+      const balance = harvest + expandedWheatHarvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0) +
         (prior?.reserve ?? 3) - actor.demand;
       const shortage = Math.max(0, -balance);
       const { works, openingCash, developmentSpend, changed } = developNeighbor(game, actor, prior, {
@@ -464,9 +466,10 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const prior = partners[id];
     const inherited = inheritedSuccessorWorks(game, world, id);
     const roll = yearlyRoll(game, actor.seed);
-    const shock = monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0;
+    const harvest = actor.harvest + Math.floor(roll * 6) - 2;
+    const shock = marketDroughtLoss(game, id, harvest, monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0);
     const development = developmentEffects(prior, game.year, shock);
-    const supply = actor.harvest + Math.floor(roll * 6) - 2 - shock + development.harvestSaved + (inherited?.irrigation ?? 0);
+    const supply = harvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0);
     const priorPopulation = prior?.population ?? actor.demand;
     const actorDemand = clamp(Math.round(priorPopulation), actor.demand - 2, actor.demand + 2);
     const balance = supply + (prior?.reserve ?? 3) - actorDemand;

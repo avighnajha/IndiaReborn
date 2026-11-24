@@ -14,6 +14,7 @@ import { adoptRegionalMandate, recordRegionalMandate, regionalMandate } from "./
 import { campaignPriceYear, openingPriceYear, periodAmount, priceBasis } from "./period-prices.js";
 import { partnershipActivity } from "./partnerships.js";
 import { crisisDelivery, crisisSeverity } from "./food-crisis.js";
+import { dispatchOffer, dispatchWindow, settleReserveDispatch } from "./reserve-dispatch.js";
 
 const outcomeWindowYears = 5;
 const productiveTarget = 4;
@@ -409,9 +410,18 @@ export const Campaign = (() => {
 
   function orderCrisisFood(game, order) {
     if (!crisisSeverity(game, World.key) || game.year > campaignEnd(game)) return game;
-    const { crisisOrder, ...planning } = game;
-    if (!order) return crisisOrder ? planning : game;
+    const { crisisOrder, reserveDispatch, ...planning } = game;
+    if (!order) return crisisOrder ? { ...planning, ...(reserveDispatch ? { reserveDispatch } : {}) } : game;
     return crisisOrder?.year === game.year ? game : { ...planning, crisisOrder: { year: game.year } };
+  }
+
+  function pledgeReserve(game, pledged) {
+    if (!dispatchWindow(game)) return game;
+    const { reserveDispatch, ...planning } = game;
+    if (!pledged) return reserveDispatch ? planning : game;
+    const { dispatch } = foodPlan(game);
+    if (dispatch.orderPlaced || !dispatch.limit || dispatch.pledged) return game;
+    return { ...planning, reserveDispatch: { year: game.year } };
   }
 
   function droughtDelivery(game, state, { harvest, demand, towns, reached, charterUpkeep, priorityCost }) {
@@ -561,9 +571,11 @@ export const Campaign = (() => {
         protectedFood: foodEffects.protection + extensionRecovery + waterRecovery + priorityRecovery };
     });
     const authorization = game.relief?.year === game.year ? game.relief.budget : 0;
-    const crisis = severeDry ? droughtDelivery(game, state, { ...scenarios[1], ...access(state), charterUpkeep: operating?.upkeep ?? 0, priorityCost: priority.report?.spent ?? 0 }) : null;
+    const network = dispatchWindow(game) ? access(state) : null;
+    const dispatch = network ? dispatchOffer(game, demand, reserveFacilities(state, network)) : null;
+    const crisis = severeDry ? droughtDelivery(game, state, { ...scenarios[1], ...network, charterUpkeep: operating?.upkeep ?? 0, priorityCost: priority.report?.spent ?? 0 }) : null;
     return { outlook: outlook(game), demand, reserve: game.reserve, cases,
-      cash: Math.max(0, game.cash - (operating?.upkeep ?? 0) - (priority.report?.spent ?? 0)), authorization, crisis };
+      cash: Math.max(0, game.cash - (operating?.upkeep ?? 0) - (priority.report?.spent ?? 0)), authorization, crisis, dispatch };
   }
 
   function reserveFacilities(state, { reached, towns }) {
@@ -598,7 +610,7 @@ export const Campaign = (() => {
     const servedSites = new Set(operating?.sites.map(({ id }) => id));
     const charterUpkeep = operating?.upkeep ?? 0;
     const { assets, completed } = yearWorks(game);
-    const { relief, crisisOrder, ...planning } = game;
+    const { relief, crisisOrder, reserveDispatch, ...planning } = game;
     const state = { ...planning, assets };
     const priceYear = campaignPriceYear(game);
     const priority = resolveCabinetPlan(game, finance(game), cabinetContext(game, assets, charterUpkeep));
@@ -711,14 +723,24 @@ export const Campaign = (() => {
     const marketSurplus = Math.min(Math.max(0, harvest - demand), Math.max(0, foodAfterShipment - (union?.floor ?? 0)));
     const sold = policy === "export" ? Math.min(marketSurplus, 18 - availableGrain, market === "Tight" ? towns * 2 : towns) : 0;
     const bilateral = regional && settleNeighborTrade(regional, { bought, sold, buyPrice });
-    const regionalSettlement = bilateral && settleFreight(settleNationalTrade(bilateral, game, World), game, crisis?.freightCapacityUsed);
     const marketStock = availableGrain - bought + sold;
     const carryStock = bilateral
       ? Math.max(0, Math.min(18, backgroundStock - (bought - bilateral.report.importUnits) + (sold - bilateral.report.exportUnits)))
       : marketStock;
     const shortage = foodDeficit - bought;
     const capacity = 5 + active(state, "granary").length * 10 + development.storage;
-    const reserve = Math.min(capacity, foodAfterShipment - sold);
+    const foodOnHand = foodAfterShipment - sold;
+    const closingStock = Math.min(capacity, foodOnHand);
+    let domestic = bilateral && settleNationalTrade(bilateral, game, World);
+    let dispatch = null;
+    if (domestic && reserveDispatch?.year === game.year && dispatchWindow(game)) {
+      const result = settleReserveDispatch(domestic, game, World, { stateName: campaignName(game), demand, towns, fromReserve,
+        facilities: reserveFacilities(state, { reached, towns }), foodOnHand, shortage });
+      domestic = result.regional;
+      dispatch = result.dispatch;
+    }
+    const reserve = dispatch?.reserve ?? closingStock;
+    const regionalSettlement = domestic && settleFreight(domestic, game, (crisis?.freightCapacityUsed ?? 0) + (dispatch?.freightCapacityUsed ?? 0));
     const funding = finance(game);
     const receipts = localReceipts(output, towns, development.marketReceipts, priceYear);
     const tax = funding.local + receipts.markets + receipts.workshops;
@@ -762,6 +784,7 @@ export const Campaign = (() => {
       const { ordered, delivered, cost, freightCapacityUsed } = crisis;
       report.foodCrisis = { ordered, delivered, cost, freightCapacityUsed };
     }
+    if (dispatch) report.reserveDispatch = dispatch;
     const partnership = partnershipRecord(game);
     if (partnership) {
       report.partnership = {
@@ -890,7 +913,7 @@ export const Campaign = (() => {
 
   return {
     saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, reportFunding, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
-    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, orderCrisisFood, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority,
+    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, orderCrisisFood, pledgeReserve, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority,
     regionalMandate: (game) => regionalMandate(game, targets(game).output, game.journey?.mandate && {
       food: active(game, "waterNetwork").length,
       education: active(game, "technicalInstitute").length + active(game, "agriculturalInstitute").length,

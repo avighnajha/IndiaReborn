@@ -42,6 +42,8 @@ Harvests, food units, road capacities, AI development envelopes and investment p
 4. Review whether aggregated princely administrations need separate pre-integration economies. Do not infer completed simulation from the territorial integration events.
 5. Review the candidate roster and multiple victory paths through fresh player sessions. Measure campaign pace, supported-browser performance, keyboard flows and save recovery. Resolve map licensing and historical review before release.
 
+The first proposed maritime playtest pairs Port Blair with Calcutta and Madras. The 1950–51 Home Affairs report describes more frequent scheduled voyages to Calcutta, mainland food supply coordinated by the Union, and a separate 1950 charter to meet timber demand. Use the different service frequencies to model distinct route capacity. Compare a reserve-and-supply commitment against a commercial freight commitment from the same mainland start. Show what crossed the Bay and how it changed island coverage or commercial earnings in the annual brief. Use the report year as documented evidence of service and verify any earlier start with period records. [Home Affairs annual report, chapter on Andaman and Nicobar](https://www.mha.gov.in/files/annual_reports_documents/REPORT_1950_51_12022021.pdf#page=41)
+
 The original roughly one-to-four-hour human playtime goal cannot be established by automated turn advancement. Browser runs and financial checks provide evidence for stability, rather than evidence that the full game is fun or release-ready.
 
 ## Review path
