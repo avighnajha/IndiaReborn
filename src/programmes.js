@@ -10,6 +10,7 @@ import { andhraBasinAgreements, madrasBasinAgreements, madrasProgrammes } from "
 import { assamBasinAgreements, assamProgrammes } from "./assam-programmes.js";
 import { centralBasinAgreements, centralProgrammes } from "./central-programmes.js";
 import { campaignPriceYear, openingPriceYear, periodAmount } from "./period-prices.js";
+import { partnershipProgrammes, partnershipWindow } from "./partnerships.js";
 
 const work = (kind, q, r, year) => ({ kind, hex: World.id(q, r), year });
 
@@ -157,7 +158,9 @@ function regionalPriceYear(plan) {
 export const programmes = {
   ...Object.fromEntries(Object.entries(regionalProgrammes).map(([id, plan]) => [id, { ...plan, priceYear: regionalPriceYear(plan) }])),
   ...departmentProgrammes(World),
+  ...partnershipProgrammes(World.key),
 };
+export { partnershipWindow };
 const regionalAgreements = World.key === "bihar" ? kosiAgreements : World.key === "west-bengal" ? damodarAgreements
   : World.key === "bombay" ? bombayBasinAgreements : World.key === "punjab" ? punjabBasinAgreements
     : World.key === "central" ? centralBasinAgreements : World.key === "assam" ? assamBasinAgreements : mahanadiAgreements;
@@ -185,7 +188,8 @@ function availablePlan(game, plan) {
 
 export function visibleProgrammes(game) {
   return Object.fromEntries(Object.entries(programmes).filter(([id, plan]) =>
-    availablePlan(game, plan) || records(game).some((record) => record.id === id)));
+    (availablePlan(game, plan) && (!plan.partnership || game.year <= partnershipWindow.closes && !partnershipRecord(game))) ||
+    records(game).some((record) => record.id === id)));
 }
 
 const worksFor = (game, footprint) => footprint.filter(({ kind, hex }) => !game.assets.some((asset) => asset.kind === kind && asset.hex === hex));
@@ -193,6 +197,18 @@ const length = (works) => Math.max(0, ...works.map(({ year }) => year));
 
 function records(game) {
   return game.programmes ?? [];
+}
+
+export function partnershipRecord(game) {
+  return records(game).find(({ partnership }) => partnership);
+}
+
+export function planningPartnership(game) {
+  const record = partnershipRecord(game);
+  if (!game.journey || (!record && (game.year < partnershipWindow.notice || game.year > partnershipWindow.closes))) return null;
+  const options = Object.entries(programmes).filter(([id, plan]) => plan.partnership && (!record || record.id === id))
+    .map(([id, plan]) => ({ id, plan, quote: programmeQuote(game, id), requirements: programmeRequirements(game, id) }));
+  return options.length ? { record, options } : null;
 }
 
 function remainingWorks(game, id) {
@@ -256,7 +272,7 @@ export function programmeQuote(game, id, agreement = "focused") {
   const year = campaignPriceYear(game);
   const subsidy = game.year <= 1951 && preferred ? 3 : 0;
   const financed = (terms?.total ?? plan.cost) * proportion;
-  const unionShare = (terms?.union ?? 0) * proportion;
+  const unionShare = (terms?.union ?? plan.partnership ?? 0) * proportion;
   const union = periodAmount(unionShare, priceYear, year, Math.floor);
   const cost = Math.max(0, periodAmount(financed, priceYear, year, Math.ceil) - union - subsidy);
   const pricing = game.journey ? {
@@ -266,9 +282,12 @@ export function programmeQuote(game, id, agreement = "focused") {
   let reason;
   if (game.year > campaignEnd(game)) reason = "Campaign complete.";
   else if (records(game).some((record) => record.id === id)) reason = "Already commissioned.";
+  else if (plan.partnership && partnershipRecord(game)) reason = "The other partnership has the Union allocation.";
+  else if (plan.partnership && game.year < partnershipWindow.opens) reason = `Applications open in ${partnershipWindow.opens}.`;
+  else if (plan.partnership && game.year > partnershipWindow.closes) reason = "The Union offer has closed.";
   else if (!works.length) reason = footprint.some(({ kind, hex }) => game.assets.some((asset) => asset.kind === kind && asset.hex === hex && asset.remaining > 0))
     ? "These works are already under construction." : "Already commissioned.";
-  else if (missing) reason = plan.requires && !plan.treeOnly ? `Unlocks when ${missing.text} is complete.` : `Requires ${missing.text}.`;
+  else if (missing) reason = plan.requires && !plan.treeOnly && !plan.partnership ? `Unlocks when ${missing.text} is complete.` : `Requires ${missing.text}.`;
   else if (footprint.some(({ hex }) => game.owners[hex] !== World.key)) reason = "Part of this programme lies outside your administration.";
   else if (activeProgramme(game)) reason = "The works office is delivering another programme.";
   else if (game.year + duration - 1 > campaignEnd(game)) reason = "This programme would finish after the campaign.";
@@ -284,6 +303,7 @@ export function approveProgramme(game, id, agreement = "focused") {
   const assets = quote.works.map(({ kind, hex, year }) => ({ id: `${hex}:${kind}`, hex, kind, started: game.year, remaining: year, programme: id }));
   const record = { id, approved: game.year, finish: game.year + quote.duration - 1, cost: quote.cost };
   if (quote.pricing) record.pricing = quote.pricing;
+  if (programmes[id].partnership) record.partnership = { union: quote.union };
   const agreementTerms = basinAgreementsFor(id)?.[agreement];
   if (agreementTerms) record.terms = {
     agreement, union: quote.union,

@@ -118,6 +118,13 @@ function detailRows(rows) {
   return `<dl class="brief-ledger">${rows.map(([label, value]) => `<div><dt>${escapeText(label)}</dt><dd>${escapeText(value)}</dd></div>`).join("")}</dl>`;
 }
 
+function partnershipEffect(partnership) {
+  if (programmes[partnership.id]?.department === "food") {
+    return `Project fields supplied ${units(partnership.food)}. The depot can store ${units(partnership.storage)}.`;
+  }
+  return `Project workshops produced ${partnership.output} output. ${partnership.linkedWorkshops} linked to market.`;
+}
+
 function revenueRows(report) {
   const funding = Campaign.reportFunding(report);
   if (!funding) return [["Local revenue", money(report.tax)]];
@@ -210,11 +217,14 @@ function whyContent(report, previous) {
   const agreement = funding && basinAgreementsFor(delivery.id)?.[funding.agreement];
   const response = delivery?.floodResponse;
   const training = report.training;
+  const partnership = report.partnership;
+  const partnershipFunding = partnership?.funding;
   const served = [...new Set((training?.sites ?? []).map(({ name }) => name).filter(Boolean))];
   return `<details class="brief-why"><summary>Why this happened</summary>
     ${effect ? "" : '<p class="brief-note">This earlier report records the totals after weather. Separate losses and protection effects were not saved for this turn.</p>'}
     <section><h3>Food supply · ${escapeText(report.monsoon)}</h3>${food}</section>
     <section><h3>Investment and output</h3>${production}${works.length ? `<ul class="brief-works">${works.map((work) => `<li>${escapeText(work)}</li>`).join("")}</ul>` : ""}
+      ${partnership ? `<p class="brief-note"><b>Union development partnership.</b> ${escapeText(partnershipEffect(partnership))}</p>` : ""}
       ${training ? `<p class="brief-note">${escapeText(training.title)} · ${served.length ? `Served ${escapeText(names.format(served))}.` : escapeText(training.message)}</p>` : ""}</section>
     <section><h3>Treasury</h3>${cash}
     ${activityEffect !== null && receiptEffect ? `<p class="brief-note">Price changes account for ${signedMoney(receiptEffect)} in workshop and market receipts.${activityEffect ? ` Changes in activity contributed ${signedMoney(activityEffect)}.` : " Activity contributed no change."}</p>` : ""}
@@ -223,6 +233,7 @@ function whyContent(report, previous) {
     ${training?.setup ? `<p class="brief-note">The charter’s ${money(training.setup)} setup cost is included in cash after planning.</p>` : ""}
     ${report.technicalIntake?.state ? `<p class="brief-note">The state’s ${money(report.technicalIntake.state)} technical intake share is included in cash after planning. The Union paid ${money(report.technicalIntake.union)} directly for equipment.</p>` : ""}
     ${report.relief ? `<p class="brief-note">Emergency purchase authorization was ${money(report.relief.budget)}. Purchases used ${money(report.relief.spent)}.</p>` : ""}
+    ${partnershipFunding ? `<p class="brief-note">Union development partnership: ${money(partnershipFunding.state)} state share and ${money(partnershipFunding.union)} paid directly by the Union. The state share is included in cash after planning.</p>` : ""}
     ${agreement ? `<p class="brief-note">${escapeText(agreement.title)} · ${escapeText(funding.stateName ?? World.name)} committed ${money(funding.state ?? funding.bihar)}.${funding.union ? ` The Union committed ${money(funding.union)} directly to the works.` : ""} The state share is included in cash after planning.</p>` : ""}
     ${response?.cost ? `<p class="brief-note">Emergency work to keep the ${basinNameFor(delivery.id)} timetable cost ${money(response.cost)}. Included in cash after planning.</p>` : ""}</section>
     ${report.regional ? regionalLedger(report) : ""}
@@ -337,8 +348,17 @@ function changeRows(report, previous) {
   const sector = plan && programmeDepartment(World, null, delivery.id, plan)?.id;
   if (plan) {
     const followOn = programmes[delivery.followOn]?.title;
-    if (delivery.finish === report.year) add(sector, plan.title, followOn ? `Completed. ${followOn} is now available.` : "Completed and operating.", delivery.id);
+    const partnership = report.partnership?.id === delivery.id ? report.partnership : null;
+    if (delivery.finish === report.year) add(sector, plan.title, partnership ? `${partnership.delivered ? "Completed. " : ""}${partnershipEffect(partnership)}`
+      : followOn ? `Completed. ${followOn} is now available.` : "Completed and operating.", delivery.id);
     else if (delivery.nextWorkYear) add(sector, plan.title, `Next works due ${delivery.nextWorkYear}. Final delivery is scheduled for ${delivery.finish}.`, delivery.id);
+  }
+  const partnership = report.partnership;
+  const partnershipDelivery = partnership && delivery && partnership.id === delivery.id && (delivery.finish === report.year || delivery.nextWorkYear);
+  if (partnership?.protectedFood > 0 && report.monsoon === "Severe flood" && !partnershipDelivery &&
+      partnership.protectedFood !== (previous?.partnership?.id === partnership.id ? previous.partnership.protectedFood : 0)) {
+    add("food", programmes[partnership.id]?.title ?? "Union development partnership",
+      `Protection at project farms prevented ${units(partnership.protectedFood)} of flood losses.`, partnership.id);
   }
   const response = delivery?.floodResponse;
   if (response) add("food", `${basinNameFor(delivery.id)} flood response`, response.response === "repair"

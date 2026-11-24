@@ -2,7 +2,7 @@ import { Campaign } from "./campaign.js";
 import { departmentTracks } from "./department-content.js";
 import { departmentFacility } from "./department-icons.js";
 import { Fiscal } from "./fiscal.js";
-import { activeProgramme, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes } from "./programmes.js";
+import { activeProgramme, planningPartnership, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes } from "./programmes.js";
 import { World } from "./scenario.js";
 import { apprenticeshipOutput, charterOpening, extensionYield } from "./training.js";
 import { campaignPriceYear, openingPriceYear, periodAmount } from "./period-prices.js";
@@ -120,6 +120,7 @@ export function developmentTrees(game) {
   const training = Campaign.training(game);
   const intake = Campaign.technicalIntake(game);
   const current = activeProgramme(game);
+  const partnership = planningPartnership(game);
   return departmentTracks(World, game).map(({ tiers, ...track }) => {
     const nodes = tiers.flatMap((ids, index) => ids.map((id) => id.startsWith("charter:")
       ? charterNode(id.slice("charter:".length), index + 1, training)
@@ -134,6 +135,8 @@ export function developmentTrees(game) {
         actionLabel: "Review intake",
       });
     }
-    return { ...track, nodes };
+    const option = partnership?.options.find(({ plan }) => plan.department === track.id);
+    const optionalProject = option && programmeNode(game, option.id, null, current);
+    return { ...track, nodes, optionalProject };
   });
 }

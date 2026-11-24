@@ -41,6 +41,8 @@ const facilities = {
   juteSupply: { label: "Domestic Jute Supply", icon: "jute" },
   northIndustry: { label: "Industrial Workshops", icon: "workshop" },
   applied: { label: "Training Workshops", icon: "trainingWorkshop" },
+  planFoodReserve: { label: "Protected Farms & Reserves", icon: "flood", metric: "2 protected growing areas · +18 food storage" },
+  planSuppliers: { label: "College & Supplier Workshops", icon: "trainingWorkshop", metric: "2 workshops · +6 Skills from the college" },
   tradeFreightTerminal: { label: "Freight Terminal", icon: "freight" },
   tradeIndustrialPark: { label: "Industrial Park", icon: "industrialPark" },
 };

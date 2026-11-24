@@ -18,6 +18,8 @@ From 1951, **Five-year priority** adds a continuing department choice alongside 
 
 In a campaign ending in 1985, **Regional mandate** opens in 1974. Choose food resilience, a trained workforce or a strong workshop economy by 1979. The annual brief tracks progress and the ending judges the outcome you chose. [Regional mandate rules](design/regional-mandates.md)
 
+In Bihar and Orissa, **Union development partnership** appears in the Cabinet from 1953. Compare a protected reserve district and an industrial supplier district. Prepare the qualifying works, then choose which one receives Union co-funding between 1957 and 1960. [Partnership terms and outcomes](design/union-partnerships.md)
+
 Founding campaigns now price new works and ordinary operating results in the turn’s rupees. Open **Budget office** to see the historical price source and **Why this happened** in the annual brief to see when higher prices changed receipts. [Period price rules](design/period-prices.md)
 
 Advance through 1947 to choose a development priority and a separate response to Partition displacement. In 1949, Mayurbhanj and Orissa can integrate or agree to maintain separate works offices. Bihar can face a southern reorganization in 1956 if the plateau received less than one third of investment starts. The border choices show the proposed outline and explain who receives works and funds. **Chronicle** records choices alongside historical census snapshots. **Neighbors** opens treaty offers. The annual brief reports trade, migration, freight revenue and political decisions.

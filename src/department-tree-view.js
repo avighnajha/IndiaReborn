@@ -117,6 +117,10 @@ export function departmentTreeMarkup(trees, selectedId, treasuryLabel) {
         ${routeDiagram(groups)}
       </div>
       ${tiers.length ? `<ol class="department-tiers" role="list" aria-label="Development tiers">${tiers.join("")}</ol>` : '<p class="department-tree-empty">No development plans are available in this department.</p>'}
+      ${selected.optionalProject ? `<section class="department-partnership" aria-label="Union development partnership">
+        <h4>Union development partnership</h4>
+        <ul class="department-tier-nodes" role="list">${nodeCard(selected.optionalProject, index, true)}</ul>
+      </section>` : ""}
     </section>
   </div>`;
 }

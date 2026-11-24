@@ -177,7 +177,7 @@ The completed station asks the player to prioritize workshops or irrigation. Ind
 
 ## Next delivery tasks
 
-1. **Make a regional commitment change the long campaign.** Compare a Bihar floodplain resilience commitment with an education and market-led route, starting from common conditions. Reuse programme coverage, shared reserves, workforce and market access where they support the decision. Review the opportunities that open several years later and what the ending recognizes. Check a contrasting region before generalizing.
+1. **Make a regional commitment change the long campaign.** The Second Plan offers one package in Bihar and Orissa. Earlier basin works or schools and market links prepare each bid. Compare how the delivered reserves and suppliers affect diplomacy, freight and the ending as the player continues to fund other departments. [Union development partnerships](union-partnerships.md)
 2. **Teach and show the consequence in play.** Use the visual opening and short annual brief to connect investment, its footprint and the result. Compare a flood and a school-to-workshop payoff. Use existing emergency food planning to make a reserve versus spending decision tangible when weather threatens.
 3. **Deepen cross-border choices where they affect the plan.** Compare local protection and storage to financing a shared reserve or relying on purchases. Compare joint freight investment to competing for existing routes. Bring pricing into this work where it changes affordability, access or the explanation. [Interregional model](interregional-model.md).
 

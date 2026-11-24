@@ -29,10 +29,12 @@ import { campaignCapital, campaignEnd, campaignLengths, campaignName, foundingSa
 import { boundaryPreview } from "./journey-map";
 import { ReliefMap } from "./map";
 import { openingArt } from "./opening.js";
-import { accelerateProgramme, accelerationQuote, activeProgramme, approveProgramme, basinAgreementsFor, basinFloodDecision, basinNameFor, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes, respondToBasinFlood, visibleProgrammes } from "./programmes.js";
+import { accelerateProgramme, accelerationQuote, activeProgramme, approveProgramme, basinAgreementsFor, basinFloodDecision, basinNameFor, partnershipWindow, planningPartnership, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes, respondToBasinFlood, visibleProgrammes } from "./programmes.js";
 
 const rupees = (value) => "₹" + value.toLocaleString("en-IN");
 const money = Fiscal.lakh;
+const textEntities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+const escapeText = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => textEntities[character]);
 
 const byId = (id) => document.getElementById(id);
 const initialSite = World.capital;
@@ -115,7 +117,7 @@ function choiceButton(text, action, primary = false, disabled = false) {
 }
 
 function showModal(kicker, title, content, buttons) {
-  modal.classList.remove("opening-dialog", "brief-dialog", "regions-dialog", "founding-dialog", "department-dialog", "results-dialog", "national-market-dialog", "mandate-dialog");
+  modal.classList.remove("opening-dialog", "brief-dialog", "regions-dialog", "founding-dialog", "department-dialog", "results-dialog", "national-market-dialog", "mandate-dialog", "partnership-dialog");
   byId("modal-kicker").textContent = kicker;
   byId("modal-title").textContent = title;
   byId("modal-content").innerHTML = content;
@@ -267,6 +269,10 @@ function reviewProgramme(id, focus = false) {
   if (focus) {
     ReliefMap.reset();
     if (World.key === "mayurbhanj" && game.journey?.jurisdiction?.settlement !== "merger") ReliefMap.zoom(.55, selected);
+    if (plan.partnership) {
+      ReliefMap.zoom(.7, selected);
+      byId("map").scrollIntoView({ block: "nearest" });
+    }
     byId("programme-title").focus({ preventScroll: true });
   }
 }
@@ -274,7 +280,8 @@ function reviewProgramme(id, focus = false) {
 function programmeKind(plan, tier) {
   const parts = [];
   if (tier) parts.push(`Tier ${tierNumerals[tier] ?? tier}`);
-  if (plan.era) parts.push("Special project");
+  if (plan.partnership) parts.push("Union partnership");
+  else if (plan.era) parts.push("Special project");
   else if (!plan.department && plan.requires) parts.push("Follow-on");
   return parts.join(" · ");
 }
@@ -315,6 +322,7 @@ function showOpening() {
 function cabinetEntries(active) {
   return Object.entries(visibleProgrammes(game)).flatMap(([id, plan]) => {
     const record = game.programmes?.find((entry) => entry.id === id);
+    if (plan.partnership && !record && selectedProgramme !== id) return [];
     if (plan.treeOnly && id !== selectedProgramme && !record) return [];
     const department = programmeDepartment(World, game, id, plan);
     const quote = programmeQuote(game, id);
@@ -348,6 +356,36 @@ function openCabinetDepartment(department, focusTab = false) {
   if (focusTab) byId("programme-list").querySelector(`[data-cabinet-department="${department}"]`)?.focus({ preventScroll: true });
 }
 
+function showPlanningPartnership() {
+  const model = planningPartnership(game);
+  if (!model || model.record) return;
+  const preparing = game.year < partnershipWindow.opens;
+  const cards = model.options.map(({ id, plan, quote, requirements }) => {
+    const status = preparing ? `Opens ${partnershipWindow.opens}` : quote.reason ? "Not ready" : "Ready to fund";
+    return `<article class="partnership-option" data-sector="${plan.department}" data-ready="${!quote.reason}">
+      <header>${departmentBadge(plan.department)}<span class="partnership-state">${status}</span></header>
+      <h3>${escapeText(plan.title)}</h3><p class="partnership-area">${escapeText(plan.district)}</p>
+      <p class="partnership-outcome">${escapeText(plan.outcome)}${plan.department === "trade" && game.journey?.preset === "standard" ? " Market-linked suppliers also strengthen freight bids." : ""}</p>
+      <dl class="partnership-finance"><div><dt>State share</dt><dd>${money(quote.cost)}</dd></div><div><dt>Union share</dt><dd>${money(quote.union)}</dd></div></dl>
+      <p class="partnership-duration">${quote.duration ? `${quote.duration} ${quote.duration === 1 ? "year" : "years"} to deliver` : "Works already operating"}</p>
+      <ul class="partnership-requirements" aria-label="Eligibility">${requirements.map(({ text, met }) => `<li data-met="${met}"><span>${met ? "Met" : "Requires"}</span> ${escapeText(text)}</li>`).join("")}</ul>
+      ${quote.reason ? `<p class="partnership-reason">${escapeText(quote.reason)}</p>` : ""}
+      <button type="button" data-partnership-review="${id}" aria-label="Review ${escapeText(plan.title)} on the map">Review on map <span aria-hidden="true">→</span></button>
+    </article>`;
+  }).join("");
+  showModal(`${partnershipWindow.opens}–${partnershipWindow.closes} · Union co-funding`, preparing ? "Prepare a partnership" : "Choose one partnership", `
+    <p class="partnership-lede">The Union will co-fund one package. Review the sites, then commit the state share by ${partnershipWindow.closes}.</p>
+    <p class="partnership-quote-year">${game.year} ${preparing ? "price estimates" : "quotes"}</p>
+    <div class="partnership-options">${cards}</div>`, [choiceButton("Return to Cabinet", returnToMap, true)]);
+  modal.classList.add("partnership-dialog");
+  for (const button of byId("modal-content").querySelectorAll("[data-partnership-review]")) {
+    button.addEventListener("click", () => {
+      modal.close();
+      reviewProgramme(button.dataset.partnershipReview, true);
+    });
+  }
+}
+
 function renderCabinetList(active, department) {
   const entries = cabinetEntries(active);
   const list = byId("programme-list");
@@ -375,6 +413,13 @@ function renderCabinetList(active, department) {
     cards.innerHTML = '<p class="cabinet-empty">No new regional programmes in this department.</p>';
   }
   list.replaceChildren(picker, cards);
+  const partnership = planningPartnership(game);
+  if (partnership && !partnership.record) {
+    const compare = choiceButton("", showPlanningPartnership);
+    compare.className = "cabinet-partnership-link";
+    compare.innerHTML = `<span><strong>Union development partnership</strong><small>${game.year < partnershipWindow.opens ? `Prepare for ${partnershipWindow.opens}` : `Choose by ${partnershipWindow.closes}`} · One package</small></span><b>Compare →</b>`;
+    list.prepend(compare);
+  }
 
   const ongoing = entries.find(({ id }) => id === active?.id);
   if (ongoing) {
@@ -408,7 +453,7 @@ function renderProgrammes() {
   const record = plans.find(({ id }) => id === selectedProgramme);
   const inherited = !record && programmeCommissioned(game, selectedProgramme);
   const terms = agreements?.[record ? record.terms?.agreement : selectedBasinTerms];
-  const union = record?.terms?.union ?? quote.union;
+  const union = record?.partnership?.union ?? record?.terms?.union ?? quote.union;
   const period = record ? `${record.approved}–${record.finish}` : quote.duration ? `${quote.duration} ${quote.duration === 1 ? "year" : "years"}` : "Works already placed";
   const funded = record ? record.cost : quote.cost;
   const requirements = record ? [] : programmeRequirements(game, selectedProgramme);
@@ -422,7 +467,8 @@ function renderProgrammes() {
     <p class="programme-area">${terms?.area ?? plan.district}</p><p>${terms?.detail ?? plan.outcome}</p>
     ${isBasin && !record ? '<div id="kosi-options" class="kosi-options" role="group" aria-label="Compare basin agreements"></div>' : `<p class="programme-next">${plan.next}</p>`}
     ${requirements.length ? `<ul class="programme-prerequisites" aria-label="Prerequisites">${requirements.map(({ text, met }) => `<li>${met ? "Met" : "Requires"} · ${text}</li>`).join("")}</ul>` : ""}
-    ${inherited ? "" : `<div class="programme-terms"><b>${money(funded)}</b><span>${period}</span></div>`}
+    ${inherited ? "" : `<div class="programme-terms"><b>${money(funded)}</b><span>${plan.partnership ? "State share · " : ""}${period}</span></div>`}
+    ${plan.partnership ? `<p class="partnership-contribution">Union share <b>${money(union)}</b>${record ? "" : " · One package can receive co-funding"}</p>` : ""}
     ${!inherited && record && game.journey ? `<p class="fiscal-note">Committed in ${record.approved}</p>`
       : !inherited && quote.pricing && quote.cost !== quote.pricing.baseCost ? `<p class="fiscal-note">${quote.pricing.year} quote · ${money(quote.pricing.baseCost)} at ${quote.pricing.priceYear} prices</p>` : ""}
     ${terms ? basinTermsContent(terms, quote, record, union) : ""}
@@ -465,7 +511,7 @@ function renderProgrammes() {
   if (game.journey) {
     const tree = choiceButton(`View ${label} tree →`, () => {
       selectedDepartment = department;
-      showDevelopmentTrees(false, tier ? selectedProgramme : null);
+      showDevelopmentTrees(false, tier || plan.partnership ? selectedProgramme : null);
     });
     tree.className = "programme-tree-link";
     tree.dataset.programmeTree = department;
@@ -851,7 +897,7 @@ function render() {
   const colour = departmentIdentity[sector.id].color;
   const tint = `#${colour.toString(16).padStart(6, "0")}`;
   const footprint = programmeFootprint(game, selectedProgramme, selectedBasinTerms);
-  const coverage = basinAgreementsFor(selectedProgramme) ? [...new Set(footprint.filter(({ kind }) => kind === "levee").flatMap(({ hex }) => [hex, ...World.neighbors(hex)]))].filter((id) => World.tiles[id].flood >= 2) : [];
+  const coverage = (basinAgreementsFor(selectedProgramme) || plan.partnership && plan.department === "food") ? [...new Set(footprint.filter(({ kind }) => kind === "levee").flatMap(({ hex }) => [hex, ...World.neighbors(hex)]))].filter((id) => World.tiles[id].flood >= 2) : [];
   byId("map-subtitle").textContent = ReliefMap.boundary(game);
   byId("bengal-map-credit").hidden = World.key !== "west-bengal";
   const key = [["#f9dfa1", `${name} border`], ["#b7c0b2", "Neighboring borders"], ...mapLayers[layer], ["#53999b", "River"]];
@@ -1012,6 +1058,15 @@ function showComparison() {
 function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
+  const partnership = planningPartnership(game);
+  if (partnership && !partnership.record && [partnershipWindow.notice, partnershipWindow.opens, partnershipWindow.closes].includes(game.year)) {
+    return {
+      advice: game.year === partnershipWindow.notice ? `Union co-funding opens in ${partnershipWindow.opens}. Compare food and supplier packages and prepare their requirements.`
+        : game.year === partnershipWindow.closes ? "This is the final year to fund one Union development partnership. Review eligibility and the state share."
+          : `Union co-funding is open. Choose one food or supplier package by ${partnershipWindow.closes}.`,
+      label: "Compare Union partnerships", open: showPlanningPartnership,
+    };
+  }
   const mandate = Campaign.regionalMandate(game);
   if (mandate.available && [mandate.opens, mandate.closes].includes(game.year)) {
     return { advice: "Choose the outcome that will define this administration in 1985.", label: "Compare regional mandates", open: () => showRegionalMandate() };
@@ -1251,7 +1306,7 @@ function showResults() {
   const completed = game.programmes.filter(({ id }) => programmeCommissioned(game, id)).length;
   const allSecure = game.reports.filter(({ shortage }) => !shortage).length;
   const opened = game.journey ? developmentTrees(game).map(({ label, nodes }) => {
-    const tiers = new Set(nodes.filter(({ status }) => status === "completed").map(({ tier }) => tier));
+    const tiers = new Set(nodes.filter(({ status, tier }) => status === "completed" && Number.isInteger(tier) && tier >= 1 && tier <= 4).map(({ tier }) => tier));
     return `<li><span>${label}</span><strong>${tiers.size} of 4 tiers</strong></li>`;
   }).join("") : "";
   const milestones = Object.values(game.journey?.events ?? {}).filter(({ choice }) =>
@@ -1261,6 +1316,17 @@ function showResults() {
   const trainingEffect = charter?.id === "apprenticeships"
     ? `${trainingYears.reduce((total, { training }) => total + training.output, 0)} extra workshop output`
     : `${trainingYears.reduce((total, { training }) => total + training.food + training.recovered, 0)} extra food units including recovered losses`;
+  const partnership = latest.partnership;
+  const partnershipPlan = partnership && programmes[partnership.id];
+  const partnershipYears = partnership ? game.reports.filter((report) => report.partnership?.id === partnership.id) : [];
+  const partnershipFood = partnershipPlan?.department === "food";
+  const partnershipTotal = partnershipYears.reduce((total, report) => total + (partnershipFood ? report.partnership.food : report.partnership.output), 0);
+  const productivePartnershipYears = partnershipYears.filter((report) => (partnershipFood ? report.partnership.food : report.partnership.output) > 0).length;
+  const partnershipSummary = partnershipPlan ? `<section class="result-path partnership-result" data-sector="${partnershipPlan.department}">
+    <h3>Union development partnership</h3><p>${departmentBadge(partnershipPlan.department, partnershipPlan.title)}</p>
+    <dl><div><dt>${partnershipFood ? "Total food harvested" : "Total workshop output"}</dt><dd><b>${partnershipTotal}</b><small>Across ${productivePartnershipYears} productive ${productivePartnershipYears === 1 ? "year" : "years"}</small></dd></div>
+      <div><dt>${partnershipFood ? "Food storage at campaign end" : "Linked workshops at campaign end"}</dt><dd><b>${partnershipFood ? partnership.storage : partnership.linkedWorkshops}</b><small>${partnership.delivered ? "Operating" : "Not fully operating"}</small></dd></div></dl>
+    <p class="partnership-result-note">Recorded production at project sites includes later improvements.</p></section>` : "";
   const baseResult = prosperity && economy ? "Both goals achieved" : prosperity ? "Shared prosperity achieved" : economy ? "Industrial economy achieved" : "Campaign ended below both goals";
   const result = mandate ? mandate.achieved ? "Regional mandate achieved" : "Regional mandate fell short" : baseResult;
   const marketTowns = ["Market towns", latest.towns, goal.towns];
@@ -1272,6 +1338,7 @@ function showResults() {
       ${path("Industrial economy", economy, [["Workshop output", latest.output, goal.output], marketTowns, ["Treasury", game.cash, goal.cash, money]])}
     </div>
     ${opened ? `<section class="result-path"><h3>Development reached</h3><ul class="result-departments">${opened}</ul></section>` : ""}
+    ${partnershipSummary}
     ${charter ? `<section class="result-path"><h3>${charter.title}</h3><p>${trainingYears.length} operating years · ${trainingEffect}</p></section>` : ""}
     ${milestones.length ? `<div class="journey-events">${historyRows(milestones)}</div>` : ""}`, [
     choiceButton("Inspect the map", () => modal.close()),

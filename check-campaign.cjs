@@ -1,6 +1,75 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+test("one Second Plan partnership buys a lasting regional advantage with a fixed state and Union share", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { approveProgramme, basinFloodDecision, planningPartnership, programmeQuote, respondToBasinFlood } = await import("./src/programmes.js");
+  const { decodeSave, encodeSave } = await import("./src/save-codec.js");
+  let game = Campaign.newGame(1946, { end: 1985, preset: "standard" });
+  assert.equal(planningPartnership(game), null);
+  const sequence = ["food", "kosi", "trade", "skills"];
+  while (game.year < 1957) {
+    for (let decision; (decision = Campaign.nextDecision(game));) {
+      const preferred = ["unified", ...Object.keys(decision.choices)].find((key) => decision.choices[key] && Campaign.decide(game, key) !== game);
+      game = Campaign.decide(game, preferred);
+    }
+    if (basinFloodDecision(game)) game = respondToBasinFlood(game, "delay");
+    const grant = Campaign.grantOffers(game).find(({ id, reason }) => id === "standard" && !reason);
+    if (grant) game = Campaign.acceptGrant(game, grant.id);
+    const candidate = sequence[0];
+    if (candidate && !programmeQuote(game, candidate).reason) game = approveProgramme(game, sequence.shift());
+    if (game.year === 1953) {
+      assert.equal(planningPartnership(game).options.length, 2);
+      assert.equal(programmeQuote(game, "planFoodReserve").reason, "Applications open in 1957.");
+    }
+    const next = Campaign.advance(game);
+    assert.equal(next.year, game.year + 1);
+    game = next;
+  }
+  const end = (initial, year) => {
+    let state = initial;
+    while (state.year <= year) {
+      const next = Campaign.advance(state);
+      assert.equal(next.year, state.year + 1);
+      state = next;
+    }
+    return state;
+  };
+  const base = end(game, 1961);
+  assert.equal(planningPartnership(base), null);
+  assert.equal(programmeQuote(base, "planSuppliers").reason, "The Union offer has closed.");
+  assert.equal(base.reports.at(-1).partnership, undefined);
+  const outcomes = new Map();
+  for (const { id, quote } of planningPartnership(game).options) {
+    assert.equal(quote.reason, undefined);
+    const committed = approveProgramme(game, id);
+    const restored = decodeSave(encodeSave(committed));
+    const record = planningPartnership(restored).record;
+    assert.equal(restored.cash, game.cash - quote.cost);
+    assert.deepEqual(record.partnership, { union: quote.union });
+    assert.ok(planningPartnership(restored).options.every((option) => option.id === id));
+    const other = id === "planSuppliers" ? "planFoodReserve" : "planSuppliers";
+    assert.equal(programmeQuote(restored, other).reason, "The other partnership has the Union allocation.");
+    const resolved = end(restored, 1961);
+    const signing = resolved.reports.find(({ year }) => year === 1957).partnership;
+    assert.equal(signing.delivered, false);
+    assert.deepEqual(signing.funding, { state: quote.cost, union: quote.union });
+    const report = resolved.reports.at(-1);
+    assert.equal(report.partnership.delivered, true);
+    outcomes.set(id, report);
+  }
+  const reference = base.reports.at(-1);
+  const food = outcomes.get("planFoodReserve");
+  const trade = outcomes.get("planSuppliers");
+  assert.equal(food.harvest - reference.harvest, food.partnership.food);
+  assert.equal(food.partnership.storage, 18);
+  assert.ok(food.reserve > trade.reserve);
+  assert.equal(trade.partnership.linkedWorkshops, 2);
+  assert.ok(trade.output > food.output);
+  assert.equal(reference.regional.freightContract.playerCapacity, 3);
+  assert.equal(trade.regional.freightContract.playerCapacity, 5);
+});
+
 test("campaign rules and complete strategies", async () => {
   const { World } = await import("./src/scenario.js");
   const { Campaign } = await import("./src/campaign.js");

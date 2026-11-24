@@ -5,13 +5,14 @@ import { campaignEnd, campaignLengths, campaignName, foundingSaveKey, journeySet
 import { fundJointProject, jointProjectOffers, neighborsFor, partnerOffers, resolveNeighbors, settleFreight, settleNationalTrade, settleNeighborTrade, signPartnerOffer } from "./interregional.js";
 import { contractPlayerBid, contractRivalBid, upcomingFreightContract } from "./neighbor-competition.js";
 import { applyPoliticalDecision, politicalDecision } from "./politics.js";
-import { activeProgramme, basinAgreementsFor, basinFloodDecision, programmeCommissioned, programmeRequirements, programmes, visibleProgrammes } from "./programmes.js";
+import { activeProgramme, basinAgreementsFor, basinFloodDecision, partnershipRecord, partnershipWindow, programmeCommissioned, programmeRequirements, programmes, visibleProgrammes } from "./programmes.js";
 import { apprenticeshipOutput, extensionDryRecovery, extensionFloodRecovery, extensionYield, trainingModel } from "./training.js";
 import { reservePlan, reserveWindow, resolveReserve, signReserve } from "./union-reserve.js";
 import { enrollIntake, intakeEffects, intakePlan, intakeStatus, matureSchools, placementOutput } from "./technical-intake.js";
 import { adoptCabinetPlan, cabinetPlan, resolveCabinetPlan } from "./cabinet-plan.js";
 import { adoptRegionalMandate, recordRegionalMandate, regionalMandate } from "./regional-mandate.js";
 import { campaignPriceYear, openingPriceYear, periodAmount, priceBasis } from "./period-prices.js";
+import { partnershipActivity } from "./partnerships.js";
 
 export const Campaign = (() => {
   const projects = {
@@ -707,6 +708,7 @@ export const Campaign = (() => {
       const nextWork = Math.min(...assets.filter((asset) => asset.programme === id && asset.remaining > 0 && game.owners[asset.hex] === World.key).map((asset) => asset.remaining));
       const followOn = finish === game.year && game.year < campaignEnd(game) && programmeCommissioned(state, id)
         ? Object.entries(visibleProgrammes(state)).find(([key, plan]) => {
+          if (plan.partnership && game.year + 1 < partnershipWindow.opens) return false;
           if (programmeCommissioned(state, key) || plan.works.some(({ hex }) => state.owners[hex] !== World.key)) return false;
           const requirements = programmeRequirements(state, key);
           return requirements.some(({ ids }) => ids.includes(id)) && requirements.every(({ met }) => met);
@@ -726,6 +728,15 @@ export const Campaign = (() => {
       attribution: { food: foodEffects, industry, newlyConnected, programme: delivery },
       siteEconomy: { workshops: workshopSites, irrigation: irrigationSites },
     };
+    const partnership = partnershipRecord(game);
+    if (partnership) {
+      report.partnership = {
+        ...partnershipActivity(partnership, assets, game.owners, World.key, report.siteEconomy, foodEffects.floodSites ?? [],
+          (hex) => isConnected(reached, hex)),
+        delivered: programmeCommissioned(state, partnership.id),
+      };
+      if (partnership.approved === game.year) report.partnership.funding = { state: partnership.cost, union: partnership.partnership.union };
+    }
     if (game.journey) {
       const { index, referenceYear } = priceBasis(priceYear);
       const previous = game.reports.at(-1);

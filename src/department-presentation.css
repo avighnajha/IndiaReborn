@@ -99,3 +99,49 @@
 .department-tree-panel[data-sector] .department-facility-icon { color: var(--sector-accent); }
 .department-tree-panel[data-sector] .department-tier-index b { color: var(--sector-accent); }
 .department-tree-description { margin-bottom: 4px; color: #dce5d2; font-size: .76rem; }
+
+.programme-list .cabinet-partnership-link { display: flex; align-items: center; justify-content: space-between; gap: 9px; min-height: 51px; margin-bottom: 5px; padding: 8px; border-color: #9a885e; background: #303729; text-align: start; }
+.cabinet-partnership-link > span { display: grid; gap: 3px; min-width: 0; }
+.cabinet-partnership-link strong { color: #f1e2bc; font-size: .77rem; line-height: 1.2; }
+.cabinet-partnership-link small { color: #d1cfb4; font-size: .68rem; }
+.cabinet-partnership-link > b { color: #edcf8d; font-size: .72rem; white-space: nowrap; }
+.cabinet-partnership-link:focus-visible { outline: 2px solid #ffe2a0; outline-offset: 3px; }
+dialog.partnership-dialog { width: min(760px, calc(100% - 24px)); }
+.partnership-dialog .partnership-lede { margin: 0; color: #dce3d1; font-size: .88rem; line-height: 1.45; }
+.partnership-dialog .partnership-quote-year { margin: 5px 0 12px; color: #c3cbb5; font-size: .75rem; }
+.partnership-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.partnership-option { display: flex; flex-direction: column; min-width: 0; padding: 13px; border: 1px solid #4f604b; border-top: 3px solid var(--sector-accent); border-radius: 6px; background: #223229; }
+.partnership-option > header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 9px; }
+.partnership-state { padding: 3px 6px; border-radius: 3px; color: #d6d7bc; background: #18271e; font-size: .7rem; font-weight: 700; }
+.partnership-option[data-ready="true"] .partnership-state { color: #d5eab7; background: #34482b; }
+.partnership-dialog .partnership-option h3 { margin: 10px 0 3px; color: #f3ead2; font: 700 1.15rem / 1.25 var(--serif); }
+.partnership-dialog .partnership-area { margin: 0; color: var(--sector-accent); font-size: .74rem; }
+.partnership-dialog .partnership-outcome { margin: 9px 0; color: #dae3d1; font-size: .82rem; line-height: 1.45; }
+.partnership-finance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 2px 0 0; padding: 9px 0; border-block: 1px solid #455642; }
+.partnership-finance dt { color: #bdcbb4; font-size: .73rem; }
+.partnership-finance dd { margin: 3px 0 0; color: #f2e5c6; font-size: 1.03rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.partnership-dialog .partnership-duration { margin: 7px 0; color: #bdcbb4; font-size: .75rem; }
+.partnership-requirements { display: grid; gap: 5px; margin: 0 0 10px; padding: 0; list-style: none; }
+.partnership-requirements li { color: #dae0cc; font-size: .77rem; line-height: 1.35; }
+.partnership-requirements li > span { margin-inline-end: 4px; color: #efd0a6; font-size: .67rem; font-weight: 750; text-transform: uppercase; }
+.partnership-requirements li[data-met="true"] > span { color: #cce2ac; }
+.partnership-dialog .partnership-reason { margin: 0 0 10px; color: #edc8a8; font-size: .76rem; line-height: 1.4; }
+.partnership-option > button { display: flex; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; margin-top: auto; padding: 8px 10px; border-color: color-mix(in srgb, var(--sector-accent) 60%, #455642); color: var(--sector-accent); font-size: .82rem; font-weight: 700; }
+.partnership-option > button:hover { background: color-mix(in srgb, var(--sector-accent) 14%, #223229); }
+.partnership-option > button:focus-visible { outline: 2px solid #ffe2a0; outline-offset: 3px; }
+.programme-details .partnership-contribution { margin: 5px 0; color: #d1dbc5; font-size: .76rem; }
+.partnership-contribution b { color: #e6d5a7; font-variant-numeric: tabular-nums; }
+.partnership-result { border-inline-start: 3px solid var(--sector-accent); }
+.partnership-result > dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; }
+.partnership-result dd { margin: 4px 0; }
+.partnership-result dd b { color: var(--sector-accent); }
+.partnership-result dd small { display: block; margin-top: 4px; }
+.partnership-result .partnership-result-note { color: #c6d1bc; font-size: .75rem; }
+@media (max-width: 540px) {
+  .partnership-options { grid-template-columns: minmax(0, 1fr); }
+  .partnership-option { padding: 11px; }
+  .partnership-option > button { min-height: 44px; }
+}
+@media (max-width: 385px) {
+  .partnership-result > dl { grid-template-columns: minmax(0, 1fr); }
+}
