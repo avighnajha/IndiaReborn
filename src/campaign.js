@@ -14,6 +14,9 @@ import { adoptRegionalMandate, recordRegionalMandate, regionalMandate } from "./
 import { campaignPriceYear, openingPriceYear, periodAmount, priceBasis } from "./period-prices.js";
 import { partnershipActivity } from "./partnerships.js";
 
+const outcomeWindowYears = 5;
+const productiveTarget = 4;
+
 export const Campaign = (() => {
   const projects = {
     irrigation: { name: "Irrigation", icon: "≈", cost: 13, years: 1, summary: "Adds harvest. Fertile land gives more, but exposed crops lose more in a flood." },
@@ -802,11 +805,15 @@ export const Campaign = (() => {
 
   function score(game) {
     const latest = game.reports.at(-1);
-    const secureYears = game.reports.slice(-5).filter((report) => report.shortage === 0).length;
+    const recent = game.reports.slice(-outcomeWindowYears);
+    const secureYears = recent.filter((report) => report.shortage === 0).length;
     const goals = targets(game);
     const prosperity = secureYears >= goals.secureYears && latest?.skills >= goals.skills && latest.towns >= goals.towns;
-    const economy = latest?.output >= goals.output && latest.towns >= goals.towns && game.cash >= goals.cash;
-    return { latest, secureYears, prosperity, economy, mandate: latest?.regionalMandate ?? null };
+    const productiveYears = recent.filter(({ output, towns }) => output >= goals.output && towns >= goals.towns).length;
+    const economy = game.journey
+      ? productiveYears >= productiveTarget
+      : latest?.output >= goals.output && latest.towns >= goals.towns && game.cash >= goals.cash;
+    return { latest, recent, secureYears, productiveYears, productiveTarget, prosperity, economy, mandate: latest?.regionalMandate ?? null };
   }
 
   function validSave(game, region, founding) {

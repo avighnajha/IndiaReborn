@@ -27,3 +27,18 @@ Both directions were also reached and completed on seed 1947 under Light politic
 In a second comparison, every branch took the first affordable ordinary programme after the award year, whenever the works office was free. Bihar finished with 71 food in reserve and 94 workshop output on the reserve route, and with 53 food and 128 output on the supplier route. Orissa finished at 71 and 96 on the reserve route, and 53 and 134 on the supplier route. The no-award runs had 53 in reserve and output of 112 in Bihar and 96 in Orissa. The investments still changed the final economies when later construction continued. All six runs reached both original victory goals, which strengthens the case for reviewing the scorecard and late resource pressure.
 
 In the production browser, the Standard Bihar reserve route reached 1985 and the Standard Orissa supplier route reached 1965. Both were signed from the Cabinet after reviewing the map and the corresponding department tree. They were reloaded after signing, then checked in the annual brief and ending. The comparison was checked at desktop width and 430 pixels. These are functional playthroughs. Human pacing and enjoyment remain open for playtesting.
+
+## What the ending shows
+
+The founding scorecard compares the opening and final five years of the administration. Food reserve coverage divides closing stores by that year's food demand and expresses the ratio in months. Skills and workshop output are annual averages. Jurisdictions can change during the campaign, so the two periods describe the player's administration at each end of the journey. Actual paid Union freight terms, linked workshops, public food shipments and teaching results appear when the reports record them. Partnership production at the project sites has its own dated entry and a map link.
+
+The industrial goal now requires the regional output and market link targets in the same year in at least four of the final five years. Treasury remains in the budget summary. The shared prosperity goal and optional regional mandate still use their existing rules. Archive scenarios retain their original industrial threshold. Completed founding saves use the new assessment when opened, based on their saved reports.
+
+| Continued construction, Standard seed 1946 | Reserve coverage, food / suppliers | Output per year, food / suppliers | Paid freight terms, food / suppliers |
+| --- | --- | --- | --- |
+| Bihar | 16.0 / 12.0 months | 94 / 128 | 1 / 4 |
+| Orissa | 17.5 / 12.7 months | 96 / 134 | 1 / 5 |
+
+Bihar's supplier route gained its first award in 1966. The reserve route gained its first in 1981. Orissa's supplier route served all five terms. The higher storage and higher production also diverged under Light politics on seed 1947, in Northern Bihar after the split and in Orissa. Light has no freight competition. Both base goals still passed in all 12 runs including the no-award branches. The final range is informative, but the branches still need a stronger food-side opportunity and broader late-game balance review.
+
+Installed Standard browser runs reached 1985 in Bihar on the reserve route and Orissa on the supplier route. Both reopened the scorecard after locating the partnership on the Economy map. The interface matched the saved production averages at desktop and narrow widths.

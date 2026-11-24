@@ -3,6 +3,7 @@ const test = require("node:test");
 
 test("one Second Plan partnership buys a lasting regional advantage with a fixed state and Union share", async () => {
   const { Campaign } = await import("./src/campaign.js");
+  const { campaignOutcomes } = await import("./src/campaign-outcomes.js");
   const { approveProgramme, basinFloodDecision, planningPartnership, programmeQuote, respondToBasinFlood } = await import("./src/programmes.js");
   const { decodeSave, encodeSave } = await import("./src/save-codec.js");
   let game = Campaign.newGame(1946, { end: 1985, preset: "standard" });
@@ -40,6 +41,7 @@ test("one Second Plan partnership buys a lasting regional advantage with a fixed
   assert.equal(programmeQuote(base, "planSuppliers").reason, "The Union offer has closed.");
   assert.equal(base.reports.at(-1).partnership, undefined);
   const outcomes = new Map();
+  const profiles = new Map();
   for (const { id, quote } of planningPartnership(game).options) {
     assert.equal(quote.reason, undefined);
     const committed = approveProgramme(game, id);
@@ -57,6 +59,7 @@ test("one Second Plan partnership buys a lasting regional advantage with a fixed
     const report = resolved.reports.at(-1);
     assert.equal(report.partnership.delivered, true);
     outcomes.set(id, report);
+    profiles.set(id, campaignOutcomes(resolved.reports, Campaign.score(resolved).recent));
   }
   const reference = base.reports.at(-1);
   const food = outcomes.get("planFoodReserve");
@@ -68,6 +71,24 @@ test("one Second Plan partnership buys a lasting regional advantage with a fixed
   assert.ok(trade.output > food.output);
   assert.equal(reference.regional.freightContract.playerCapacity, 3);
   assert.equal(trade.regional.freightContract.playerCapacity, 5);
+  assert.ok(profiles.get("planFoodReserve").closing.reserveMonths > profiles.get("planSuppliers").closing.reserveMonths);
+  assert.ok(profiles.get("planSuppliers").closing.output > profiles.get("planFoodReserve").closing.output);
+});
+
+test("founding score rewards four years of connected production instead of treasury or a one-year spike", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { targets } = await import("./src/journey.js");
+  const start = Campaign.newGame(1946, { end: 1965, preset: "light" });
+  const goals = targets(start);
+  const strong = { output: goals.output, towns: goals.towns };
+  const quiet = { output: 0, towns: goals.towns };
+  const isolated = { output: goals.output, towns: goals.towns - 1 };
+  const reports = [strong, quiet, strong, strong, strong, isolated];
+  const ending = { ...start, year: 1966, cash: 0, reports };
+  assert.equal(Campaign.score(ending).economy, false);
+  assert.equal(Campaign.score(ending).productiveYears, 3);
+  assert.equal(Campaign.score({ ...ending, cash: 100000, reports: [quiet, quiet, isolated, quiet, strong] }).economy, false);
+  assert.equal(Campaign.score({ ...ending, reports: [strong, strong, strong, strong, quiet] }).economy, true);
 });
 
 test("campaign rules and complete strategies", async () => {

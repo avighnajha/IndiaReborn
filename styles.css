@@ -239,7 +239,27 @@ dialog::backdrop { background: #0b120ed2; }
 .result-path dl { margin: 8px 0 0; }
 .result-path dl > div, .result-departments > li { display: flex; align-items: baseline; justify-content: space-between; gap: 7px; padding: 4px 0; border-top: 1px solid var(--line); }
 .result-path dd { display: grid; text-align: end; font-variant-numeric: tabular-nums; }
+.result-goals .result-path dd small { white-space: nowrap; }
 .result-departments { list-style: none; padding: 0; margin: 7px 0 0; }
+.campaign-outcomes > h3 { font: bold 1.15rem var(--serif); color: #f4ebd0; }
+.campaign-outcomes > p { margin: 4px 0 10px; font-size: .82rem; color: var(--subtle); }
+.outcome-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.outcome-card { padding: 11px; background: var(--panel-dark); border: 1px solid var(--line); border-top: 3px solid var(--sector-accent); border-radius: 5px; }
+.outcome-card h3 { font-size: .83rem; }
+.outcome-card p { min-height: 2.5em; margin: 7px 0 5px; font-size: .81rem; }
+.outcome-period { display: grid; grid-template-columns: 5em minmax(0, 1fr) 2.9em; gap: 5px; align-items: center; margin: 5px 0; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.outcome-period strong { text-align: right; }
+.outcome-period + .outcome-period strong { color: var(--sector-accent); }
+.outcome-bar { height: 6px; background: #35423b; border-radius: 2px; }
+.outcome-bar i { display: block; width: var(--extent); height: 100%; background: #a3b3a7; border-radius: inherit; }
+.outcome-period + .outcome-period .outcome-bar i { background: var(--sector-accent); }
+.outcome-card ul { list-style: none; margin: 8px 0 0; padding: 6px 0 0; border-top: 1px solid var(--line); color: var(--subtle); font-size: .76rem; }
+.outcome-card ul:empty { display: none; }
+.outcome-card li + li { margin-top: 4px; }
+@media (max-width: 670px) {
+  .outcome-grid { grid-template-columns: minmax(0, 1fr); }
+  .outcome-card p { min-height: 0; }
+}
 @media (max-width: 580px) { .result-goals { grid-template-columns: minmax(0, 1fr); } }
 .guide { padding-left: 21px; }
 .guide li + li { margin-top: 6px; }

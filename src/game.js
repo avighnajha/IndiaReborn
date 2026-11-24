@@ -2,6 +2,7 @@ import { briefContent, briefHeadline } from "./annual-brief.js";
 import "./annual-brief.css";
 import { campaignStorageKey, territories, World } from "./scenario.js";
 import { Campaign } from "./campaign.js";
+import { campaignOutcomesMarkup } from "./campaign-outcomes.js";
 import { decodeSave } from "./save-codec.js";
 import { charterOpening } from "./training.js";
 import { trainingComparisonMarkup, trainingStatusMarkup } from "./training-view.js";
@@ -29,7 +30,7 @@ import { campaignCapital, campaignEnd, campaignLengths, campaignName, foundingSa
 import { boundaryPreview } from "./journey-map";
 import { ReliefMap } from "./map";
 import { openingArt } from "./opening.js";
-import { accelerateProgramme, accelerationQuote, activeProgramme, approveProgramme, basinAgreementsFor, basinFloodDecision, basinNameFor, partnershipWindow, planningPartnership, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes, respondToBasinFlood, visibleProgrammes } from "./programmes.js";
+import { accelerateProgramme, accelerationQuote, activeProgramme, approveProgramme, basinAgreementsFor, basinFloodDecision, basinNameFor, partnershipRecord, partnershipWindow, planningPartnership, programmeCommissioned, programmeFootprint, programmeQuote, programmeRequirements, programmes, respondToBasinFlood, visibleProgrammes } from "./programmes.js";
 
 const rupees = (value) => "₹" + value.toLocaleString("en-IN");
 const money = Fiscal.lakh;
@@ -750,7 +751,7 @@ function render() {
   const end = campaignEnd(game);
   const name = campaignName(game);
   const goal = targets(game);
-  const { latest, secureYears } = Campaign.score(game);
+  const { latest, secureYears, productiveYears, productiveTarget } = Campaign.score(game);
   const { reached, towns } = Campaign.access(game);
   const tile = World.tiles[selected];
   const terrain = World.terrain[tile.kind];
@@ -888,7 +889,10 @@ function render() {
     return `<li><strong>${Campaign.projects[asset.kind].name}</strong><span>${site.town?.name ?? World.districts[site.district]} · ${asset.remaining} yr${asset.remaining === 1 ? "" : "s"}</span></li>`;
   }).join("")}</ul>` : "";
   byId("queue").innerHTML = portfolio + earlierWorks || "<p>The works office has capacity for a new programme.</p>";
-  byId("goals").innerHTML = `<ul><li><strong>Shared prosperity</strong><span>${secureYears} of the last 5 years food-secure (target ${goal.secureYears}) · ${latest?.skills ?? 0}/${goal.skills} skills · ${towns}/${goal.towns} towns</span></li><li><strong>Industrial economy</strong><span>${latest?.output ?? 0}/${goal.output} output · ${towns}/${goal.towns} towns · ${rupees(game.cash)} / ${money(goal.cash)}</span></li></ul>`;
+  const industrialProgress = game.journey
+    ? `${productiveYears} of the last 5 years qualified (target ${productiveTarget}) · ${goal.output}+ output and ${goal.towns}+ market towns in the same year`
+    : `${latest?.output ?? 0}/${goal.output} output · ${towns}/${goal.towns} towns · ${rupees(game.cash)} / ${money(goal.cash)}`;
+  byId("goals").innerHTML = `<ul><li><strong>Shared prosperity</strong><span>${secureYears} of the last 5 years food-secure (target ${goal.secureYears}) · ${latest?.skills ?? 0}/${goal.skills} skills · ${towns}/${goal.towns} towns</span></li><li><strong>Industrial economy</strong><span>${industrialProgress}</span></li></ul>`;
 
   for (const button of document.querySelectorAll("[data-layer]")) button.setAttribute("aria-pressed", String(layer === button.dataset.layer));
   const weather = latest ? `Last resolved season: ${latest.monsoon}` : "Advance a year to see monsoon conditions.";
@@ -1297,7 +1301,7 @@ function jointProjectCard(project, partner) {
 }
 
 function showResults() {
-  const { latest, secureYears, prosperity, economy, mandate } = Campaign.score(game);
+  const { latest, recent, secureYears, productiveYears, productiveTarget, prosperity, economy, mandate } = Campaign.score(game);
   const goal = targets(game);
   const name = campaignName(game);
   const path = (title, won, measures) => `<section class="result-path" data-achieved="${won}"><h3>${title} <span>${won ? "Achieved" : "Below target"}</span></h3>
@@ -1318,35 +1322,43 @@ function showResults() {
     : `${trainingYears.reduce((total, { training }) => total + training.food + training.recovered, 0)} extra food units including recovered losses`;
   const partnership = latest.partnership;
   const partnershipPlan = partnership && programmes[partnership.id];
+  const approval = partnershipRecord(game);
+  const partnershipSite = partnershipPlan && game.assets.find(({ programme, hex, remaining }) =>
+    programme === partnership.id && !remaining && game.owners[hex] === World.key);
   const partnershipYears = partnership ? game.reports.filter((report) => report.partnership?.id === partnership.id) : [];
   const partnershipFood = partnershipPlan?.department === "food";
   const partnershipTotal = partnershipYears.reduce((total, report) => total + (partnershipFood ? report.partnership.food : report.partnership.output), 0);
   const productivePartnershipYears = partnershipYears.filter((report) => (partnershipFood ? report.partnership.food : report.partnership.output) > 0).length;
   const partnershipSummary = partnershipPlan ? `<section class="result-path partnership-result" data-sector="${partnershipPlan.department}">
-    <h3>Union development partnership</h3><p>${departmentBadge(partnershipPlan.department, partnershipPlan.title)}</p>
+    <header><h3>Union development partnership${approval ? ` · ${approval.approved}` : ""}</h3>
+      ${partnershipSite ? '<button type="button" id="result-partnership-map">Locate on map</button>' : ""}</header>
+    <p>${departmentBadge(partnershipPlan.department, partnershipPlan.title)}</p>
     <dl><div><dt>${partnershipFood ? "Total food harvested" : "Total workshop output"}</dt><dd><b>${partnershipTotal}</b><small>Across ${productivePartnershipYears} productive ${productivePartnershipYears === 1 ? "year" : "years"}</small></dd></div>
       <div><dt>${partnershipFood ? "Food storage at campaign end" : "Linked workshops at campaign end"}</dt><dd><b>${partnershipFood ? partnership.storage : partnership.linkedWorkshops}</b><small>${partnership.delivered ? "Operating" : "Not fully operating"}</small></dd></div></dl>
     <p class="partnership-result-note">Recorded production at project sites includes later improvements.</p></section>` : "";
-  const baseResult = prosperity && economy ? "Both goals achieved" : prosperity ? "Shared prosperity achieved" : economy ? "Industrial economy achieved" : "Campaign ended below both goals";
-  const result = mandate ? mandate.achieved ? "Regional mandate achieved" : "Regional mandate fell short" : baseResult;
   const marketTowns = ["Market towns", latest.towns, goal.towns];
-  showModal(`1946–${campaignEnd(game)} · ${identity}`, result, `
-    <div class="result-summary"><div><strong>${allSecure}/${game.reports.length}</strong><span>food-secure years</span></div><div><strong>${completed}</strong><span>programmes delivered and retained</span></div><div><strong>${money(game.cash)}</strong><span>final treasury</span></div></div>
+  const industryMeasures = game.journey
+    ? [[`Years with ${goal.output}+ output and ${goal.towns}+ market towns in the final five`, productiveYears, productiveTarget]]
+    : [["Workshop output", latest.output, goal.output], marketTowns, ["Treasury", game.cash, goal.cash, money]];
+  showModal(`1946–${campaignEnd(game)} · ${identity}`, `${name} in ${campaignEnd(game)}`, `
+    ${game.journey ? campaignOutcomesMarkup(game.reports, recent, secureYears) : ""}
+    ${partnershipSummary}
     ${mandate ? mandateProgressMarkup(mandate) : ""}
     <div class="result-goals">
       ${path("Shared prosperity", prosperity, [["Secure years in the final five", secureYears, goal.secureYears], ["Skills", latest.skills, goal.skills], marketTowns])}
-      ${path("Industrial economy", economy, [["Workshop output", latest.output, goal.output], marketTowns, ["Treasury", game.cash, goal.cash, money]])}
+      ${path("Industrial economy", economy, industryMeasures)}
     </div>
+    <div class="result-summary"><div><strong>${allSecure}/${game.reports.length}</strong><span>food-secure years</span></div><div><strong>${completed}</strong><span>programmes delivered and retained</span></div><div><strong>${money(game.cash)}</strong><span>final treasury</span></div></div>
     ${opened ? `<section class="result-path"><h3>Development reached</h3><ul class="result-departments">${opened}</ul></section>` : ""}
-    ${partnershipSummary}
     ${charter ? `<section class="result-path"><h3>${charter.title}</h3><p>${trainingYears.length} operating years · ${trainingEffect}</p></section>` : ""}
     ${milestones.length ? `<div class="journey-events">${historyRows(milestones)}</div>` : ""}`, [
-    choiceButton("Inspect the map", () => modal.close()),
+    choiceButton("Inspect the map", () => game.journey ? showEconomyMap() : modal.close()),
     choiceButton("Read the final brief", () => showReport()),
     ...(game.journey ? [choiceButton("Read your chronicle", showChronicle)] : []),
     choiceButton("Campaign atlas", () => showRegions(), true),
   ]);
   modal.classList.add("results-dialog");
+  if (partnershipSite) byId("result-partnership-map").addEventListener("click", () => focusEconomySite(partnershipSite.hex));
 }
 
 function showDecisionCards(kicker, title, description, options, choose, source) {
