@@ -7,8 +7,8 @@ import { building, center, drawLandscape, elevation, height, riverChannels, tile
 import { drawTownRole, type TownRole } from './town-role-art';
 
 type Asset = { hex: string; kind: string; remaining: number };
-type FloodSite = { hex: string; lost: number; protected: number };
-type Season = { monsoon: string; year: number; completed: Asset[]; attribution?: { food?: { floodSites?: FloodSite[] } } };
+type WeatherSite = { hex: string; lost: number; protected: number };
+type Season = { monsoon: string; year: number; completed: Asset[]; attribution?: { food?: { floodSites?: WeatherSite[]; droughtSites?: WeatherSite[] } } };
 type State = { year: number; owners: Record<string, string>; assets: Asset[]; reports: Season[]; journey?: { jurisdiction?: Jurisdiction } };
 type SelectSite = (id: string, fromMap?: boolean) => void;
 type ProgrammePreview = { cells: string[]; color: number; coverage?: string[] };
@@ -415,12 +415,12 @@ function floodOverlay(g: Graphics, game: State, strong: boolean) {
   }
 }
 
-function floodResults(graphics: Graphics, report: Season) {
-  for (const { hex, lost, protected: saved } of report.attribution?.food?.floodSites ?? []) {
+function weatherResults(graphics: Graphics, sites: WeatherSite[], lossColor: number) {
+  for (const { hex, lost, protected: saved } of sites) {
     const [x, y] = center(tiles[hex]);
     if (lost) {
       graphics.ellipse(x, y, 17, 11).stroke({ color: 0x172b35, width: 4 })
-        .ellipse(x, y, 17, 11).stroke({ color: 0x80d7f2, width: 2 });
+        .ellipse(x, y, 17, 11).stroke({ color: lossColor, width: 2 });
     }
     if (saved) {
       graphics.circle(x + 12, y - 8, 4.5).fill(0x21352c)
@@ -533,10 +533,11 @@ function render(game: State, layer: string, selected: string, select: SelectSite
   const latest = game.reports.at(-1);
   if (layer === 'weather' && latest?.monsoon === 'Severe flood') {
     floodOverlay(regions, game, false);
-    floodResults(markers, latest);
+    weatherResults(markers, latest.attribution?.food?.floodSites ?? [], 0x80d7f2);
   }
-  if (layer === 'weather' && game.reports.at(-1)?.monsoon === 'Dry monsoon') {
+  if (layer === 'weather' && latest?.monsoon === 'Dry monsoon') {
     for (const tile of allTiles) if (tile.kind === 'p') regions.ellipse(...center(tile), 17, 10).fill({ color: 0xd59f50, alpha: .24 });
+    weatherResults(markers, latest.attribution?.food?.droughtSites ?? [], 0xf3aa66);
   }
   for (const id of preview?.coverage ?? []) {
     regions.ellipse(...center(tiles[id]), 15, 10).fill({ color: 0xa8d8b4, alpha: .29 })
@@ -621,6 +622,7 @@ function season(report: Season) {
   if (flood) floodOverlay(haze, currentGame, true);
   if (dry) {
     for (const tile of allTiles) if (tile.kind === 'p') haze.ellipse(...center(tile), 17, 10).fill({ color: 0xd6a860, alpha: .32 });
+    weatherResults(haze, report.attribution?.food?.droughtSites ?? [], 0xf3aa66);
   } else {
     for (let i = 0; i < (flood ? 178 : 100); i++) {
       const drop = new Graphics().moveTo(0, 0).lineTo(-4, 10 + i % 8).stroke({ color: 0xe0f3e5, alpha: 0.55, width: 0.9, cap: 'round' });

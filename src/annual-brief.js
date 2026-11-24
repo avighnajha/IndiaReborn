@@ -18,12 +18,18 @@ const signedMoney = (value) => `${value < 0 ? "−" : "+"}${money(Math.abs(value
 
 export function foodStatus(report) {
   if (report.shortage) return "Shortfall";
-  if (report.fromReserve || report.bought || report.regional?.emergencyFood || report.unionReserve?.released) return "Covered with support";
+  if (report.fromReserve || report.bought || report.regional?.emergencyFood || report.unionReserve?.released || report.foodCrisis?.delivered) return "Covered with support";
   return "Covered by harvest";
 }
 
 export function briefHeadline(report, previous) {
   if (report.assam?.earthquakeLoss) return report.shortage ? "Earthquake damage left a food shortfall" : "Assam met food needs after the earthquake";
+  if (report.foodCrisis) {
+    if (report.shortage) return "Drought left food needs unmet";
+    if (report.foodCrisis.delivered) return "Union deliveries helped cover the drought";
+    if (report.fromReserve) return "Local reserves cushioned the drought";
+    return "Food needs met through drought";
+  }
   if (report.monsoon === "Severe flood") return report.shortage ? "Floods left a food shortfall" : "Food needs were met through flooding";
   if (report.monsoon === "Dry monsoon") return report.shortage ? "A dry monsoon left food in short supply" : "Food needs were met through a dry monsoon";
   if (report.shortage) return "Food supply fell short";
@@ -40,6 +46,7 @@ function foodCoverage(report) {
   const supplied = demand - shortage;
   const sources = [
     ["harvest", "Harvest", report.harvest],
+    ["union", "Union drought deliveries", report.foodCrisis?.delivered],
     ["reserve", "State reserves", report.fromReserve],
     ["shared", "Shared reserves", report.regional?.emergencyFood],
     ["union", "Union reserve", report.unionReserve?.released],
@@ -74,7 +81,7 @@ function weatherCard(report) {
     recovered ? `${units(recovered)} protected or recovered` : "",
   ].filter(Boolean).join(" · ") : "Recorded harvest includes weather effects.";
   return `<section class="brief-card brief-weather" data-season="${season}">
-    <h3>Monsoon</h3><strong>${escapeText(report.monsoon)}</strong><p>${details}</p>
+    <h3>Monsoon</h3><strong>${report.foodCrisis ? "Regional drought" : escapeText(report.monsoon)}</strong><p>${details}</p>
     ${report.assam?.earthquakeLoss ? `<p>Earthquake damage · ${units(report.assam.earthquakeLoss - report.assam.bankRepairs)} lost</p>` : ""}
   </section>`;
 }
@@ -159,6 +166,7 @@ function whyContent(report, previous) {
     ...(report.cabinetPriority?.recovered ? [["Weather losses recovered by food priority", `+${report.cabinetPriority.recovered}`]] : []),
   ] : [["Baseline after seasonal effects", report.baseline], ["Irrigation after seasonal effects", `+${report.farms}`]];
   const food = detailRows([...harvestRows, ["Harvest delivered", report.harvest], ["Drawn from reserves", report.fromReserve],
+    ...(report.foodCrisis?.delivered ? [["Union drought deliveries", report.foodCrisis.delivered]] : []),
     ...(report.regional?.emergencyFood ? [["Shared reserve deliveries", report.regional.emergencyFood]] : []),
     ...(report.unionReserve?.released ? [["Received from the Union reserve", report.unionReserve.released]] : []),
     ...(report.unionReserve?.shipped ? [["Shipped to the Union reserve", report.unionReserve.shipped]] : []),
@@ -202,6 +210,7 @@ function whyContent(report, previous) {
     ...(Number.isFinite(planningChange) && planningChange ? [["Cash carried in", money(previous.cash)], ["Planning commitments and grants", signedMoney(planningChange)]] : []),
     ["Cash after planning", money(report.openingCash)], ...revenueRows(report),
     ["Food sales", money(report.sold)], ["Food purchases", money(report.bought * report.buyPrice)],
+    ...(report.foodCrisis?.cost ? [["Union drought deliveries", money(report.foodCrisis.cost)]] : []),
     ...(report.unionReserve?.proceeds ? [["Union food shipments", money(report.unionReserve.proceeds)]] : []),
     ...(report.regionalCash ? [["Freight agreements", money(report.regionalCash - (report.regional?.jointFreightCash ?? 0))]] : []),
     ...(report.regional?.jointFreightCash ? [["Joint freight projects", money(report.regional.jointFreightCash)]] : []),
@@ -302,6 +311,13 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const crisis = report.foodCrisis;
+  if (crisis?.delivered) {
+    const freight = crisis.freightCapacityUsed ? ` ${crisis.freightCapacityUsed} commercial freight slots reassigned.` : "";
+    add("food", "Drought deliveries received", `${units(crisis.delivered)} for ${money(crisis.cost)}.${freight}`);
+  } else if (crisis && report.fromReserve) {
+    add("food", "Stores drawn down during drought", `${units(report.fromReserve)} used. ${units(report.reserve)} carried forward.`);
+  }
   const neighbors = new Set(report.regional?.partners.map(({ id }) => id));
   for (const work of (report.regional?.developments ?? []).filter(({ id, partner, status }) =>
     neighbors.has(partner) && ["protection", "trainingSchool", "processing"].includes(id) && status === "open").slice(0, 3)) {

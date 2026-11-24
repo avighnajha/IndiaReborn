@@ -1,0 +1,25 @@
+import { openingPriceYear, periodAmount } from "./period-prices.js";
+
+export const crisisYears = [1965, 1966];
+export const crisisSource = "https://thedocs.worldbank.org/en/doc/658351619025491246-0240021967/original/WorldBankGroupArchivesFolder1844626.pdf";
+
+export function crisisSeverity(game, region) {
+  if (!game.journey || !crisisYears.includes(game.year)) return 0;
+  if (region === "bihar") return game.year === 1965 ? .37 : .48;
+  if (region === "orissa" || (region === "mayurbhanj" && game.journey.jurisdiction?.settlement === "merger")) {
+    return game.year === 1965 ? .31 : .37;
+  }
+  return 0;
+}
+
+export function crisisDelivery(game, { harvest, demand, towns, terminals, cash }) {
+  const rate = periodAmount(3, openingPriceYear, game.year);
+  const gap = Math.max(0, demand - harvest);
+  const capacity = Math.min(8, Math.max(1, towns - 1) + terminals * 2);
+  const possible = Math.min(capacity, gap, Math.floor(cash / rate));
+  const ordered = game.crisisOrder?.year === game.year;
+  const delivered = ordered ? possible : 0;
+  const loading = game.journey.preset === "standard";
+  return { ordered, rate, capacity, possible, delivered, cost: delivered * rate,
+    freightCapacityUsed: loading ? Math.ceil(delivered / 2) : 0, loading };
+}

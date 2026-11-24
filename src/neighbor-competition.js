@@ -70,10 +70,11 @@ export function resolveFreightContract(game, player, rivals) {
   return { start, end, fee, minimumCapacity, winner, capacity, payment, reason, awarded, playerCapacity: player.capacity };
 }
 
-export function competitiveFreight(game, { towns, workshops, terminals, monsoon, partners, inland = [], linkedLoads = 0 }) {
+export function competitiveFreight(game, { towns, workshops, terminals, monsoon, partners, inland = [], linkedLoads = 0, reliefLoads = 0 }) {
   if (game.journey?.preset !== "standard" || game.year < freightCompetitionOpening || ![...partners, ...inland].some(({ capacity }) => capacity)) return null;
 
   const player = playerFreight({ towns, workshops, terminals });
+  player.capacity = Math.max(0, player.capacity - reliefLoads);
   const linkedDemand = Math.min(3, linkedLoads);
   const demand = 6 + partners.length + (game.year >= 1970 ? 2 : 0) - (monsoon === "Severe flood" ? 2 : 0) + linkedDemand;
   const competitors = [player, ...partners, ...inland];

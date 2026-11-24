@@ -413,11 +413,11 @@ function inlandCarriers(market, partners, nearby) {
   return [...carriers.values()];
 }
 
-export function settleFreight(regional, game) {
+export function settleFreight(regional, game, reliefLoads = 0) {
   const { freight, report } = regional;
   if (!freight) return regional;
   const inland = inlandCarriers(report.nationalMarket, regional.partners, freight.partners);
-  const competition = competitiveFreight(game, { ...freight, inland });
+  const competition = competitiveFreight(game, { ...freight, inland, reliefLoads });
   const contract = resolveFreightContract(game, contractPlayerBid(freight), report.partners.map((row) => contractRivalBid(row)));
   if (!competition && !contract) return regional;
 

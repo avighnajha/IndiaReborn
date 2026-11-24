@@ -19,6 +19,7 @@ import "./regional-mandate-view.css";
 import "./fiscal-view.css";
 import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
+import { crisisSeverity } from "./food-crisis.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
 import { intakeDeadline, intakeStatus } from "./technical-intake.js";
@@ -632,6 +633,16 @@ function showRelief() {
     <p class="fiscal-note">A purchase cap replaces the standing food policy for ${game.year}.</p>
     <div id="relief-options" class="modal-actions" role="group" aria-label="Set purchase cap"></div>`,
   [choiceButton("Return to map", () => { returnToMap(); byId("relief").focus(); })]);
+  for (const button of byId("modal-content").querySelectorAll("[data-crisis-order]")) {
+    button.addEventListener("click", () => {
+      const { crisisOrder } = button.dataset;
+      game = Campaign.orderCrisisFood(game, crisisOrder === "union");
+      persist();
+      render();
+      showRelief();
+      byId("modal-content").querySelector(`[data-crisis-order="${crisisOrder}"]`).focus();
+    });
+  }
   for (const budget of [0, 4, 8, 12]) {
     const button = choiceButton(budget ? money(budget) : "Use standing policy", () => {
       game = Campaign.authorizeRelief(game, budget);
@@ -820,14 +831,16 @@ function render() {
   const workforceNote = workforce ? `<p>${workforce.cohorts} trained ${workforce.cohorts === 1 ? "cohort" : "cohorts"} · ${workforce.years % 5}/5 funded years toward the next.</p>` : "";
   const effects = (results?.workshopEffects.length ? `<ul aria-label="Effects on workshop output">${results.workshopEffects.map(({ label, units }) => `<li><b>${units > 0 ? "+" : ""}${units}</b> ${label}</li>`).join("")}</ul>` : "") + workforceNote;
   const floodSites = latest?.attribution?.food?.floodSites ?? [];
+  const droughtSites = latest?.attribution?.food?.droughtSites ?? [];
   const floodImpact = layer === "weather" && floodSites.find(({ hex }) => hex === selected);
+  const droughtImpact = layer === "weather" && droughtSites.find(({ hex }) => hex === selected);
   const floodSummary = floodImpact && [
     floodImpact.lost ? `${floodImpact.lost} food lost` : "",
     floodImpact.protected ? `${floodImpact.protected} food saved` : "",
   ].filter(Boolean).join(" · ");
   byId("map-site-peek").hidden = !inspectSelection;
   byId("map-site-name").textContent = townName ?? World.districts[tile.district];
-  byId("map-site-summary").textContent = floodSummary || (layer === "economy" && (resultsSummary || roleSummary)) || (localAssets.length
+  byId("map-site-summary").textContent = (droughtImpact && `${droughtImpact.lost} food lost before recovery`) || floodSummary || (layer === "economy" && (resultsSummary || roleSummary)) || (localAssets.length
     ? [operating.length ? `${operating.length} operating` : "", building ? `${building} building` : ""].filter(Boolean).join(" · ")
     : "No works at this site");
   const siteProduction = byId("map-site-production");
@@ -872,7 +885,9 @@ function render() {
   const relief = game.relief?.year === game.year ? game.relief : null;
   byId("trade-note").textContent = relief ? `Purchase cap for ${game.year}` : "Applies each year";
   byId("relief").hidden = !game.journey || done;
-  byId("relief").textContent = relief ? `Emergency purchases · ${money(relief.budget)} cap` : "Emergency food plan";
+  byId("relief").textContent = crisisSeverity(game, World.key)
+    ? game.crisisOrder?.year === game.year ? "Drought plan · Union food ordered" : "Drought plan · Review supplies"
+    : relief ? `Emergency purchases · ${money(relief.budget)} cap` : "Emergency food plan";
   const reserveAction = byId("union-reserve");
   const reserveOffer = reserveStatus(game);
   reserveAction.hidden = done || !reserveWindow(game);
@@ -914,6 +929,7 @@ function render() {
     if (latest?.monsoon === "Dry monsoon") key.push(["#d59f50", "Dry-season exposure"]);
     if (floodSites.some(({ lost }) => lost)) key.push(["#80d7f2", "Food lost at site"]);
     if (floodSites.some((site) => site.protected)) key.push(["#c9e78d", "Food saved at site"]);
+    if (droughtSites.length) key.push(["#f3aa66", "Crop losses at sites before recovery"]);
   }
   const trainingPath = training.options.find(({ id }) => id === (trainingPreview ?? training.charter));
   const showTraining = layer === "works" && trainingPath?.sites.length && (trainingPreview || training.status === "operating");
@@ -1062,6 +1078,10 @@ function showComparison() {
 function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
+  if (crisisSeverity(game, World.key)) return {
+    advice: "Rainfall is failing. Compare your harvest and stores with what the Union can deliver this year.",
+    label: "Plan drought supplies", open: showRelief,
+  };
   const partnership = planningPartnership(game);
   if (partnership && !partnership.record && [partnershipWindow.notice, partnershipWindow.opens, partnershipWindow.closes].includes(game.year)) {
     return {
@@ -1122,7 +1142,7 @@ function showMonsoonMap(report) {
   modal.close();
   layer = "weather";
   inspectWeather = true;
-  const sites = report.attribution?.food?.floodSites ?? [];
+  const sites = report.attribution?.food?.floodSites ?? report.attribution?.food?.droughtSites ?? [];
   const highlight = sites.find(({ lost }) => lost) ?? sites[0];
   if (highlight) selectSite(highlight.hex);
   else {

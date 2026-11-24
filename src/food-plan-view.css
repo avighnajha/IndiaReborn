@@ -66,6 +66,16 @@
 .food-plan-case-note { margin-top: 7px; font-size: .76rem; color: var(--subtle); }
 .food-plan-purchases { border-top: 1px solid var(--line); padding-top: 7px; }
 #modal-content .food-plan-purchases p + p { margin-top: 3px; }
+.crisis-options { display: grid; gap: 7px; }
+.crisis-options > h3 { font: 700 1.14rem var(--serif); color: #e9e4cd; }
+.crisis-option h4 { margin: 0 0 6px; }
+.crisis-option[data-selected="true"] { border-color: var(--sector-accent); }
+.crisis-option .food-plan-sources > div { border-color: #56674d; }
+.crisis-option button { width: 100%; min-height: 36px; margin-top: 7px; }
+.crisis-option button[aria-pressed="true"] { background: #3d4b31; }
+.crisis-ready { padding: 9px 10px; border: 1px solid #667955; border-radius: 6px; font-size: .83rem; }
+.crisis-ready strong, .crisis-reference { color: var(--sector-accent); }
+.crisis-reference { font-size: .76rem; }
 
 @media (max-width: 440px) {
   .food-plan-outlook { grid-template-columns: 1fr; }

@@ -17,10 +17,13 @@ export function campaignOutcomes(reports, recent) {
   const servicedContracts = reports.map(({ regional }) => regional?.freightContract)
     .filter((contract) => contract?.winner?.id === "player" && contract.payment > 0);
   const latest = recent.at(-1);
+  const droughtReports = reports.filter(({ foodCrisis }) => foodCrisis);
   return {
     opening: period(reports.slice(0, recent.length)),
     closing: period(recent),
     unionShipments: reports.reduce((total, report) => total + (report.unionReserve?.shipped ?? 0), 0),
+    droughtYears: droughtReports.length,
+    droughtYearsCovered: droughtReports.filter(({ shortage }) => !shortage).length,
     cohorts: (latest.cabinetPriority?.graduates ?? 0) - (latest.cabinetPriority?.newGraduates ?? 0),
     researchOutput: average(recent, ({ development }) => development?.researchOutput ?? 0),
     linkedWorkshops: latest.siteEconomy?.workshops?.filter(({ market }) => market > 0).length,
@@ -34,7 +37,7 @@ const count = (value, singular, plural = `${singular}s`) => `${value} ${value ==
 
 export function campaignOutcomesMarkup(reports, recent, secureYears) {
   const outcome = campaignOutcomes(reports, recent);
-  const { opening, closing, unionShipments, cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears } = outcome;
+  const { opening, closing, unionShipments, droughtYears, droughtYearsCovered, cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears } = outcome;
   const latest = recent.at(-1);
   const card = (sector, metric, label, facts) => {
     const max = Math.max(1, opening[metric], closing[metric]);
@@ -50,6 +53,7 @@ export function campaignOutcomesMarkup(reports, recent, secureYears) {
     <div class="outcome-grid">
       ${card("food", "reserveMonths", "Months of demand covered by food reserves", [
         `${secureYears} of ${recent.length} final years food-secure`,
+        droughtYears && `${droughtYearsCovered} of ${droughtYears} drought years food-secure in 1965–66`,
         unionShipments && `${count(unionShipments, "food unit")} supplied to the Union`,
       ])}
       ${card("education", "skills", "Skills in service", [

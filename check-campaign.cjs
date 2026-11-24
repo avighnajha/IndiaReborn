@@ -244,10 +244,55 @@ test("one school network supports distinct food and industrial paths", async () 
   const rural = finish("extension");
   const industry = finish("apprenticeships");
   assert.equal(Campaign.score(rural).secureYears, 5);
-  assert.equal(Campaign.score(industry).secureYears, 3);
+  assert.equal(Campaign.score(industry).secureYears, 2);
+  assert.equal(industry.reports.at(-1).monsoon, "Dry monsoon");
   assert.equal(industry.reports.at(-1).output - rural.reports.at(-1).output, 12);
   assert.ok(industry.cash > rural.cash);
   assert.ok(rural.reports.some(({ regional }) => regional?.developments?.some(({ status }) => status === "open")));
+});
+
+test("the drought plan settles forecast deliveries once and reduces spot freight capacity", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { approveProgramme, programmeQuote } = await import("./src/programmes.js");
+  const { decodeSave, encodeSave } = await import("./src/save-codec.js");
+  let game = Campaign.newGame(1946, { end: 1985, preset: "standard" });
+  while (game.year < 1965) {
+    for (let decision; (decision = Campaign.nextDecision(game));) {
+      const choice = Object.keys(decision.choices).find((id) => Campaign.decide(game, id) !== game);
+      assert.ok(choice, decision.title);
+      game = Campaign.decide(game, choice);
+    }
+    const first = ["food", "trade", "industry"].find((id) => !programmeQuote(game, id).reason);
+    if (first) game = approveProgramme(game, first);
+    const next = Campaign.advance(game);
+    assert.equal(next.year, game.year + 1);
+    game = next;
+  }
+  assert.ok(Campaign.foodPlan(game).reserve > 0);
+  const plan = Campaign.foodPlan(game);
+  assert.ok(plan.cases[1].harvest < plan.cases[0].harvest);
+  assert.ok(plan.crisis.possible > 0);
+  const ordered = Campaign.orderCrisisFood(game, true);
+  assert.equal(Campaign.orderCrisisFood(ordered, true), ordered);
+  assert.equal(ordered.cash, game.cash);
+  assert.deepEqual(Campaign.orderCrisisFood(ordered, false), game);
+  const resolved = Campaign.advance(decodeSave(encodeSave(ordered)));
+  assert.equal(resolved.crisisOrder, undefined);
+  const result = resolved.reports.at(-1);
+  const local = Campaign.advance(game).reports.at(-1);
+  assert.equal(result.harvest, plan.cases[1].harvest);
+  assert.equal(result.foodCrisis.delivered, plan.crisis.possible);
+  assert.equal(result.foodCrisis.cost, plan.crisis.rate * plan.crisis.possible);
+  assert.equal(result.fromReserve, Math.min(game.reserve, result.demand - result.harvest - result.foodCrisis.delivered));
+  assert.equal(result.foodCrisis.delivered, local.shortage - result.shortage + result.reserve - local.reserve);
+  assert.equal(result.regional.freightCompetition.player.capacity,
+    local.regional.freightCompetition.player.capacity - result.foodCrisis.freightCapacityUsed);
+  assert.equal(result.regional.freightContract.payment, local.regional.freightContract.payment);
+  assert.equal(result.cash, result.openingCash + result.funding.total + Campaign.earnedReceipts(result).total
+    - result.maintenance - result.bought * result.buyPrice - result.foodCrisis.cost);
+  assert.ok(result.attribution.food.droughtSites.length);
+  assert.equal(Campaign.foodPlan({ ...game, cash: 0 }).crisis.possible, 0);
+  assert.equal(Campaign.foodPlan(Campaign.newGame()).crisis, null);
 });
 
 test("a freight terminal requires both market links and industry", async () => {
