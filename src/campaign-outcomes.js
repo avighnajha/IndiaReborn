@@ -23,6 +23,8 @@ export function campaignOutcomes(reports, recent) {
     closing: period(recent),
     unionShipments: reports.reduce((total, report) => total + (report.unionReserve?.shipped ?? 0), 0),
     droughtReliefSent: reports.reduce((total, report) => total + (report.reserveDispatch?.sent ?? 0), 0),
+    islandFood: reports.reduce((total, report) => total + (report.regional?.maritime?.food ?? 0), 0),
+    timberLoads: reports.reduce((total, report) => total + (report.regional?.maritime?.timber ?? 0), 0),
     droughtYears: droughtReports.length,
     droughtYearsCovered: droughtReports.filter(({ shortage }) => !shortage).length,
     cohorts: (latest.cabinetPriority?.graduates ?? 0) - (latest.cabinetPriority?.newGraduates ?? 0),
@@ -38,7 +40,7 @@ const count = (value, singular, plural = `${singular}s`) => `${value} ${value ==
 
 export function campaignOutcomesMarkup(reports, recent, secureYears) {
   const outcome = campaignOutcomes(reports, recent);
-  const { opening, closing, unionShipments, droughtReliefSent, droughtYears, droughtYearsCovered, cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears } = outcome;
+  const { opening, closing, unionShipments, droughtReliefSent, islandFood, timberLoads, droughtYears, droughtYearsCovered, cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears } = outcome;
   const latest = recent.at(-1);
   const card = (sector, metric, label, facts) => {
     const max = Math.max(1, opening[metric], closing[metric]);
@@ -57,6 +59,7 @@ export function campaignOutcomesMarkup(reports, recent, secureYears) {
         droughtYears && `${droughtYearsCovered} of ${droughtYears} drought years food-secure in 1965–66`,
         unionShipments && `${count(unionShipments, "food unit")} supplied to the Union`,
         droughtReliefSent && `${count(droughtReliefSent, "food unit")} sent to regions with drought-era shortages`,
+        islandFood && `${count(islandFood, "food unit")} supplied to Port Blair`,
       ])}
       ${card("education", "skills", "Skills in service", [
         cohorts && `${count(cohorts, "trained cohort")} in service in ${latest.year}`,
@@ -65,6 +68,7 @@ export function campaignOutcomesMarkup(reports, recent, secureYears) {
       ${card("trade", "output", "Annual workshop output", [
         linkedWorkshops !== undefined ? `${count(linkedWorkshops, "linked workshop")} in ${latest.year}` : `${count(latest.towns, "market town")} in ${latest.year}`,
         freightTerms && `${count(freightTerms, "Union freight term")} served over ${count(freightYears, "year")}`,
+        timberLoads && `${count(timberLoads, "timber load")} carried from Port Blair`,
       ])}
     </div>
   </section>`;

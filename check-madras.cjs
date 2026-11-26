@@ -37,12 +37,23 @@ test("Madras and Andhra retain their works, budgets and water or power commitmen
   assert.equal(campaignName(province), "Madras Province");
   assert.ok(World.madrasTransition.pudukkottai.every((hex) => province.owners[hex] !== World.key));
   const programme = { 1946: "trade", 1949: "food", 1951: "skills" };
+  let signed;
   while (province.year < 1953) {
     if (programme[province.year]) province = fund(province, programme[province.year]);
+    if (province.year === 1952) signed = advance(Campaign.signBayShipping(province, "trade"));
     province = advance(province);
   }
   assert.ok(World.madrasTransition.pudukkottai.every((hex) => province.owners[hex] === World.key));
   assert.equal(Campaign.nextDecision(province).id, "madras-division");
+  assert.equal(signed.journey.bayCharter.port, "madras");
+  for (const choice of ["madras", "andhra"]) {
+    const division = Campaign.decide(signed, choice);
+    assert.notEqual(division.journey.jurisdiction.madrasSuccessor, undefined);
+    const report = advance(division).reports.at(-1).regional.maritime;
+    assert.equal(report.timber, choice === "madras" ? 1 : 0);
+    assert.equal(report.status, choice === "madras" ? "operating" : "transferred");
+    assert.equal(report.fee, 0);
+  }
   const oldCash = province.cash;
   const mysoreShare = Math.floor(oldCash / 75);
   const andhraShare = Math.floor(oldCash * 27 / 75);

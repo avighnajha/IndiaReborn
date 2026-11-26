@@ -3,6 +3,75 @@ const test = require("node:test");
 
 globalThis.location = { search: "?region=west-bengal" };
 
+test("the Calcutta charter trades early freight receipts against island food coverage", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { approveProgramme } = await import("./src/programmes.js");
+  const { decodeSave, encodeSave } = await import("./src/save-codec.js");
+  const head = (game) => {
+    for (let decision; (decision = Campaign.nextDecision(game));) {
+      const id = Object.keys(decision.choices).find((id) => Campaign.decide(game, id) !== game);
+      assert.ok(id, decision.title);
+      game = Campaign.decide(game, id);
+    }
+    return game;
+  };
+  const advance = (game) => {
+    const next = Campaign.advance(game);
+    assert.equal(next.year, game.year + 1);
+    return next;
+  };
+  let start = Campaign.newGame(1946, { end: 1985, preset: "standard" });
+  while (start.year < 1952) {
+    start = head(start);
+    const id = { 1946: "trade", 1949: "food" }[start.year];
+    if (id) start = approveProgramme(start, id);
+    start = advance(start);
+  }
+  const portBlair = (report) => report.regional.nationalMarket.nodes.find(({ id }) => id === "andamans");
+  assert.equal(portBlair(start.reports.find(({ year }) => year === 1949)), undefined);
+  assert.ok(portBlair(start.reports.find(({ year }) => year === 1950)));
+  assert.ok(start.reports.at(-1).regional.nationalMarket.links.some(({ from, to, mode, capacity }) =>
+    mode === "sea" && capacity === 1 && [from, to].includes("madras") && [from, to].includes("andamans")));
+  const { options, capacity } = Campaign.bayShipping(start);
+  assert.equal(capacity, 3);
+  assert.ok(options.every(({ reason }) => !reason));
+  const holdFee = (id) => options.find((option) => option.id === id).cost;
+  let food = Campaign.signBayShipping(start, "food");
+  let trade = Campaign.signBayShipping(start, "trade");
+  assert.equal(food.cash, start.cash - holdFee("food"));
+  assert.equal(trade.cash, start.cash - holdFee("trade"));
+  assert.equal(Campaign.signBayShipping(food, "trade"), food);
+  food = decodeSave(encodeSave(food));
+  let normal = start;
+  let sent = 0;
+  let timber = 0;
+  while (normal.year <= 1954) {
+    normal = advance(head(normal));
+    food = advance(head(food));
+    trade = advance(head(trade));
+    const plain = normal.reports.at(-1);
+    const supplied = food.reports.at(-1);
+    const sold = trade.reports.at(-1);
+    const manifest = supplied.regional.maritime;
+    const freight = sold.regional.maritime;
+    sent += manifest.food;
+    timber += freight.timber;
+    assert.ok(manifest.food <= capacity && freight.timber <= capacity);
+    assert.equal(manifest.fee, supplied.year === 1952 ? holdFee("food") : 0);
+    assert.equal(supplied.shortage, plain.shortage);
+    if (manifest.food) assert.ok(supplied.reserve >= manifest.localFloor);
+    assert.equal(portBlair(supplied).shortage, manifest.islandShortage);
+    assert.ok(portBlair(supplied).shortage <= portBlair(plain).shortage);
+    assert.equal(sold.income - plain.income, freight.receipt);
+    assert.equal(Campaign.earnedReceipts(supplied).procurement, manifest.receipt);
+    assert.equal(Campaign.earnedReceipts(sold).freight - Campaign.earnedReceipts(plain).freight, freight.receipt);
+  }
+  assert.ok(sent > 0);
+  assert.equal(timber, 9);
+  assert.equal(Campaign.bayShipping(food), null);
+  assert.equal(advance(head(food)).reports.at(-1).regional.maritime, undefined);
+});
+
 test("Bengal's jute supply and territorial choices survive a full campaign", async () => {
   const { World } = await import("./src/scenario.js");
   const { Campaign } = await import("./src/campaign.js");

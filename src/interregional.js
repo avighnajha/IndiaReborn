@@ -1,8 +1,9 @@
 import { competitiveFreight, contractPlayerBid, contractRivalBid, domesticContractRival, freightCompetitionOpening, maxFreightCapacity, resolveFreightContract, upcomingFreightContract } from "./neighbor-competition.js";
-import { clearNationalMarket, inlandActors, marketConnection, marketHubs, nationalMarketActive, nationalMarketActors, seedBombayDivision, seedPunjabDivision, seedSouthernTransitions } from "./national-market.js";
+import { clearNationalMarket, inlandActors, marketConnection, marketHubs, nationalMarketActive, nationalMarketActors, playerMarketId, seedBombayDivision, seedPunjabDivision, seedSouthernTransitions } from "./national-market.js";
 import { marketFunding } from "./market-finance.js";
 import { openingPriceYear, periodAmount } from "./period-prices.js";
 import { marketDroughtLoss } from "./food-crisis.js";
+import { bayOpening, bayPorts, islandMarket, settleBayCharter } from "./bay-shipping.js";
 
 const actors = {
   ...inlandActors,
@@ -25,6 +26,7 @@ const actors = {
 };
 
 const reserveLimit = 12;
+const islandUnionFood = 1;
 const workPlans = {
   storage: { title: "Reserve depots", department: "food", cost: 7, years: 2, effect: "Holds 6 more food units and can offer one more unit to a priority buyer." },
   freight: { title: "Freight exchange", department: "trade", cost: 10, years: 2, effect: "Handles more food trade and adds ₹1 lakh for each side when a signed corridor is open." },
@@ -336,13 +338,18 @@ function inheritedOperatingReceipts(inherited, year) {
   return inherited ? periodAmount(inherited.workshops, openingPriceYear, year) + inherited.workforceReceipts : 0;
 }
 
-export function settleNationalTrade(regional, game, world) {
-  if (!nationalMarketActive(game)) return regional;
+export function settleNationalTrade(regional, game, world, shipping) {
+  if (!game.journey) return regional;
+  const standard = nationalMarketActive(game);
+  const portId = playerMarketId(game, world);
+  const nearbyIsland = game.year >= bayOpening && (Object.hasOwn(bayPorts, portId) || game.journey.bayCharter?.end >= game.year);
+  if (!standard && !nearbyIsland) return regional;
   const partners = { ...regional.partners };
   const localIds = regional.report.partners.map(({ id }) => id);
   const local = new Set(localIds);
   const developments = [...(regional.report.developments ?? [])];
-  const marketActors = nationalMarketActors(game, world).map((id) => {
+  const marketIds = standard ? nationalMarketActors(game, world) : [islandMarket];
+  const marketActors = marketIds.map((id) => {
     const actor = actors[id];
     const connection = marketRoadConnection(game, id);
     const funding = marketFunding(id, game.year);
@@ -354,7 +361,8 @@ export function settleNationalTrade(regional, game, world) {
       const shock = marketDroughtLoss(game, id, harvest, weather < 0.16 ? actor.flood : weather > 0.75 ? actor.dry : 0);
       const expandedWheatHarvest = (id === "punjab" || id === "haryana") && game.year >= 1968 ? 2 : 0;
       const development = developmentEffects(prior, game.year, shock);
-      const balance = harvest + expandedWheatHarvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0) +
+      const provisions = id === islandMarket ? islandUnionFood : 0;
+      const balance = harvest + expandedWheatHarvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0) + provisions +
         (prior?.reserve ?? 3) - actor.demand;
       const shortage = Math.max(0, -balance);
       const { works, openingCash, developmentSpend, changed } = developNeighbor(game, actor, prior, {
@@ -375,12 +383,24 @@ export function settleNationalTrade(regional, game, world) {
     const name = game.year === 1946 && id === "madras" ? "Madras Province" : actorName(id, game.year);
     return { id, name, market: marketHubs[id] };
   });
+  const island = partners[islandMarket];
+  const resolution = island && shipping && settleBayCharter(game, portId, island, shipping);
+  let maritime;
+  if (resolution) {
+    const { island: supplied, ...manifest } = resolution;
+    partners[islandMarket] = supplied;
+    maritime = manifest;
+  }
+  if (!standard) return { ...regional, partners, report: { ...regional.report,
+    ...(maritime ? { maritime: { ...maritime, islandShortage: partners[islandMarket].shortage, islandReserve: partners[islandMarket].reserve } } : {}),
+  } };
   const { market, flows } = clearNationalMarket(game, partners, marketActors, localIds);
   for (const node of market.nodes) {
     const partner = partners[node.id];
     node.works = Object.keys(workPlans).filter((kind) => partner.works?.[kind]).map((kind) => workSummary(kind, partner.works[kind], partner.routeCapacity, partner.mode));
     node.development = partner.development;
     node.funding = partner.funding;
+    if (node.id === islandMarket) node.unionFood = islandUnionFood;
     if (partner.inherited) node.inherited = partner.inherited;
     const yard = partners[node.id].works?.loadingYard;
     if (yard) node.loadingYard = { completionYear: yard.completionYear, open: Boolean(yard.opened) };
@@ -391,7 +411,14 @@ export function settleNationalTrade(regional, game, world) {
   const rows = regional.report.partners.map((row) => flows[row.id]
     ? { ...row, cash: partners[row.id].cash, reserve: partners[row.id].reserve, shortage: partners[row.id].shortage, national: flows[row.id] }
     : row);
-  return { ...regional, partners, report: { ...regional.report, partners: rows, developments, nationalMarket: market } };
+  if (maritime) {
+    const { shortage, reserve } = partners[islandMarket];
+    Object.assign(maritime, { islandShortage: shortage, islandReserve: reserve });
+    if (maritime.status === "operating") market.charter = maritime;
+  }
+  return { ...regional, partners, report: { ...regional.report, partners: rows, developments, nationalMarket: market,
+    ...(maritime ? { maritime } : {}),
+  } };
 }
 
 function inlandCarriers(market, partners, nearby) {
@@ -399,7 +426,8 @@ function inlandCarriers(market, partners, nearby) {
   const gateways = new Map(nearby.filter(({ capacity }) => capacity > 0).map((row) => [row.id, row]));
   const nodes = new Map(market.nodes.map((node) => [node.id, node]));
   const carriers = new Map();
-  for (const { from, to, capacity: routeLimit } of market.links) {
+  for (const { from, to, capacity: routeLimit, mode } of market.links) {
+    if (mode === "sea") continue;
     const gateway = gateways.get(from) ?? gateways.get(to);
     if (!gateway) continue;
     const id = gateway.id === from ? to : from;

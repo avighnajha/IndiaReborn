@@ -21,6 +21,8 @@ import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
 import { crisisSeverity } from "./food-crisis.js";
 import { dispatchWindow } from "./reserve-dispatch.js";
+import { bayDeadline, bayOpening } from "./bay-shipping.js";
+import { bayShippingMarkup } from "./bay-shipping-view.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
 import { intakeDeadline, intakeStatus } from "./technical-intake.js";
@@ -416,6 +418,12 @@ function renderCabinetList(active, department) {
     cards.innerHTML = '<p class="cabinet-empty">No new regional programmes in this department.</p>';
   }
   list.replaceChildren(picker, cards);
+  const shipping = Campaign.bayShipping(game);
+  if (shipping && (department === "food" || department === "trade")) {
+    const charter = choiceButton(shipping.status === "open" ? "Compare Port Blair charters →" : "Review Port Blair charter →", showBayShipping);
+    charter.className = "bay-cabinet-link";
+    list.prepend(charter);
+  }
   const partnership = planningPartnership(game);
   if (partnership && !partnership.record) {
     const compare = choiceButton("", showPlanningPartnership);
@@ -663,6 +671,24 @@ function showRelief() {
     button.dataset.reliefBudget = budget;
     button.setAttribute("aria-pressed", String(budget === authorization));
     byId("relief-options").append(button);
+  }
+}
+
+function showBayShipping() {
+  const plan = Campaign.bayShipping(game);
+  if (!plan) return;
+  showModal(`${game.year} · Bay of Bengal`, "Port Blair shipping charter", bayShippingMarkup(plan, game.reports.at(-1)?.regional?.maritime), [
+    choiceButton("Return to map", () => { returnToMap(); document.querySelector(".bay-cabinet-link")?.focus(); }, true),
+  ]);
+  for (const button of byId("modal-content").querySelectorAll("[data-bay-charter]")) {
+    button.addEventListener("click", () => {
+      const signed = Campaign.signBayShipping(game, button.dataset.bayCharter);
+      if (signed === game) return;
+      game = signed;
+      persist();
+      render();
+      showBayShipping();
+    });
   }
 }
 
@@ -1088,6 +1114,11 @@ function showComparison() {
 function nextBriefDecision(report) {
   const pending = pendingDecision();
   if (pending) return { advice: pending.title, label: "Review decision", open: pending.open };
+  if ([bayOpening, bayDeadline].includes(game.year) && Campaign.bayShipping(game)?.status === "open") return {
+    advice: game.year === bayOpening ? "Port Blair needs regular food supplies and cargo space. Compare two charters for your port."
+      : "This is the last year to commit a berth to food or timber on the Port Blair route.",
+    label: "Compare Port Blair charters", open: showBayShipping,
+  };
   if (crisisSeverity(game, World.key)) return {
     advice: "Rainfall is failing. Plan home supplies and see what your stores could spare for other regions.",
     label: "Plan drought supplies", open: showRelief,
@@ -1195,7 +1226,8 @@ function showReport(index = game.reports.length - 1) {
       if (placement) focusEconomySite(placement.hex);
       else showEconomyMap();
     })] : []),
-    ...(report.regional?.nationalMarket ? [choiceButton(report.reserveDispatch?.sent ? "View relief routes" : "Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
+    ...(report.regional?.nationalMarket ? [choiceButton(report.reserveDispatch?.sent ? "View relief routes"
+      : report.regional.nationalMarket.charter ? "View Port Blair route" : "Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
       else returnToMap();
@@ -1256,7 +1288,7 @@ async function showChronicle() {
 
 async function showNationalMarket(report, back, backLabel) {
   const { nationalMarketMarkup } = await import("./national-market-view.js");
-  showModal(`${report?.year ?? game.year} · Trade & Industry`, "Domestic food market", nationalMarketMarkup(report?.regional?.nationalMarket), [
+  showModal(`${report?.year ?? game.year} · Trade & Industry`, "Domestic market", nationalMarketMarkup(report?.regional?.nationalMarket), [
     choiceButton(backLabel, back, true),
   ]);
   modal.classList.add("national-market-dialog");

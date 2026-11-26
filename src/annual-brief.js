@@ -34,6 +34,8 @@ export function briefHeadline(report, previous) {
   if (report.monsoon === "Severe flood") return report.shortage ? "Floods left a food shortfall" : "Food needs were met through flooding";
   if (report.monsoon === "Dry monsoon") return report.shortage ? "A dry monsoon left food in short supply" : "Food needs were met through a dry monsoon";
   if (report.shortage) return "Food supply fell short";
+  if (report.regional?.maritime?.food) return "Your port kept supplies moving to Port Blair";
+  if (report.regional?.maritime?.timber) return "Timber freight earned receipts for your port";
   if (report.attribution?.newlyConnected?.length) return "The market network expanded";
   if (report.completed?.some(({ kind }) => kind === "school")) return "New technical schools opened";
   if (report.completed?.length) return "New works came into service";
@@ -217,6 +219,7 @@ function whyContent(report, previous) {
     ...(report.regional?.jointFreightCash ? [["Joint freight projects", money(report.regional.jointFreightCash)]] : []),
     ...(competition ? [["Competitive freight receipts", money(competition.player.earnings)]] : []),
     ...(contract?.winner?.id === "player" ? [["Freight contract payment", money(contract.payment)]] : []),
+    ...(report.regional?.maritime?.receipt ? [[report.regional.maritime.id === "food" ? "Port Blair food procurement" : "Port Blair timber freight", money(report.regional.maritime.receipt)]] : []),
     ["Works upkeep", money(report.prices?.worksUpkeep ?? (report.maintenance - (report.training?.upkeep ?? 0) - (report.cabinetPriority?.spent ?? 0)))],
     ...(report.training?.upkeep ? [["Training charter upkeep", money(report.training.upkeep)]] : []),
     ...(report.cabinetPriority?.spent ? [["Five-year priority services", money(report.cabinetPriority.spent)]] : []),
@@ -312,6 +315,19 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const maritime = report.regional?.maritime;
+  if (maritime) {
+    const fee = maritime.fee ? ` ${money(maritime.fee)} paid at signing.` : "";
+    if (maritime.status === "transferred") {
+      if (previous?.regional?.maritime?.status !== "transferred") add(maritime.id, "Madras retained the port", "Your administration’s charter ended with the division.");
+    } else if (maritime.id === "food") {
+      const coverage = maritime.islandShortage ? `Port Blair still needed ${units(maritime.islandShortage)}.` : "Port Blair covered its food needs.";
+      const delivery = maritime.food ? `${maritime.port} supplied ${units(maritime.food)} for ${money(maritime.receipt)}.` : maritime.reason;
+      add("food", "Port Blair food charter", `${delivery} ${coverage}${fee}`);
+    } else {
+      add("trade", "Port Blair timber charter", `${maritime.reason ?? `${maritime.port} handled ${maritime.timber} timber ${maritime.timber === 1 ? "load" : "loads"} and earned ${money(maritime.receipt)}.`}${fee}`);
+    }
+  }
   const dispatch = report.reserveDispatch;
   if (dispatch?.sent) {
     const freight = dispatch.freightCapacityUsed ? ` ${dispatch.freightCapacityUsed} spot freight ${dispatch.freightCapacityUsed === 1 ? "slot" : "slots"} reassigned.` : "";

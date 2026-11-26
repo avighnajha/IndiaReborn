@@ -21,7 +21,7 @@ function marketName(id, year) {
   return actor ? year >= actor.renamed ? actor.later : actor.name : marketHubs[id] ?? id;
 }
 
-function outsideMarkets(year, markets) {
+function outsideMarkets(year, markets, standard) {
   const active = new Set(markets.map(({ id }) => id));
   return [
     active.has("jammu") ? "Jammu and Kashmir beyond the Jammu exchange" : "Jammu and Kashmir",
@@ -30,7 +30,7 @@ function outsideMarkets(year, markets) {
     year < 1962 ? "Portuguese coastal enclaves" : "Goa, Daman and Diu",
     year < 1954 ? "Dadra and Nagar Haveli under Portuguese rule" : "Dadra and Nagar Haveli",
     year < 1954 ? "French coastal enclaves" : "Pondicherry and associated enclaves",
-    "Andaman and Nicobar Islands",
+    ...(!active.has("andamans") && (standard || year < 1950) ? ["Andaman and Nicobar Islands"] : []),
     year < 1973 ? "Laccadive, Minicoy and Amindivi Islands" : "Lakshadweep",
     ...(year < 1950 ? ["Manipur", "Tripura"] : []),
     ...(year < 1972 ? ["Northeastern frontier"] : []),
@@ -55,9 +55,9 @@ export function nationalCoverageMarkup({ year = 1946, preset = "standard", nodes
       <div class="coverage-cards">
         <section class="coverage-card" data-coverage-status="playable"><h3><span aria-hidden="true">⚑</span> Playable starts</h3><p>Choose a government in 1946.</p>${chips(starts, "starts")}<small>Successor states follow your campaign decisions.</small></section>
         <section class="coverage-card" data-coverage-status="simulated"><h3><span aria-hidden="true">↔</span> ${standard ? "Market governments" : "Local neighbors"}</h3><p>${standard ? "Own harvests, reserves, treasuries and investments." : "Nearby trade and agreements remain active."}</p>
-          ${standard ? chips(marketNames, "markets") : "<small>Choose Standard for the wider domestic market.</small>"}
+          ${standard ? chips(marketNames, "markets") : `<small>${year >= 1950 ? "West Bengal and Madras can also deal with Port Blair. " : ""}Choose Standard for the wider domestic market.</small>`}
           ${standard ? `<small>${fixedSnapshot ? "Other administrations recorded in this annual report." : "National market preview. Your government uses the full campaign model."} Nearby agreements appear in Neighbors.</small>` : ""}</section>
-        <section class="coverage-card" data-coverage-status="context"><h3><span aria-hidden="true">◇</span> Outside the market model</h3><p>No independent treasury or annual turn.</p>${chips(outsideMarkets(year, markets), "context")}<small>Some smaller territories share a larger regional market. International trade follows campaign-specific agreements.</small></section>
+        <section class="coverage-card" data-coverage-status="context"><h3><span aria-hidden="true">◇</span> Outside the market model</h3><p>No independent treasury or annual turn.</p>${chips(outsideMarkets(year, markets, standard), "context")}<small>Some smaller territories share a larger regional market. International trade follows campaign-specific agreements.</small></section>
       </div>
     </div>
   </details>`;

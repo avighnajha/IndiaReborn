@@ -1,4 +1,7 @@
+import { bayOpening, bayPorts, islandMarket } from "./bay-shipping.js";
+
 export const inlandActors = {
+  [islandMarket]: { name: "Andaman and Nicobar Islands", harvest: 4, demand: 8, flood: 1, dry: 1, seed: 159 },
   delhi: { name: "Delhi", harvest: 5, demand: 8, flood: 1, dry: 2, seed: 196 },
   punjab: { name: "Punjab", harvest: 12, demand: 8, flood: 2, dry: 3, seed: 623 },
   haryana: { name: "Haryana", harvest: 10, demand: 8, flood: 2, dry: 4, seed: 726 },
@@ -27,6 +30,7 @@ export const marketHubs = {
   nagaland: "Dimapur", meghalaya: "Shillong", mizoram: "Aijal",
   manipur: "Imphal", tripura: "Agartala", arunachal: "Bomdila",
   himachal: "Mandi", jammu: "Jammu", sikkim: "Gangtok",
+  [islandMarket]: "Port Blair",
 };
 
 export function marketConnection(id, year) {
@@ -69,7 +73,8 @@ export function domesticLinks(year) {
   if (year >= 1948) northernMarkets.push(["punjab", "himachal", marketConnection("himachal", year).routeCapacity, "road"]);
   if (year >= 1949) { const { routeCapacity, mode } = marketConnection("jammu", year); northernMarkets.push(["punjab", "jammu", routeCapacity, mode]); }
   if (year >= 1975) northernMarkets.push(["bengal", "sikkim", 1, "road"]);
-  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets].map(([from, to, capacity, mode]) => {
+  const sea = year >= bayOpening ? Object.entries(bayPorts).map(([port, { capacity }]) => [port, islandMarket, capacity, "sea"]) : [];
+  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets, ...sea].map(([from, to, capacity, mode]) => {
     const southernPool = year >= 1965 && (from === "andhra" || from === "madras");
     const northernDispatch = year >= 1968 && (from === "punjab" || from === "haryana");
     return [from, to, capacity + Number(!mode && (southernPool || northernDispatch)), ...(mode ? [mode] : [])];
@@ -119,7 +124,7 @@ const marketChapters = {
   1947: "Partition interrupts the Bengal–Assam route.",
   1948: "Himachal Pradesh keeps a separate market account, with limited road trade through Mandi.",
   1949: "Jammu enters the network through the Pathankot road opened the previous year.",
-  1950: "Assam reconnects to the domestic rail network. Manipur and Tripura have separate market accounts; Imphal trades over a limited road link.",
+  1950: "Assam reconnects by rail. Imphal gains a road link, Tripura opens a separate account, and Port Blair enters with two sea routes.",
   1953: "Andhra opens a separate market after the division of Madras.",
   1955: "The completed Assam–Agartala road connects Tripura’s market. Road freight remains limited.",
   1956: "Andhra Pradesh and Kerala enter the reorganized network. Madhya Pradesh gains a route to Rajasthan.",
@@ -168,8 +173,9 @@ export function clearNationalMarket(game, partners, actors, localIds) {
   const links = domesticLinks(game.year).filter(([from, to]) => nodes[from] && nodes[to])
     .map(([from, to, capacity, mode]) => ({ from, to, capacity, units: 0, ...(mode ? { mode } : {}) }));
 
-  const first = (game.year - 1946) % Math.max(1, links.length);
-  const rotation = [...links.slice(first), ...links.slice(0, first)];
+  const land = links.filter(({ mode }) => mode !== "sea");
+  const first = (game.year - 1946) % Math.max(1, land.length);
+  const rotation = [...land.slice(first), ...land.slice(0, first), ...links.filter(({ mode }) => mode === "sea")];
   const demand = (node, restock) => restock ? Math.max(0, 5 - node.reserve) : node.shortage;
   for (const restock of [false, true]) {
     // A year-based rotation gives equal claims a changing priority.

@@ -15,6 +15,8 @@ import { campaignPriceYear, openingPriceYear, periodAmount, priceBasis } from ".
 import { partnershipActivity } from "./partnerships.js";
 import { crisisDelivery, crisisSeverity } from "./food-crisis.js";
 import { dispatchOffer, dispatchWindow, settleReserveDispatch } from "./reserve-dispatch.js";
+import { acceptBayCharter, bayOpening, bayShippingPlan } from "./bay-shipping.js";
+import { playerMarketId } from "./national-market.js";
 
 const outcomeWindowYears = 5;
 const productiveTarget = 4;
@@ -241,10 +243,11 @@ export const Campaign = (() => {
 
   function earnedReceipts(report) {
     const { workshops, markets } = report.receipts ?? localReceipts(report.output, report.towns, report.development?.marketReceipts);
-    const freight = (report.regionalCash ?? 0) + (report.regional?.freightCompetition?.player.earnings ?? 0);
+    const maritime = report.regional?.maritime;
+    const freight = (report.regionalCash ?? 0) + (report.regional?.freightCompetition?.player.earnings ?? 0) + (maritime?.id === "trade" ? maritime.receipt : 0);
     const contract = playerContractReceipts(report.regional?.freightContract);
     const sales = report.sold ?? 0;
-    const procurement = report.unionReserve?.proceeds ?? 0;
+    const procurement = (report.unionReserve?.proceeds ?? 0) + (maritime?.id === "food" ? maritime.receipt : 0);
     return { workshops, markets, freight, contract, sales, procurement, total: workshops + markets + freight + contract + sales + procurement };
   }
 
@@ -602,6 +605,21 @@ export const Campaign = (() => {
     return signReserve(game, id, reserveFacilities(state, access(state)).capacity);
   }
 
+  function portFacilities(state, { reached, towns }) {
+    const operates = (kind) => active(state, kind).some(({ hex }) => isConnected(reached, hex));
+    return { towns, stores: operates("granary") || operates("foodDepot"), workshops: operates("mill") };
+  }
+
+  function bayShipping(game) {
+    if (!game.journey || game.year < bayOpening) return null;
+    return bayShippingPlan(game, playerMarketId(game, World), portFacilities(game, access(game)));
+  }
+
+  function signBayShipping(game, id) {
+    const plan = bayShipping(game);
+    return plan ? acceptBayCharter(game, plan, playerMarketId(game, World), id) : game;
+  }
+
   function advance(game) {
     if (game.year > campaignEnd(game) || nextDecision(game) || basinFloodDecision(game)) return game;
     const charter = game.journey?.training ? training(game) : null;
@@ -731,15 +749,19 @@ export const Campaign = (() => {
     const capacity = 5 + active(state, "granary").length * 10 + development.storage;
     const foodOnHand = foodAfterShipment - sold;
     const closingStock = Math.min(capacity, foodOnHand);
-    let domestic = bilateral && settleNationalTrade(bilateral, game, World);
+    const shipping = game.journey?.bayCharter && game.year <= game.journey.bayCharter.end ? {
+      ...portFacilities(state, { reached, towns }), stock: foodOnHand, demand, shortage,
+    } : null;
+    let domestic = bilateral && settleNationalTrade(bilateral, game, World, shipping);
+    const maritime = domestic?.report.maritime;
     let dispatch = null;
     if (domestic && reserveDispatch?.year === game.year && dispatchWindow(game)) {
       const result = settleReserveDispatch(domestic, game, World, { stateName: campaignName(game), demand, towns, fromReserve,
-        facilities: reserveFacilities(state, { reached, towns }), foodOnHand, shortage });
+        facilities: reserveFacilities(state, { reached, towns }), foodOnHand: foodOnHand - (maritime?.food ?? 0), shortage });
       domestic = result.regional;
       dispatch = result.dispatch;
     }
-    const reserve = dispatch?.reserve ?? closingStock;
+    const reserve = dispatch?.reserve ?? Math.min(closingStock, foodOnHand - (maritime?.food ?? 0));
     const regionalSettlement = domestic && settleFreight(domestic, game, (crisis?.freightCapacityUsed ?? 0) + (dispatch?.freightCapacityUsed ?? 0));
     const funding = finance(game);
     const receipts = localReceipts(output, towns, development.marketReceipts, priceYear);
@@ -749,7 +771,7 @@ export const Campaign = (() => {
     const maintenance = worksUpkeep + charterUpkeep + priorityCost;
     const competitiveReceipts = regionalSettlement?.report.freightCompetition?.player.earnings ?? 0;
     const contractReceipts = playerContractReceipts(regionalSettlement?.report.freightContract);
-    const income = tax + funding.transfers + sold - bought * buyPrice - crisisCost + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts + (union?.proceeds ?? 0);
+    const income = tax + funding.transfers + sold - bought * buyPrice - crisisCost + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts + (union?.proceeds ?? 0) + (maritime?.receipt ?? 0);
     const cash = Math.max(0, game.cash + income - maintenance);
     const previouslyReached = completed.some((asset) => asset.kind === "road") ? access(game).reached : reached;
     const newlyConnected = [...reached].filter((id) => !previouslyReached.has(id) && World.tiles[id].town).map((id) => World.tiles[id].town.name);
@@ -913,7 +935,7 @@ export const Campaign = (() => {
 
   return {
     saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, reportFunding, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
-    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, orderCrisisFood, pledgeReserve, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority,
+    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, orderCrisisFood, pledgeReserve, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority, bayShipping, signBayShipping,
     regionalMandate: (game) => regionalMandate(game, targets(game).output, game.journey?.mandate && {
       food: active(game, "waterNetwork").length,
       education: active(game, "technicalInstitute").length + active(game, "agriculturalInstitute").length,
