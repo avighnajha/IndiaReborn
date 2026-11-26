@@ -4,6 +4,7 @@ import { marketFunding } from "./market-finance.js";
 import { openingPriceYear, periodAmount } from "./period-prices.js";
 import { marketDroughtLoss } from "./food-crisis.js";
 import { bayOpening, bayPorts, islandMarket, settleBayCharter } from "./bay-shipping.js";
+import { goaMarket, westernExportRival, westernIslands, westernShipping } from "./western-shipping.js";
 
 const actors = {
   ...inlandActors,
@@ -348,6 +349,7 @@ export function settleNationalTrade(regional, game, world, shipping) {
   const localIds = regional.report.partners.map(({ id }) => id);
   const local = new Set(localIds);
   const developments = [...(regional.report.developments ?? [])];
+  const western = westernShipping(game.year, yearlyRoll(game, actors.kerala.seed + 1925) < 0.16);
   const marketIds = standard ? nationalMarketActors(game, world) : [islandMarket];
   const marketActors = marketIds.map((id) => {
     const actor = actors[id];
@@ -361,7 +363,7 @@ export function settleNationalTrade(regional, game, world, shipping) {
       const shock = marketDroughtLoss(game, id, harvest, weather < 0.16 ? actor.flood : weather > 0.75 ? actor.dry : 0);
       const expandedWheatHarvest = (id === "punjab" || id === "haryana") && game.year >= 1968 ? 2 : 0;
       const development = developmentEffects(prior, game.year, shock);
-      const provisions = id === islandMarket ? islandUnionFood : 0;
+      const provisions = id === islandMarket ? islandUnionFood : id === westernIslands ? western.islands.provisioned : 0;
       const balance = harvest + expandedWheatHarvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0) + provisions +
         (prior?.reserve ?? 3) - actor.demand;
       const shortage = Math.max(0, -balance);
@@ -394,13 +396,14 @@ export function settleNationalTrade(regional, game, world, shipping) {
   if (!standard) return { ...regional, partners, report: { ...regional.report,
     ...(maritime ? { maritime: { ...maritime, islandShortage: partners[islandMarket].shortage, islandReserve: partners[islandMarket].reserve } } : {}),
   } };
-  const { market, flows } = clearNationalMarket(game, partners, marketActors, localIds);
+  const { market, flows } = clearNationalMarket(game, partners, marketActors, localIds, western);
   for (const node of market.nodes) {
     const partner = partners[node.id];
     node.works = Object.keys(workPlans).filter((kind) => partner.works?.[kind]).map((kind) => workSummary(kind, partner.works[kind], partner.routeCapacity, partner.mode));
     node.development = partner.development;
     node.funding = partner.funding;
     if (node.id === islandMarket) node.unionFood = islandUnionFood;
+    if (node.id === westernIslands) node.unionFood = western.islands.provisioned;
     if (partner.inherited) node.inherited = partner.inherited;
     const yard = partners[node.id].works?.loadingYard;
     if (yard) node.loadingYard = { completionYear: yard.completionYear, open: Boolean(yard.opened) };
@@ -416,7 +419,9 @@ export function settleNationalTrade(regional, game, world, shipping) {
     Object.assign(maritime, { islandShortage: shortage, islandReserve: reserve });
     if (maritime.status === "operating") market.charter = maritime;
   }
-  return { ...regional, partners, report: { ...regional.report, partners: rows, developments, nationalMarket: market,
+  const exportRival = westernExportRival(game.year, portId);
+  return { ...regional, partners, ...(exportRival && regional.freight ? { freight: { ...regional.freight, exportRival } } : {}),
+    report: { ...regional.report, partners: rows, developments, nationalMarket: market,
     ...(maritime ? { maritime } : {}),
   } };
 }
@@ -433,7 +438,7 @@ function inlandCarriers(market, partners, nearby) {
     const id = gateway.id === from ? to : from;
     const node = nodes.get(id);
     const { works } = partners[id];
-    if (node.local || node.shortage || !works?.freight?.opened) continue;
+    if (id === goaMarket || node.local || node.shortage || !works?.freight?.opened) continue;
     const development = partners[id].development;
     const workforce = development?.workforceCapacity ?? 0;
     const capacity = Math.min(routeLimit, gateway.capacity, (works.loadingYard?.opened ? 4 : 2) + workforce);
@@ -467,7 +472,9 @@ export function settleFreight(regional, game, reliefLoads = 0) {
     ...(contractReceipts(row.id) ? { contractCash: contractReceipts(row.id) } : {}),
   }));
   const market = report.nationalMarket;
-  const nationalMarket = market && { ...market, nodes: market.nodes.map((node) => {
+  const nationalMarket = market && { ...market,
+    ...(competition?.exportRival ? { western: { ...market.western, rival: competition.exportRival } } : {}),
+    nodes: market.nodes.map((node) => {
     const carrier = carriers.get(node.id);
     const payment = contractReceipts(node.id);
     return carrier || payment ? { ...node, cash: partners[node.id].cash,

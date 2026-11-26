@@ -1,6 +1,55 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+test("western market accounts clear physical shipments and keep the dated fiscal basis", async () => {
+  const { domesticLinks, clearNationalMarket, nationalMarketActors } = await import("./src/national-market.js");
+  const { westernShipping } = await import("./src/western-shipping.js");
+  const { marketFunding } = await import("./src/market-finance.js");
+  const ids = (year) => nationalMarketActors({ year, journey: {} }, { key: "bihar" });
+  assert.ok(!ids(1955).includes("lakshadweep") && ids(1956).includes("lakshadweep"));
+  assert.ok(!ids(1961).includes("goa") && ids(1962).includes("goa"));
+  assert.ok(domesticLinks(1957).every((link) => !link.includes("lakshadweep")));
+  assert.equal(westernShipping(1969, true).islands.capacity, 1);
+  assert.equal(westernShipping(1970, true).islands.capacity, 3);
+  assert.equal(westernShipping(1982, true).islands.capacity, 4);
+  assert.equal(westernShipping(1969, true).islands.provisioned, 2);
+  assert.equal(westernShipping(1970, true).islands.provisioned, 3);
+  assert.equal(marketFunding("goa", 1972).reference.value, 980);
+  assert.equal(marketFunding("goa", 1985).allocation, 32);
+  assert.equal(marketFunding("lakshadweep", 1971).reference, null);
+  assert.equal(marketFunding("lakshadweep", 1978).reference.value, 244);
+
+  const game = { year: 1979, journey: { preset: "standard" } };
+  const participants = ids(game.year).map((id) => ({ id }));
+  const partners = Object.fromEntries(participants.map(({ id }) => [id, { cash: 20, reserve: 5, shortage: 0 }]));
+  Object.assign(partners.mysore, { reserve: 10 });
+  Object.assign(partners.kerala, { reserve: 10 });
+  Object.assign(partners.goa, { shortage: 3 });
+  Object.assign(partners.lakshadweep, { shortage: 4 });
+  const { market } = clearNationalMarket(game, partners, participants, []);
+  assert.deepEqual(market.western.ore, { loads: 2, railCapacity: 3, foodCapacity: 1 });
+  const rail = market.links.find(({ from, to }) => from === "mysore" && to === "goa");
+  assert.deepEqual([rail.capacity, rail.units, rail.fromMarket], [1, 1, "Hospet–Bellary"]);
+  const ship = market.links.find(({ to }) => to === "lakshadweep");
+  assert.deepEqual([ship.capacity, ship.units, ship.fromMarket], [1, 1, "Calicut"]);
+  assert.equal(market.western.islands.shortage, 3);
+  assert.equal(ship.capacity + market.western.islands.administrationCargo, market.western.islands.capacity);
+  const sum = (rows, field) => rows.reduce((total, row) => total + row[field], 0);
+  assert.equal(sum(market.nodes, "cash"), sum(Object.values(partners), "cash"));
+  assert.equal(sum(market.nodes, "reserve") + 2, sum(Object.values(partners), "reserve"));
+  assert.equal(sum(market.nodes, "shortage") + 2, sum(Object.values(partners), "shortage"));
+
+  const isolated = { ...game, year: 1958 };
+  Object.assign(partners.lakshadweep, { shortage: 0, reserve: 10 });
+  Object.assign(partners.kerala, { shortage: 4, reserve: 0 });
+  const fair = clearNationalMarket(isolated, partners, participants, []).market;
+  const open = clearNationalMarket(game, partners, participants, []).market;
+  assert.equal(open.links.find(({ to }) => to === "lakshadweep").units, 0, "Island rice does not become an export supply");
+  assert.equal(fair.western.islands.administrationCargo, 1);
+  const rough = clearNationalMarket(isolated, partners, participants, [], westernShipping(isolated.year, true)).market;
+  assert.equal(rough.links.find(({ to }) => to === "lakshadweep").capacity, 0);
+});
+
 test("northeastern market accounts and road links follow their separate timelines", async () => {
   const { clearNationalMarket, inlandActors, marketHubs, nationalMarketActive, nationalMarketActors } = await import("./src/national-market.js");
   const network = (year, played = "bihar") => {

@@ -10,15 +10,16 @@ export function freightBoardMarkup(result, resolvedYear, preset) {
   if (preset !== "standard") return "";
   if (!result) return `<section class="freight-board" data-sector="trade">
     <h3>Freight competition</h3><p>From ${freightCompetitionOpening}, connect three towns and a workshop to compete for orders. Inland exchanges can bid through nearby markets.</p></section>`;
-  const rows = [result.player, ...result.partners, ...(result.inland ?? [])];
+  const rows = [result.player, ...result.partners, ...(result.inland ?? []), ...(result.exportRival ? [result.exportRival] : [])];
   const inlandLoads = (result.inland ?? []).reduce((total, row) => total + row.loads, 0);
   return `<section class="freight-board" data-sector="trade" aria-labelledby="freight-heading">
     <header><div><h3 id="freight-heading">Freight competition</h3><p>${resolvedYear} · ${result.served} of ${result.demand} loads carried</p></div>${departmentBadge("trade")}</header>
-    <ul class="freight-results">${rows.map(({ name, capacity, loads, earnings, reason, via }, index) => `<li data-freight-player="${index === 0}"${via ? ' data-freight-inland' : ''}>
+    <ul class="freight-results">${rows.map(({ id, name, capacity, loads, earnings, reason, via }, index) => `<li data-freight-player="${index === 0}"${via ? ' data-freight-inland' : ''}${id === result.exportRival?.id && result.exportRival ? ' data-freight-export-rival' : ''}>
       <div><strong>${name}</strong><span>${reason ?? `${loads} carried · ${capacity} capacity`}${via ? ` · via ${via}` : ""}</span></div>
       <div><b>${Fiscal.lakh(earnings)}</b><progress max="${result.demand}" value="${loads}" aria-label="${name}, share of available loads"></progress></div>
     </li>`).join("")}</ul>
     ${inlandLoads ? `<p class="freight-note">Inland exchanges carried ${inlandLoads} of the available loads through nearby markets.</p>` : ""}
+    ${result.exportRival ? '<p class="freight-note">Sugar and oilcake shippers can use Mormugao when Bombay’s railway is congested. Both ports compete for these commercial orders.</p>' : ""}
     ${result.linkedDemand ? `<p class="freight-note">Last year’s domestic shipments through your neighbors added ${result.linkedDemand} orders.</p>` : ""}
     <p class="freight-note">Connect more towns and workshops, or add a freight terminal to carry a larger share. Signed corridor payments are separate.</p>
   </section>`;

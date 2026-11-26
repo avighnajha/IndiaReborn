@@ -78,5 +78,21 @@ test("Bombay's two successors keep their inherited works and have playable endin
     }
     assert.ok(programmeCommissioned(game, terminal));
     assert.equal(game.reports.at(-1).year, end);
+    if (choice === "maharashtra") {
+      const at = (year) => game.reports.find((report) => report.year === year).regional;
+      assert.equal(at(1972).freightCompetition.exportRival, undefined);
+      const rivalResults = game.reports.filter(({ year }) => year >= 1973).map(({ regional }) => {
+        const freight = regional.freightCompetition;
+        assert.equal(freight.served, freight.player.loads + freight.partners.reduce((sum, row) => sum + row.loads, 0) +
+          (freight.inland ?? []).reduce((sum, row) => sum + row.loads, 0) + freight.exportRival.loads);
+        assert.deepEqual(regional.nationalMarket.western.rival, freight.exportRival);
+        assert.ok(!freight.inland?.some(({ id }) => id === "goa") && !regional.nationalMarket.nodes.find(({ id }) => id === "goa").freight);
+        return freight.exportRival;
+      });
+      assert.equal(rivalResults[0].capacity, 2);
+      assert.equal(rivalResults[1].capacity, 4);
+      assert.equal(rivalResults.at(-1).capacity, 5);
+      assert.ok(rivalResults.some(({ loads }) => loads > 0));
+    }
   }
 });

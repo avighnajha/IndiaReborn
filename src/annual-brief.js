@@ -269,6 +269,7 @@ function regionalLedger(report) {
     ["Your freight", `${freight.player.loads} / ${freight.player.capacity} capacity · ${money(freight.player.earnings)}`],
     ...(freight.partners ?? []).map(({ name, loads, capacity, earnings }) => [name, `${loads} / ${capacity} capacity · ${money(earnings)}`]),
     ...(freight.inland ?? []).map(({ name, via, loads, capacity, earnings }) => [`${name} via ${via}`, `${loads} / ${capacity} capacity · ${money(earnings)}`]),
+    ...(freight.exportRival ? [[freight.exportRival.name, `${freight.exportRival.loads} / ${freight.exportRival.capacity} capacity`]] : []),
   ] : [];
   if (contract) {
     carrierRows.push([`Freight contract · ${contract.start}–${contract.end}`, contract.winner
@@ -410,6 +411,13 @@ function changeRows(report, previous) {
   const freight = report.regional?.freightCompetition;
   const marketChapter = report.regional?.nationalMarket?.chapter;
   if (marketChapter) add("trade", "Domestic market routes", marketChapter);
+  const islands = report.regional?.nationalMarket?.western?.islands;
+  const priorIslands = previous?.regional?.nationalMarket?.western?.islands;
+  if (islands && (islands.capacity < islands.sailingCapacity || islands.capacity !== priorIslands?.capacity)) {
+    const weather = islands.capacity < islands.sailingCapacity ? "Monsoon weather cut one sailing slot. " : "";
+    const shipped = (islands.administrationCargo ?? 0) + islands.delivered;
+    add("food", "Calicut island supplies", `${weather}${shipped ? `Calicut shipped ${units(shipped)}. ` : ""}${islands.shortage ? `${units(islands.shortage)} still needed.` : "Island food needs covered."}`);
+  }
   const assam = report.assam;
   if (assam?.earthquakeLoss) add("food", "Earthquake recovery", assam.bankRepairs
     ? `Bank repairs prevented ${units(assam.bankRepairs)} of harvest losses.` : "Emergency supplies went to reserves. The harvest absorbed the damage.");
@@ -497,7 +505,7 @@ function changeRows(report, previous) {
   if (freight) {
     const inland = freight.inland?.reduce((total, row) => total + row.loads, 0) ?? 0;
     add("trade", "Freight competition",
-      `You carried ${freight.player.loads} of ${freight.demand} loads and earned ${money(freight.player.earnings)}.${inland ? ` Inland rivals carried ${inland}.` : ""}${freight.unserved ? ` ${freight.unserved} went unserved.` : ""}`);
+      `You carried ${freight.player.loads} of ${freight.demand} loads and earned ${money(freight.player.earnings)}.${freight.exportRival?.loads ? ` Mormugao carried ${freight.exportRival.loads}.` : ""}${inland ? ` Inland rivals carried ${inland}.` : ""}${freight.unserved ? ` ${freight.unserved} went unserved.` : ""}`);
   }
   if (!changes.length && completed.length) add(null, "Works opened", `${completed.length} completed. See the investment ledger for their locations.`);
   return changes;

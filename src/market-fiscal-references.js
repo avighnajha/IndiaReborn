@@ -3,6 +3,8 @@ import { stateRevenueReferences } from "./state-revenue-references.js";
 const plan1972 = "https://mha.gov.in/files/annual_reports_documents/REPORT_1972_73_12022021.pdf#page=50";
 const plan1980 = "https://mha.gov.in/files/annual_reports_documents/REPORT_1980_81_12022021.pdf#page=27";
 const islandReceipts = "https://eparlib.sansad.in/bitstream/123456789/2638332/1/01_II_16-12-1952_p21_p22_u699.pdf";
+const plan1978 = "https://mha.gov.in/files/annual_reports_documents/REPORT_1978_79_12022021.pdf#page=108";
+const plan1985 = "https://mha.gov.in/files/annual_reports_documents/REPORT_1985_86_12022021.pdf";
 const plan = (name, fiscalYear, value, url) => ({ name, fiscalYear, value, url,
   metric: "Annual Plan outlay", status: fiscalYear === 1972 ? "Approved annual Plan allocation" : "Reported annual Plan allocation" });
 
@@ -22,5 +24,16 @@ marketFiscalReferences.andamans = [
   plan("Andaman and Nicobar Islands", 1972, 363.17, plan1972),
   plan("Andaman and Nicobar Islands", 1978, 1057, "https://mha.gov.in/files/annual_reports_documents/REPORT_1978_79_12022021.pdf"),
   plan("Andaman and Nicobar Islands", 1985, 3350, "https://mha.gov.in/files/annual_reports_documents/REPORT_1986_87_12022021.pdf"),
+];
+const goa = "Goa, Daman and Diu (Union territory)";
+marketFiscalReferences.goa = [
+  { name: goa, fiscalYear: 1962, value: 501, metric: "Revenue receipts", status: "Estimate in the Union interim budget for 1962–63",
+    url: "https://eparlib.sansad.in/bitstream/123456789/239/1/Budget_Speech_Interim_1962-63.pdf" },
+  plan(goa, 1971, 835, plan1972), plan(goa, 1972, 980, plan1972),
+  plan(goa, 1978, 2750, plan1978), plan(goa, 1985, 6400, plan1985),
+];
+marketFiscalReferences.lakshadweep = [
+  plan("Laccadive, Minicoy and Amindivi Islands", 1972, 45, plan1972),
+  plan("Lakshadweep", 1978, 244, plan1978), plan("Lakshadweep", 1985, 765, plan1985),
 ];
 marketFiscalReferences.mizoram.unshift(plan("Mizoram (Union territory)", 1972, 437, plan1972));

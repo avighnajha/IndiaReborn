@@ -1,5 +1,6 @@
 import { crisisYears } from "./food-crisis.js";
 import { domesticLinks, marketHubs, nationalMarketActive, playerMarketId } from "./national-market.js";
+import { westernIslands, westernLinkMarkets } from "./western-shipping.js";
 
 export function dispatchWindow(game) {
   return Boolean(game.journey && crisisYears.includes(game.year) && game.year <= game.journey.end);
@@ -70,7 +71,7 @@ export function settleReserveDispatch(regional, game, world, { stateName, demand
       for (const { link, from, to } of path) {
         link.remaining -= amount;
         const key = `${from}-${to}`;
-        const route = routes.get(key) ?? { from, to, capacity: link.capacity, units: 0, ...(link.mode ? { mode: link.mode } : {}) };
+        const route = routes.get(key) ?? { from, to, capacity: link.capacity, units: 0, ...(link.mode ? { mode: link.mode } : {}), ...westernLinkMarkets(from, to) };
         route.units += amount;
         routes.set(key, route);
       }
@@ -83,7 +84,11 @@ export function settleReserveDispatch(regional, game, world, { stateName, demand
 
   const withDelivery = (row, id) => received.has(id) ? { ...row, shortage: row.shortage - received.get(id), reliefReceived: received.get(id) } : row;
   const partners = Object.fromEntries(Object.entries(regional.partners).map(([id, row]) => [id, withDelivery(row, id)]));
+  const islandRelief = received.get(westernIslands);
   const nationalMarket = market && { ...market, nodes: market.nodes.map((node) => withDelivery(node, node.id)),
+    ...(islandRelief && market.western?.islands ? { western: { ...market.western,
+      islands: { ...market.western.islands, relief: islandRelief, shortage: partners[westernIslands].shortage },
+    } } : {}),
     relief: { source: { id: source, name: stateName, market: marketHubs[source] ?? stateName }, routes: [...routes.values()] } };
   return { regional: { ...regional, partners, report: { ...report, partners: report.partners.map((row) => withDelivery(row, row.id)),
     ...(nationalMarket ? { nationalMarket } : {}) } }, dispatch };

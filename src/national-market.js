@@ -1,7 +1,10 @@
 import { bayOpening, bayPorts, islandMarket } from "./bay-shipping.js";
+import { goaMarket, islandsOpening, westernIslands, westernLinkMarkets, westernLinks, westernShipping } from "./western-shipping.js";
 
 export const inlandActors = {
   [islandMarket]: { name: "Andaman and Nicobar Islands", harvest: 4, demand: 8, flood: 1, dry: 1, seed: 159 },
+  [goaMarket]: { name: "Goa, Daman and Diu", harvest: 5, demand: 8, flood: 2, dry: 2, seed: 212 },
+  [westernIslands]: { name: "Laccadive, Minicoy and Amindivi Islands", later: "Lakshadweep", renamed: 1973, harvest: 3, demand: 6, flood: 1, dry: 1, seed: 1029 },
   delhi: { name: "Delhi", harvest: 5, demand: 8, flood: 1, dry: 2, seed: 196 },
   punjab: { name: "Punjab", harvest: 12, demand: 8, flood: 2, dry: 3, seed: 623 },
   haryana: { name: "Haryana", harvest: 10, demand: 8, flood: 2, dry: 4, seed: 726 },
@@ -31,6 +34,7 @@ export const marketHubs = {
   manipur: "Imphal", tripura: "Agartala", arunachal: "Bomdila",
   himachal: "Mandi", jammu: "Jammu", sikkim: "Gangtok",
   [islandMarket]: "Port Blair",
+  [goaMarket]: "Mormugao", [westernIslands]: "Kavaratti",
 };
 
 export function marketConnection(id, year) {
@@ -56,7 +60,7 @@ const westAfterDivision = [
 ];
 const northAfterDivision = [["punjab", "haryana", 3], ["haryana", "delhi", 3], ["haryana", "rajasthan", 2]];
 
-export function domesticLinks(year) {
+export function domesticLinks(year, western = westernShipping(year)) {
   const west = year < 1960 ? westBeforeDivision : westAfterDivision;
   const north = year < 1966 ? [] : northAfterDivision;
   const south = year < 1953 ? southBeforeDivision : southAfterDivision;
@@ -74,7 +78,7 @@ export function domesticLinks(year) {
   if (year >= 1949) { const { routeCapacity, mode } = marketConnection("jammu", year); northernMarkets.push(["punjab", "jammu", routeCapacity, mode]); }
   if (year >= 1975) northernMarkets.push(["bengal", "sikkim", 1, "road"]);
   const sea = year >= bayOpening ? Object.entries(bayPorts).map(([port, { capacity }]) => [port, islandMarket, capacity, "sea"]) : [];
-  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets, ...sea].map(([from, to, capacity, mode]) => {
+  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets, ...sea, ...westernLinks(year, western)].map(([from, to, capacity, mode]) => {
     const southernPool = year >= 1965 && (from === "andhra" || from === "madras");
     const northernDispatch = year >= 1968 && (from === "punjab" || from === "haryana");
     return [from, to, capacity + Number(!mode && (southernPool || northernDispatch)), ...(mode ? [mode] : [])];
@@ -95,8 +99,9 @@ export function playerMarketId(game, world) {
 
 export function nationalMarketActors(game, world) {
   const playerMarket = playerMarketId(game, world);
-  // Tripura keeps its own economy before its metalled Assam road is available.
-  const separateMarkets = game.year >= 1950 ? ["manipur", "tripura"] : [];
+  // Some administrations have accounts before entering regular domestic trade.
+  const separateMarkets = [...(game.year >= 1950 ? ["manipur", "tripura"] : []),
+    ...(game.year >= islandsOpening ? [westernIslands] : [])];
   return [...new Set(["assam", ...separateMarkets, ...domesticLinks(game.year).flatMap(([from, to]) => [from, to])])].filter((id) => id !== playerMarket);
 }
 
@@ -127,14 +132,19 @@ const marketChapters = {
   1950: "Assam reconnects by rail. Imphal gains a road link, Tripura opens a separate account, and Port Blair enters with two sea routes.",
   1953: "Andhra opens a separate market after the division of Madras.",
   1955: "The completed Assam–Agartala road connects Tripura’s market. Road freight remains limited.",
-  1956: "Andhra Pradesh and Kerala enter the reorganized network. Madhya Pradesh gains a route to Rajasthan.",
-  1958: "The Mandi–Kullu transport corporation supports a larger Himachal road connection.",
+  1956: "Andhra Pradesh and Kerala open reorganized accounts. The Laccadive, Minicoy and Amindivi Islands become a Union territory.",
+  1958: "Calicut opens seasonal island shipping. The Mandi–Kullu transport corporation expands Himachal road access.",
   1960: "Bombay’s markets divide between Maharashtra and Gujarat.",
-  1963: "Nagaland becomes a separate state.",
+  1962: "Goa, Daman and Diu enter the domestic market through Mormugao’s existing inland railway.",
+  1963: "Nagaland becomes a state. Calicut’s island service adds a second chartered ship. Panjim links to Bombay by steamer.",
+  1964: "The Mormugao Port Trust takes over the existing port. The Union territory keeps a separate public account.",
   1966: "Haryana opens a separate market from Punjab.",
+  1970: "An all-weather ship expands Calicut’s island service and keeps freight sailing through the monsoon.",
   1972: "The northeastern reorganization creates new markets. Jammu Tawi railway station opens; expanded freight capacity begins next year.",
-  1973: "Jammu’s rail connection can now carry three food units a year, up from one by road.",
+  1973: "Jammu gains rail freight. The western islands become Lakshadweep. Mormugao starts competing for Bombay’s sugar traffic.",
   1975: "Sikkim joins the domestic market. Gangtok trades through a limited Bengal road connection.",
+  1979: "Mormugao’s new loader reserves a second modeled rail slot for ore. One remains for food.",
+  1982: "An additional all-weather ship expands Lakshadweep’s food route.",
 };
 
 export function seedBombayDivision(partners, game, world) {
@@ -164,18 +174,18 @@ export function seedPunjabDivision(partners, game, world) {
 
 // Clear each link once per year. Immediate shortages take priority over restocking.
 // Local governments have already settled their commitments to the player.
-export function clearNationalMarket(game, partners, actors, localIds) {
+export function clearNationalMarket(game, partners, actors, localIds, western = westernShipping(game.year)) {
   const local = new Set(localIds);
   const nodes = Object.fromEntries(actors.map(({ id, name, market }) => [id, {
     id, name, market, local: local.has(id), cash: partners[id].cash,
     reserve: partners[id].reserve, shortage: partners[id].shortage,
   }]));
-  const links = domesticLinks(game.year).filter(([from, to]) => nodes[from] && nodes[to])
+  const links = domesticLinks(game.year, western).filter(([from, to]) => nodes[from] && nodes[to])
     .map(([from, to, capacity, mode]) => ({ from, to, capacity, units: 0, ...(mode ? { mode } : {}) }));
 
-  const land = links.filter(({ mode }) => mode !== "sea");
+  const land = links.filter(({ from, to, mode }) => mode !== "sea" && from !== goaMarket && to !== goaMarket);
   const first = (game.year - 1946) % Math.max(1, land.length);
-  const rotation = [...land.slice(first), ...land.slice(0, first), ...links.filter(({ mode }) => mode === "sea")];
+  const rotation = [...land.slice(first), ...land.slice(0, first), ...links.filter(({ from, to, mode }) => mode === "sea" || from === goaMarket || to === goaMarket)];
   const demand = (node, restock) => restock ? Math.max(0, 5 - node.reserve) : node.shortage;
   for (const restock of [false, true]) {
     // A year-based rotation gives equal claims a changing priority.
@@ -187,7 +197,7 @@ export function clearNationalMarket(game, partners, actors, localIds) {
       if (!link.units && seller.reserve < buyer.reserve) [seller, buyer] = [buyer, seller];
       const units = Math.min(demand(buyer, restock), Math.max(0, buyer.cash - 2),
         Math.max(0, seller.reserve - 5), link.capacity - link.units);
-      if (!units || seller.shortage) continue;
+      if (!units || seller.shortage || seller.id === westernIslands) continue;
       seller.reserve -= units;
       seller.cash += units;
       buyer.cash -= units;
@@ -202,6 +212,7 @@ export function clearNationalMarket(game, partners, actors, localIds) {
   let units = 0;
   let localUnits = 0;
   for (const link of links) {
+    Object.assign(link, westernLinkMarkets(link.from, link.to));
     if (!link.units) continue;
     flows[link.from] ??= { bought: 0, sold: 0 };
     flows[link.to] ??= { bought: 0, sold: 0 };
@@ -211,5 +222,11 @@ export function clearNationalMarket(game, partners, actors, localIds) {
     if (local.has(link.from) || local.has(link.to)) localUnits += link.units;
   }
   const chapter = marketChapters[game.year];
-  return { market: { year: game.year, ...(chapter ? { chapter } : {}), nodes: Object.values(nodes), links, units, localUnits }, flows };
+  const islands = nodes[westernIslands];
+  const westResults = {
+    ...(western.ore && nodes[goaMarket] ? { ore: western.ore } : {}),
+    ...(western.islands && islands ? { islands: { ...western.islands, delivered: flows[westernIslands]?.bought ?? 0, shortage: islands.shortage } } : {}),
+  };
+  return { market: { year: game.year, ...(chapter ? { chapter } : {}), nodes: Object.values(nodes), links, units, localUnits,
+    ...(Object.keys(westResults).length ? { western: westResults } : {}), }, flows };
 }

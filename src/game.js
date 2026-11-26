@@ -23,6 +23,7 @@ import { crisisSeverity } from "./food-crisis.js";
 import { dispatchWindow } from "./reserve-dispatch.js";
 import { bayDeadline, bayOpening } from "./bay-shipping.js";
 import { bayShippingMarkup } from "./bay-shipping-view.js";
+import { westernExportOpening, westernExportRival } from "./western-shipping.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
 import { intakeDeadline, intakeStatus } from "./technical-intake.js";
@@ -1152,6 +1153,11 @@ function nextBriefDecision(report) {
     label: "Review reserve offer",
     open: showUnionReserve,
   };
+  const administration = game.journey?.jurisdiction?.bombaySuccessor;
+  if (game.journey?.preset === "standard" && game.year === westernExportOpening - 2 && westernExportRival(westernExportOpening, administration)) return {
+    advice: `Mormugao will compete for Bombay’s freight in ${westernExportOpening}. Review your connected workshops and freight terminals.`,
+    label: "Review Trade & Industry", open: () => { selectedDepartment = "trade"; showDevelopmentTrees(); },
+  };
   if ((game.year === charterOpening || report.completed.some(({ kind }) => ["school", "road", "mill", "irrigation"].includes(kind))) &&
       Campaign.training(game).status === "ready") {
     return { advice: "Your technical school network can specialize in industry or agriculture.", label: "Compare specializations", open: showTraining };
@@ -1214,6 +1220,10 @@ function showEconomyMap() {
 
 function showReport(index = game.reports.length - 1) {
   const report = game.reports[index];
+  const market = report.regional?.nationalMarket;
+  const westernMilestone = market?.western && [1958, 1962, 1970, 1979, 1982].includes(report.year);
+  const marketLabel = report.reserveDispatch?.sent ? "View relief routes" : market?.charter ? "View Port Blair route"
+    : market?.western?.rival || westernMilestone ? "View western routes" : "Domestic market";
   const latest = index === game.reports.length - 1;
   const done = game.year > campaignEnd(game);
   const decision = latest && !done ? nextBriefDecision(report) : null;
@@ -1226,8 +1236,7 @@ function showReport(index = game.reports.length - 1) {
       if (placement) focusEconomySite(placement.hex);
       else showEconomyMap();
     })] : []),
-    ...(report.regional?.nationalMarket ? [choiceButton(report.reserveDispatch?.sent ? "View relief routes"
-      : report.regional.nationalMarket.charter ? "View Port Blair route" : "Domestic market", () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
+    ...(market ? [choiceButton(marketLabel, () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
       else returnToMap();

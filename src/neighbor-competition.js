@@ -70,14 +70,15 @@ export function resolveFreightContract(game, player, rivals) {
   return { start, end, fee, minimumCapacity, winner, capacity, payment, reason, awarded, playerCapacity: player.capacity };
 }
 
-export function competitiveFreight(game, { towns, workshops, terminals, monsoon, partners, inland = [], linkedLoads = 0, reliefLoads = 0 }) {
-  if (game.journey?.preset !== "standard" || game.year < freightCompetitionOpening || ![...partners, ...inland].some(({ capacity }) => capacity)) return null;
+export function competitiveFreight(game, { towns, workshops, terminals, monsoon, partners, inland = [], linkedLoads = 0, reliefLoads = 0, exportRival }) {
+  const extra = exportRival ? [exportRival] : [];
+  if (game.journey?.preset !== "standard" || game.year < freightCompetitionOpening || ![...partners, ...inland, ...extra].some(({ capacity }) => capacity)) return null;
 
   const player = playerFreight({ towns, workshops, terminals });
   player.capacity = Math.max(0, player.capacity - reliefLoads);
   const linkedDemand = Math.min(3, linkedLoads);
   const demand = 6 + partners.length + (game.year >= 1970 ? 2 : 0) - (monsoon === "Severe flood" ? 2 : 0) + linkedDemand;
-  const competitors = [player, ...partners, ...inland];
+  const competitors = [player, ...partners, ...inland, ...extra];
   const capacity = competitors.reduce((total, row) => total + row.capacity, 0);
   const served = Math.min(demand, capacity);
   const rows = competitors.map((row) => ({ ...row, loads: Math.floor(served * row.capacity / capacity) }));
@@ -95,5 +96,6 @@ export function competitiveFreight(game, { towns, workshops, terminals, monsoon,
   }
   for (const row of rows) row.earnings = row.loads;
   return { demand, linkedDemand, served, unserved: demand - served, player: rows[0],
-    partners: rows.slice(1, 1 + partners.length), ...(inland.length ? { inland: rows.slice(1 + partners.length) } : {}) };
+    partners: rows.slice(1, 1 + partners.length), ...(inland.length ? { inland: rows.slice(1 + partners.length, 1 + partners.length + inland.length) } : {}),
+    ...(exportRival ? { exportRival: rows.at(-1) } : {}) };
 }
