@@ -86,6 +86,38 @@
 .dispatch-actions button { min-height: 36px; }
 .dispatch-actions button[aria-pressed="true"] { background: #3d4b31; }
 
+.distribution-plan {
+  display: grid;
+  gap: 8px;
+  border-inline-start: 3px solid var(--sector-accent);
+  background: #26362b;
+}
+.distribution-outlook { display: grid; gap: 5px; }
+.distribution-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  gap: 8px;
+}
+.distribution-forecast[data-selected="true"] { border-color: var(--sector-accent); }
+.distribution-forecast header { margin-bottom: 7px; }
+.distribution-forecast h4 { margin: 0; }
+.distribution-forecast .food-plan-sources { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.distribution-forecast .food-plan-sources > div { border-color: #56674d; }
+.distribution-forecast ul, .brief-distribution ul { display: grid; gap: 4px; margin: 7px 0 0; padding: 0; list-style: none; }
+.distribution-forecast ul li, .brief-distribution ul li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 6px;
+  padding-block-start: 4px;
+  border-top: 1px solid #56674d;
+  color: #d0dac8;
+  font-size: .77rem;
+}
+.distribution-forecast li b, .brief-distribution li b { color: var(--sector-accent); }
+.brief-priority.brief-distribution dl { grid-template-columns: repeat(auto-fit, minmax(min(85px, 100%), 1fr)); }
+.brief-distribution ul { margin-block-end: 8px; }
+
 @media (max-width: 440px) {
   .food-plan-outlook { grid-template-columns: 1fr; }
   .food-plan-outlook .department-badge { grid-column: 1; grid-row: 1; }

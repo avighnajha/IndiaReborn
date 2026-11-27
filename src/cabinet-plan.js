@@ -1,5 +1,6 @@
 import { campaignEnd } from "./journey.js";
 import { bulkFreightOnTurn, upcomingFreightContract } from "./neighbor-competition.js";
+import { distributionOpening } from "./food-crisis.js";
 
 export const cabinetPlanOpening = 1951;
 export const cabinetPlanRate = .30;
@@ -43,9 +44,11 @@ function fundingStatus(game, term, finance, sites, context) {
   return { annualCost: due, spent: due, status: "funded", message: "This year’s appropriation is reserved before emergency food purchases." };
 }
 
-function effectsFor(id, sites, bulk) {
+function effectsFor(id, sites, bulk, distribution) {
   if (id === "education") return ["5 funded years → +2 lasting Skills per campus.", "+1 linked-workshop output per cohort, from the next year."];
-  if (id === "food") return [`+${sites.food.length} food a year from irrigated areas.`, "Recover up to 2 remaining weather losses per area."];
+  if (id === "food") return [`+${sites.food.length} food a year, plus weather protection.`, distribution
+    ? "Use a cooperative depot and linked store to ship surplus and rebuild reserves."
+    : "Recover up to 2 remaining weather losses per area."];
   if (id === "trade") return ["+3 output per linked workshop while funded.", bulk
     ? "Fund Trade in 1981 to bid for bulk freight, then each year to carry it."
     : "Extra production earns recurring workshop receipts."];
@@ -66,6 +69,7 @@ export function cabinetPlan(game, finance, context = {}) {
   const lockReason = term ? `Committed through ${term.ends}.` : null;
   const cost = annualCost(finance);
   const bulk = upcomingFreightContract(game)?.bulk || bulkFreightOnTurn(game);
+  const distribution = end >= distributionOpening && ends >= distributionOpening;
   const options = Object.entries(labels).map(([id, label]) => {
     const selected = term ? term.id === id : id === "services";
     let reason = timingReason ?? lockReason;
@@ -81,7 +85,7 @@ export function cabinetPlan(game, finance, context = {}) {
       }
     }
     return { id, label, annualCost: id === "services" ? 0 : selected && term ? annualCost(finance, term.rate ?? cabinetPlanRate) : cost,
-      ends: term?.ends ?? ends, effects: effectsFor(id, sites, bulk), reason, selected,
+      ends: term?.ends ?? ends, effects: effectsFor(id, sites, bulk, distribution), reason, selected,
       actionLabel: id === "services" ? "Keep normal services" : selected ? "Committed" : `Commit ${termYears} ${termYears === 1 ? "year" : "years"}` };
   });
   const status = term ? fundingStatus(game, term, finance, sites, context) : null;

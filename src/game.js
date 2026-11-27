@@ -19,8 +19,8 @@ import "./regional-mandate-view.css";
 import "./fiscal-view.css";
 import { marketFundingMarkup } from "./market-finance-view.js";
 import { foodPlanMarkup } from "./food-plan-view.js";
-import { crisisSeverity } from "./food-crisis.js";
-import { dispatchWindow } from "./reserve-dispatch.js";
+import { crisisSeverity, distributionOpening } from "./food-crisis.js";
+import { dispatchWindow, distributionWindow } from "./reserve-dispatch.js";
 import { bayDeadline, bayOpening } from "./bay-shipping.js";
 import { bayShippingMarkup } from "./bay-shipping-view.js";
 import { westernExportOpening, westernExportRival } from "./western-shipping.js";
@@ -586,6 +586,7 @@ function showDevelopmentTrees(focusDepartment = false, focusNode = null) {
     ...(Campaign.cabinetPriority(game).available ? [choiceButton("Five-year priority", showCabinetPriority)] : []),
     ...(selectedDepartment === "trade" && upcomingFreightContract(game)?.bulk ? [choiceButton("1981 bulk freight bid", showNeighbors)] : []),
     ...(selectedDepartment === "food" && reserveWindow(game) ? [choiceButton("Union food reserve", () => showUnionReserve(showDevelopmentTrees, "Back to Food & Water"))] : []),
+    ...(selectedDepartment === "food" && distributionWindow(game) ? [choiceButton("Public distribution plan", showRelief)] : []),
     choiceButton("Regional programmes →", () => {
       modal.close();
       openCabinetDepartment(selectedDepartment);
@@ -641,7 +642,8 @@ function renderCabinetGuide() {
 function showRelief() {
   const plan = Campaign.foodPlan(game);
   const { authorization } = plan;
-  showModal(`${game.year} · Monsoon planning`, "Emergency food plan", `
+  if (plan.dispatch?.late) plan.dispatch.comparison = Campaign.distributionComparison(game, plan.dispatch);
+  showModal(`${game.year} · Monsoon planning`, plan.dispatch?.late ? "Food and reserves" : "Emergency food plan", `
     ${foodPlanMarkup(plan, game.journey.preset === "standard")}
     <p class="fiscal-note">A purchase cap replaces the standing food policy for ${game.year}.</p>
     <div id="relief-options" class="modal-actions" role="group" aria-label="Set purchase cap"></div>`,
@@ -927,7 +929,9 @@ function render() {
   const relief = game.relief?.year === game.year ? game.relief : null;
   byId("trade-note").textContent = relief ? `Purchase cap for ${game.year}` : "Applies each year";
   byId("relief").hidden = !game.journey || done;
-  byId("relief").textContent = dispatchWindow(game)
+  byId("relief").textContent = distributionWindow(game)
+    ? `Public distribution${game.reserveDispatch?.year === game.year ? " · Offer filed" : ""}`
+    : dispatchWindow(game)
     ? game.crisisOrder?.year === game.year ? "Drought plan · Union food ordered"
       : game.reserveDispatch?.year === game.year ? "Drought plan · Relief offered" : "Drought plan · Review supplies"
     : relief ? `Emergency purchases · ${money(relief.budget)} cap` : "Emergency food plan";
@@ -1130,7 +1134,11 @@ function nextBriefDecision(report) {
     advice: "Rainfall is failing. Plan home supplies and see what your stores could spare for other regions.",
     label: "Plan drought supplies", open: showRelief,
   };
-  if (dispatchWindow(game)) return {
+  if (game.year === distributionOpening && distributionWindow(game)) return {
+    advice: "The monsoon has failed in several regions. Compare keeping your reserves with sending food through available routes.",
+    label: "Review public distribution", open: showRelief,
+  };
+  if (dispatchWindow(game) && !distributionWindow(game)) return {
     advice: "Drought is affecting other regions. Review what your stores could spare for Union relief.",
     label: "Review drought relief", open: showRelief,
   };
@@ -1147,6 +1155,10 @@ function nextBriefDecision(report) {
   if (mandate.available && [mandate.opens, mandate.closes].includes(game.year)) {
     return { advice: "Choose the outcome that will define this administration in 1985.", label: "Compare regional mandates", open: () => showRegionalMandate() };
   }
+  if (game.year === distributionOpening - 2 && campaignEnd(game) >= distributionOpening) return {
+    advice: `Public distribution opens in ${distributionOpening}. Prepare a cooperative depot and a market-linked store, then fund the Food & Water priority.`,
+    label: "Review Food & Water", open: () => { selectedDepartment = "food"; showDevelopmentTrees(); },
+  };
   const tender = upcomingFreightContract(game);
   if (tender?.bulk && [tender.noticeYear, tender.start].includes(game.year)) return {
     advice: game.year === tender.start ? "Bulk freight is awarded this year. Review your linked terminal and Trade & Industry funding."
@@ -1240,6 +1252,7 @@ function showReport(index = game.reports.length - 1) {
   const latest = index === game.reports.length - 1;
   const done = game.year > campaignEnd(game);
   const decision = latest && !done ? nextBriefDecision(report) : null;
+  const openMarket = () => showNationalMarket(report, () => showReport(index), "Back to annual brief");
   showModal(`${report.year} · Annual brief`, briefHeadline(report, game.reports[index - 1]), briefContent(report, game.reports[index - 1], decision?.advice, latest), [
     choiceButton("Earlier", () => showReport(index - 1), false, index === 0),
     choiceButton("Later", () => showReport(index + 1), false, latest),
@@ -1249,13 +1262,14 @@ function showReport(index = game.reports.length - 1) {
       if (placement) focusEconomySite(placement.hex);
       else showEconomyMap();
     })] : []),
-    ...(market ? [choiceButton(marketLabel, () => showNationalMarket(report, () => showReport(index), "Back to annual brief"))] : []),
+    ...(market && !(report.reserveDispatch?.late && market.relief) ? [choiceButton(marketLabel, openMarket)] : []),
     choiceButton(done && latest ? "See results" : "Return to map", () => {
       if (done && latest) showResults();
       else returnToMap();
     }, true),
   ]);
   modal.classList.add("brief-dialog");
+  byId("brief-distribution-map")?.addEventListener("click", openMarket);
   byId("brief-freight")?.addEventListener("click", () => {
     const { freightCompetition, freightContract } = report.regional;
     const reached = latest && freightContract?.bulk && Campaign.access(game).reached;

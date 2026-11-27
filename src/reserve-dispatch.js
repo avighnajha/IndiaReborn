@@ -1,16 +1,24 @@
-import { crisisYears } from "./food-crisis.js";
+import { crisisYears, distributionOpening, lateDroughtSeverity } from "./food-crisis.js";
 import { domesticLinks, marketHubs, nationalMarketActive, playerMarketId } from "./national-market.js";
 import { westernIslands, westernLinkMarkets } from "./western-shipping.js";
 
-export function dispatchWindow(game) {
-  return Boolean(game.journey && crisisYears.includes(game.year) && game.year <= game.journey.end);
+export function distributionWindow(game) {
+  return Boolean(game.journey && game.year >= distributionOpening && game.year <= game.journey.end);
 }
 
-export function dispatchOffer(game, demand, { capacity: handling, storage }) {
+export function dispatchWindow(game) {
+  return distributionWindow(game) || Boolean(game.journey && crisisYears.includes(game.year) && game.year <= game.journey.end);
+}
+
+export function dispatchOffer(game, demand, { capacity: handling, storage, distribution, depotNames }) {
   if (!dispatchWindow(game)) return null;
+  const late = distributionWindow(game);
+  const network = late && Boolean(distribution);
   const floor = Math.ceil(demand / 2);
-  const limit = Math.min(handling, Math.max(0, Math.min(game.reserve, storage) - floor));
-  return { floor, limit, pledged: game.reserveDispatch?.year === game.year, orderPlaced: game.crisisOrder?.year === game.year };
+  const limit = network && storage >= floor ? Math.min(8, handling + 3)
+    : Math.min(handling, Math.max(0, Math.min(game.reserve, storage) - floor));
+  return { floor, limit, pledged: game.reserveDispatch?.year === game.year, orderPlaced: game.crisisOrder?.year === game.year,
+    ...(late ? { late, network, dispatchStore: depotNames?.[0] } : {}) };
 }
 
 function shortestRoute(links, source, destination) {
@@ -31,13 +39,15 @@ function shortestRoute(links, source, destination) {
 export function settleReserveDispatch(regional, game, world, { stateName, demand, facilities, towns, fromReserve, foodOnHand, shortage }) {
   const offer = dispatchOffer(game, demand, facilities);
   if (!offer?.pledged) return { regional, dispatch: null };
-  const { floor, limit, orderPlaced } = offer;
+  const { floor, limit, orderPlaced, late, network } = offer;
   const reserve = Math.min(facilities.storage, foodOnHand);
-  const available = shortage || orderPlaced ? 0 : Math.max(0, Math.min(limit, game.reserve - fromReserve - floor, reserve - floor));
+  const openingSpare = network ? limit : game.reserve - fromReserve - floor;
+  const available = shortage || orderPlaced ? 0 : Math.max(0, Math.min(limit, openingSpare, reserve - floor));
   const report = regional.report;
   const market = report.nationalMarket;
   const source = playerMarketId(game, world);
-  const dispatch = { floor, limit, available, sent: 0, reserve, freightCapacityUsed: 0, deliveries: [] };
+  const dispatch = { floor, limit, available, sent: 0, reserve, freightCapacityUsed: 0, deliveries: [],
+    ...(late ? { late, network, dispatchStore: offer.dispatchStore, covered: 0, restocked: 0 } : {}) };
   if (!available) return { regional, dispatch };
 
   const neighbors = new Map(report.partners.map((row) => [row.id, row]));
@@ -53,21 +63,25 @@ export function settleReserveDispatch(regional, game, world, { stateName, demand
     const neighbor = neighbors.get(node.id);
     const gateway = gateways.get(node.id);
     if (!gateway && !neighbor) continue;
-    const capacity = neighbor?.routeCapacity ?? gateway?.capacity ?? Math.min(3, towns - 1);
+    const capacity = late && neighbor?.routeCapacity && gateway ? Math.min(neighbor.routeCapacity, gateway.capacity)
+      : neighbor?.routeCapacity ?? gateway?.capacity ?? Math.max(0, Math.min(3, towns - 1));
     const used = neighbor ? neighbor.bought + neighbor.sold + neighbor.emergencyFood : 0;
     links.push({ from: source, to: node.id, capacity, remaining: Math.max(0, capacity - used), mode: neighbor?.mode ?? gateway?.mode });
   }
 
-  const recipients = [...nodes].filter(({ shortage }) => shortage > 0).sort((a, b) => b.shortage - a.shortage);
   const received = new Map();
   const routes = new Map();
-  for (const { id, name, shortage } of recipients) {
-    while ((received.get(id) ?? 0) < shortage && dispatch.sent < available) {
+  function send({ id, name, shortage }, need, use) {
+    if (need <= 0 || dispatch.sent >= available) return;
+    const delivery = received.get(id) ?? { id, name, units: 0, covered: 0, restocked: 0, remaining: shortage };
+    while (need > 0 && dispatch.sent < available) {
       const path = shortestRoute(links, source, id);
       if (!path?.length) break;
-      const amount = Math.min(available - dispatch.sent, shortage - (received.get(id) ?? 0), ...path.map(({ link }) => link.remaining));
+      const amount = Math.min(available - dispatch.sent, need, ...path.map(({ link }) => link.remaining));
+      need -= amount;
       dispatch.sent += amount;
-      received.set(id, (received.get(id) ?? 0) + amount);
+      delivery.units += amount;
+      delivery[use] += amount;
       for (const { link, from, to } of path) {
         link.remaining -= amount;
         const key = `${from}-${to}`;
@@ -76,20 +90,47 @@ export function settleReserveDispatch(regional, game, world, { stateName, demand
         routes.set(key, route);
       }
     }
-    if (received.has(id)) dispatch.deliveries.push({ id, name, units: received.get(id), remaining: shortage - received.get(id) });
+    if (delivery.units) {
+      delivery.remaining = shortage - delivery.covered;
+      received.set(id, delivery);
+    }
+  }
+  const shortages = [...nodes].filter(({ shortage }) => shortage > 0).sort((a, b) => b.shortage - a.shortage);
+  for (const node of shortages) send(node, node.shortage, "covered");
+  if (network) {
+    const restock = nodes.filter(({ id, shortage }) => shortage === (received.get(id)?.covered ?? 0))
+      .map((node) => {
+        const share = lateDroughtSeverity(game, node.id) ? .5 : .25;
+        return { node, need: Math.ceil((regional.partners[node.id].population ?? 0) * share) - node.reserve };
+      })
+      .filter(({ need }) => need > 0).sort((a, b) => b.need - a.need);
+    for (const { node, need } of restock) send(node, need, "restocked");
   }
   if (!dispatch.sent) return { regional, dispatch };
+  for (const delivery of received.values()) {
+    const { id, name, units, remaining, covered, restocked } = delivery;
+    dispatch.deliveries.push(late ? delivery : { id, name, units, remaining });
+    if (late) {
+      dispatch.covered += covered;
+      dispatch.restocked += restocked;
+    }
+  }
   dispatch.reserve = Math.min(facilities.storage, foodOnHand - dispatch.sent);
   dispatch.freightCapacityUsed = nationalMarketActive(game) ? Math.ceil(dispatch.sent / 2) : 0;
 
-  const withDelivery = (row, id) => received.has(id) ? { ...row, shortage: row.shortage - received.get(id), reliefReceived: received.get(id) } : row;
+  const withDelivery = (row, id) => {
+    const delivery = received.get(id);
+    return delivery ? { ...row, shortage: row.shortage - delivery.covered, reliefReceived: delivery.units,
+      ...(delivery.restocked ? { reserve: row.reserve + delivery.restocked } : {}) } : row;
+  };
   const partners = Object.fromEntries(Object.entries(regional.partners).map(([id, row]) => [id, withDelivery(row, id)]));
   const islandRelief = received.get(westernIslands);
   const nationalMarket = market && { ...market, nodes: market.nodes.map((node) => withDelivery(node, node.id)),
     ...(islandRelief && market.western?.islands ? { western: { ...market.western,
-      islands: { ...market.western.islands, relief: islandRelief, shortage: partners[westernIslands].shortage },
+      islands: { ...market.western.islands, relief: islandRelief.units, shortage: partners[westernIslands].shortage },
     } } : {}),
-    relief: { source: { id: source, name: stateName, market: marketHubs[source] ?? stateName }, routes: [...routes.values()] } };
+    relief: { source: { id: source, name: stateName, market: marketHubs[source] ?? stateName }, routes: [...routes.values()],
+      ...(late ? { distribution: true } : {}) } };
   return { regional: { ...regional, partners, report: { ...report, partners: report.partners.map((row) => withDelivery(row, row.id)),
     ...(nationalMarket ? { nationalMarket } : {}) } }, dispatch };
 }

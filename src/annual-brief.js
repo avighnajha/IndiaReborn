@@ -25,6 +25,8 @@ export function foodStatus(report) {
 
 export function briefHeadline(report, previous) {
   if (report.assam?.earthquakeLoss) return report.shortage ? "Earthquake damage left a food shortfall" : "Assam met food needs after the earthquake";
+  if (report.reserveDispatch?.late && report.reserveDispatch.sent) return report.reserveDispatch.covered
+    ? "Your reserves relieved interstate food shortages" : "Your reserves replenished other regions";
   if (report.reserveDispatch?.sent) return "Your reserves helped cover interstate shortages";
   if (report.foodCrisis) {
     if (report.shortage) return "Drought left food needs unmet";
@@ -87,8 +89,9 @@ function weatherCard(report) {
     lost ? `${units(lost)} lost` : "No net harvest loss",
     recovered ? `${units(recovered)} protected or recovered` : "",
   ].filter(Boolean).join(" · ") : "Recorded harvest includes weather effects.";
+  const weather = report.lateDrought ? "1982 drought" : report.foodCrisis ? "Regional drought" : report.monsoon;
   return `<section class="brief-card brief-weather" data-season="${season}">
-    <h3>Monsoon</h3><strong>${report.foodCrisis ? "Regional drought" : escapeText(report.monsoon)}</strong><p>${details}</p>
+    <h3>Monsoon</h3><strong>${escapeText(weather)}</strong><p>${details}</p>
     ${report.assam?.earthquakeLoss ? `<p>Earthquake damage · ${units(report.assam.earthquakeLoss - report.assam.bankRepairs)} lost</p>` : ""}
   </section>`;
 }
@@ -349,12 +352,12 @@ function changeRows(report, previous) {
     }
   }
   const dispatch = report.reserveDispatch;
-  if (dispatch?.sent) {
+  if (dispatch?.sent && !dispatch.late) {
     const freight = dispatch.freightCapacityUsed ? ` ${dispatch.freightCapacityUsed} spot freight ${dispatch.freightCapacityUsed === 1 ? "slot" : "slots"} reassigned.` : "";
     const destinations = names.format(dispatch.deliveries.map(({ name, units: delivered, remaining }) =>
       `${name} received ${units(delivered)}${remaining ? ` (${units(remaining)} still needed)` : ""}`));
     add("food", "Reserve food shipped", `${destinations}. ${units(dispatch.reserve)} left at home.${freight}`);
-  } else if (dispatch) {
+  } else if (dispatch && !dispatch.late) {
     add("food", "Reserve offer was unused", dispatch.available ? "Routes with spare capacity reached no remaining shortfall." : "Stocks were held for home needs.");
   }
   const crisis = report.foodCrisis;
@@ -560,6 +563,31 @@ function priorityCard(report, allowMap) {
   </section>`;
 }
 
+function distributionCard(report) {
+  const dispatch = report.reserveDispatch;
+  if (!dispatch?.late) return "";
+  const { sent, covered, restocked, reserve, floor, freightCapacityUsed, available, deliveries, dispatchStore } = dispatch;
+  const status = sent ? "Delivered" : "Offer unused";
+  const detail = sent ? [
+    covered ? `${units(covered)} covered shortages` : "",
+    restocked ? `${units(restocked)} rebuilt reserves` : "",
+  ].filter(Boolean).join(" · ") : available
+    ? "Available routes did not reach a region with remaining needs." : "Stocks stayed at home to protect the reserve floor.";
+  const figures = [
+    ["Food sent", sent],
+    ["Home reserve", reserve],
+    ...(freightCapacityUsed ? [["Freight slots used", freightCapacityUsed]] : []),
+  ];
+  return `<section class="brief-priority brief-distribution" data-sector="food" aria-label="Public distribution results">
+    <div class="brief-card-header"><h3>${departmentBadge("food", "Public distribution")}</h3><b>${status}</b></div>
+    <dl>${figures.map(([label, value]) => `<div><dt>${label}</dt><dd>${number.format(value)}</dd></div>`).join("")}</dl>
+    <p>${detail}${sent ? ` · Home reserve floor ${units(floor)}` : ""}${sent && dispatchStore ? ` · Dispatched via ${escapeText(dispatchStore)}` : ""}</p>
+    ${deliveries?.length ? `<ul aria-label="Regions supplied">${deliveries.map(({ name, units: amount, remaining }) =>
+      `<li><span>${escapeText(name)}${remaining ? ` · ${units(remaining)} still needed` : ""}</span><b>${units(amount)}</b></li>`).join("")}</ul>` : ""}
+    ${report.regional?.nationalMarket?.relief ? '<button type="button" class="brief-programme-link" id="brief-distribution-map">View relief routes <span aria-hidden="true">↗</span></button>' : ""}
+  </section>`;
+}
+
 export function briefContent(report, previous, nextDecision, latest = true) {
   const changes = changeRows(report, previous);
   const contract = report.regional?.freightContract;
@@ -568,6 +596,7 @@ export function briefContent(report, previous, nextDecision, latest = true) {
     <div class="brief-year-facts">${weatherCard(report)}${treasuryCard(report, previous)}</div>
   </div>
   ${metricStrip(report, previous)}
+  ${distributionCard(report)}
   ${bulkFreightResultMarkup(contract, { year: report.year, more: true })}
   ${report.regionalMandate ? mandateProgressMarkup(report.regionalMandate, { compact: true, review: latest }) : ""}
   ${priorityCard(report, latest)}

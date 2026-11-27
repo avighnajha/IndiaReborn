@@ -2,7 +2,7 @@ import { bulkFreightOnTurn, competitiveFreight, contractPlayerBid, contractRival
 import { clearNationalMarket, inlandActors, marketConnection, marketHubs, nationalMarketActive, nationalMarketActors, playerMarketId, seedBombayDivision, seedPunjabDivision, seedSouthernTransitions } from "./national-market.js";
 import { marketFunding } from "./market-finance.js";
 import { openingPriceYear, periodAmount } from "./period-prices.js";
-import { marketDroughtLoss } from "./food-crisis.js";
+import { distributionOpening, marketDroughtLoss } from "./food-crisis.js";
 import { bayOpening, bayPorts, islandMarket, settleBayCharter } from "./bay-shipping.js";
 import { goaMarket, westernExportRival, westernIslands, westernShipping } from "./western-shipping.js";
 import { pondicherryMarket, pondicherryOpening, pondicherryRail, pondicherryShipment, pondicherryTerms } from "./coromandel.js";
@@ -463,6 +463,10 @@ export function settleFreight(regional, game, reliefLoads = 0, bulkService = {})
   const bids = report.partners.map((row) => contractRivalBid(row, 0, bulk, capacity ? capacity.get(row.id) ?? 0 : undefined));
   const player = contractPlayerBid({ ...freight, ...bulkService, reliefLoads }, bulk);
   const contract = resolveFreightContract(game, player, bids);
+  if (contract?.bulk && contract.winner?.id === "player" && !contract.payment && reliefLoads &&
+      contractPlayerBid({ ...freight, ...bulkService }, true).capacity >= contract.minimumCapacity) {
+    contract.reason = `Food dispatch used ${reliefLoads} ${reliefLoads === 1 ? "slot" : "slots"} needed for bulk freight.`;
+  }
   const competition = competitiveFreight(game, { ...freight, inland, reliefLoads, contract });
   if (!competition && !contract) return regional;
 
@@ -515,9 +519,9 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const inherited = inheritedSuccessorWorks(game, world, id);
     const roll = yearlyRoll(game, actor.seed);
     const harvest = actor.harvest + Math.floor(roll * 6) - 2;
-    const deltaWeather = id === pondicherryMarket ? yearlyRoll(game, actor.seed + 1925) : null;
-    const seasonalLoss = deltaWeather === null ? (monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0)
-      : deltaWeather < 0.16 ? actor.flood : deltaWeather > 0.75 ? actor.dry : 0;
+    const localWeather = id === pondicherryMarket || game.year === distributionOpening ? yearlyRoll(game, actor.seed + 1925) : null;
+    const seasonalLoss = localWeather === null ? (monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0)
+      : localWeather < 0.16 ? actor.flood : localWeather > 0.75 ? actor.dry : 0;
     const shock = marketDroughtLoss(game, id, harvest, seasonalLoss);
     const development = developmentEffects(prior, game.year, shock);
     const supply = harvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0);

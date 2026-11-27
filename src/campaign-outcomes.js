@@ -23,7 +23,9 @@ export function campaignOutcomes(reports, recent) {
     opening: period(reports.slice(0, recent.length)),
     closing: period(recent),
     unionShipments: reports.reduce((total, report) => total + (report.unionReserve?.shipped ?? 0), 0),
-    droughtReliefSent: reports.reduce((total, report) => total + (report.reserveDispatch?.sent ?? 0), 0),
+    droughtReliefSent: reports.reduce((total, report) => total + (report.reserveDispatch?.late ? 0 : report.reserveDispatch?.sent ?? 0), 0),
+    distributionSent: reports.reduce((total, report) => total + (report.reserveDispatch?.late ? report.reserveDispatch.sent : 0), 0),
+    distributionCovered: reports.reduce((total, report) => total + (report.reserveDispatch?.covered ?? 0), 0),
     islandFood: reports.reduce((total, report) => total + (report.regional?.maritime?.food ?? 0), 0),
     timberLoads: reports.reduce((total, report) => total + (report.regional?.maritime?.timber ?? 0), 0),
     droughtYears: droughtReports.length,
@@ -43,7 +45,7 @@ const count = (value, singular, plural = `${singular}s`) => `${value} ${value ==
 
 export function campaignOutcomesMarkup(reports, recent, secureYears) {
   const outcome = campaignOutcomes(reports, recent);
-  const { opening, closing, unionShipments, droughtReliefSent, islandFood, timberLoads, droughtYears, droughtYearsCovered,
+  const { opening, closing, unionShipments, droughtReliefSent, distributionSent, distributionCovered, islandFood, timberLoads, droughtYears, droughtYearsCovered,
     cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears, bulkLoads, bulkReceipts } = outcome;
   const latest = recent.at(-1);
   const card = (sector, metric, label, facts) => {
@@ -63,6 +65,7 @@ export function campaignOutcomesMarkup(reports, recent, secureYears) {
         droughtYears && `${droughtYearsCovered} of ${droughtYears} drought years food-secure in 1965–66`,
         unionShipments && `${count(unionShipments, "food unit")} supplied to the Union`,
         droughtReliefSent && `${count(droughtReliefSent, "food unit")} sent to regions with drought-era shortages`,
+        distributionSent && `${count(distributionSent, "food unit")} distributed after 1981 · ${distributionCovered} covered shortfalls`,
         islandFood && `${count(islandFood, "food unit")} supplied to Port Blair`,
       ])}
       ${card("education", "skills", "Skills in service", [

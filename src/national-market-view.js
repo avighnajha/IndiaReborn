@@ -330,7 +330,7 @@ export function nationalMarketMarkup(result) {
       <div class="market-shipments">
         ${charterRoutes.length ? `<section class="market-relief" data-sector="${charter.id}"><h3>Port Blair charter</h3>${routeRows(charterRoutes)}
           <p>${charter.islandShortage ? `${units(charter.islandShortage)} still needed on the islands` : "Island food needs covered"} · ${units(charter.islandReserve)} in island reserves</p></section>` : ""}
-        ${reliefRoutes.length ? `<section class="market-relief" data-sector="food"><h3>Relief from your reserves</h3>${routeRows(reliefRoutes)}</section>` : ""}
+        ${reliefRoutes.length ? `<section class="market-relief" data-sector="food"><h3>${result.relief.distribution ? "Public distribution shipments" : "Relief from your reserves"}</h3>${routeRows(reliefRoutes)}</section>` : ""}
         <h3>Commercial shipments in ${quantity(result.year)}</h3>
         ${result.chapter ? `<p class="market-chapter">${escapeText(result.chapter)}</p>` : ""}
         ${active.length ? routeRows(active) : "<p>Domestic routes carried no food this year.</p>"}

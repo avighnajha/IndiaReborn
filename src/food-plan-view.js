@@ -1,6 +1,6 @@
 import { departmentBadge } from "./department-presentation.js";
 import { Fiscal } from "./fiscal.js";
-import { crisisSource, dispatchSource } from "./food-crisis.js";
+import { crisisSource, dispatchSource, distributionSource } from "./food-crisis.js";
 import "./food-plan-view.css";
 
 const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -82,6 +82,54 @@ function dispatchOptions({ limit, floor, pledged, orderPlaced }, standard) {
   </section>`;
 }
 
+function distributionForecast(title, result, selected) {
+  const figures = [
+    ["Reserves at year end", result.reserve],
+    ["Food sent", result.sent ?? 0],
+    ...(result.bulkLoads === undefined ? [] : [["Bulk loads", result.bulkLoads]]),
+    ...(result.spotLoads === undefined ? [] : [["Spot loads", result.spotLoads]]),
+  ];
+  const deliveries = result.deliveries ?? [];
+  return `<article class="distribution-forecast food-plan-case" data-selected="${selected}">
+    <header><h4>${title}</h4>${selected ? "<strong>Selected</strong>" : ""}</header>
+    <dl class="food-plan-sources">${figures.map(([label, value]) => `<div><dt>${label}</dt><dd>${number.format(value)}</dd></div>`).join("")}</dl>
+    ${result.shortage ? `<p class="food-plan-case-note">${units(result.shortage)} still needed at home.</p>` : ""}
+    ${result.sent ? `<p class="food-plan-case-note">${[
+      result.covered && `${units(result.covered)} to cover shortfalls`,
+      result.restocked && `${units(result.restocked)} to rebuild reserves`,
+      result.freightCapacityUsed && `${result.freightCapacityUsed} freight ${result.freightCapacityUsed === 1 ? "slot" : "slots"} used`,
+    ].filter(Boolean).join(" · ")}</p>` : ""}
+    ${deliveries.length ? `<ul aria-label="Projected deliveries">${deliveries.map(({ name, units: amount }) =>
+      `<li>${escapeText(name)} <b>${units(amount)}</b></li>`).join("")}</ul>` : ""}
+  </article>`;
+}
+
+function distributionOptions({ limit, floor, pledged, network, comparison, orderPlaced, dispatchStore }, standard) {
+  const eligible = Boolean(limit && !orderPlaced);
+  const offer = comparison?.shared;
+  const noShipment = eligible && offer && !offer.sent;
+  const status = pledged ? "Offer filed" : "Keeping reserves";
+  const note = !eligible ? "A dispatch needs connected stores and food above the home reserve floor."
+    : noShipment ? "No shipments expected under this forecast."
+      : standard ? "Every two food units shipped use one freight slot, rounded up." : "Shipments use spare capacity on nearby routes.";
+  return `<section class="distribution-plan food-plan-case" aria-labelledby="reserve-dispatch-title">
+    <header><h3 id="reserve-dispatch-title">Public distribution</h3><strong>${status}</strong></header>
+    <p class="food-plan-note">Keep at least ${units(floor)} at home · ${eligible ? `Offer up to ${units(limit)}` : "Offer unavailable"}</p>
+    ${comparison?.held ? `<div class="distribution-outlook" aria-label="Year-end forecast">
+      <p class="food-plan-note">${comparison.scenario ? `${escapeText(comparison.scenario)} · ` : ""}Estimated year-end results</p>
+      <div class="distribution-comparison">
+        ${distributionForecast("Hold reserves", comparison.held, !pledged)}
+        ${offer && (eligible || pledged) ? distributionForecast("Offer food", offer, pledged) : ""}
+      </div>
+    </div>` : ""}
+    <div class="dispatch-actions"><p class="food-plan-note">${note}</p>
+      <button type="button" data-reserve-dispatch aria-pressed="${pledged}"${!pledged && !eligible ? " disabled" : ""}>${pledged ? "Withdraw offer" : "Offer food"}</button></div>
+    <p class="food-plan-case-note">${network ? "Your funded Food & Water priority and cooperative depot can ship harvest surplus and rebuild other regions’ reserves."
+      : "Fund Food & Water, open a cooperative depot and link a store to ship harvest surplus and rebuild other regions’ reserves."}${dispatchStore ? ` Dispatch via ${escapeText(dispatchStore)}.` : ""}</p>
+    <a class="crisis-reference" href="${distributionSource}" target="_blank" rel="noopener">Historical reference · Economic Survey 1982–83</a>
+  </section>`;
+}
+
 export function foodPlanMarkup({ outlook, demand, reserve, cases, cash, authorization, crisis, dispatch }, standard) {
   return `<section class="food-plan" data-sector="food" aria-label="Monsoon food scenarios">
     <header class="food-plan-outlook">
@@ -89,10 +137,11 @@ export function foodPlanMarkup({ outlook, demand, reserve, cases, cash, authoriz
       <strong>${escapeText(outlook)}</strong>
       <p><b>${units(demand)}</b> needed <span aria-hidden="true">·</span> <b>${units(reserve)}</b> in state reserves</p>
     </header>
+    ${dispatch?.late ? distributionOptions(dispatch, standard) : ""}
     <div class="food-plan-cases">${cases.map((scenario) => scenarioCard(scenario, demand, reserve)).join("")}</div>
     <p class="food-plan-note">Each scenario includes works due this year. Gaps are shown before shared supplies and purchases.</p>
     ${crisis ? crisisOptions(crisis, cases.at(-1), reserve) : ""}
-    ${dispatch ? dispatchOptions(dispatch, standard) : ""}
+    ${dispatch && !dispatch.late ? dispatchOptions(dispatch, standard) : ""}
     <div class="food-plan-purchases">
       <p><b>${Fiscal.lakh(cash)}</b> in treasury${authorization ? ` · ${Fiscal.lakh(authorization)} purchase cap` : ""}</p>
       <p>Local market purchases cost ₹1–2 lakh per unit. The treasury pays only for food bought.</p>

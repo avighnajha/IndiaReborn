@@ -185,7 +185,7 @@ const plans = {
     department: "food", tier: 3, kind: "foodDepot",
     pitch: "Build a larger reserve so a good harvest can carry the region through a poor one.",
     effect: "Stores 18 more units of food between years.",
-    next: "The completed depot unlocks a regional water network.",
+    next: "Unlocks a regional water network. From 1982, fund Food & Water and use a linked store to distribute surplus.",
   },
   foodWaterNetwork: {
     department: "food", tier: 4, kind: "waterNetwork", requires: "foodDepot",

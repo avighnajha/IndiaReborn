@@ -13,8 +13,8 @@ import { adoptCabinetPlan, cabinetPlan, resolveCabinetPlan } from "./cabinet-pla
 import { adoptRegionalMandate, recordRegionalMandate, regionalMandate } from "./regional-mandate.js";
 import { campaignPriceYear, openingPriceYear, periodAmount, priceBasis } from "./period-prices.js";
 import { partnershipActivity } from "./partnerships.js";
-import { crisisDelivery, crisisSeverity } from "./food-crisis.js";
-import { dispatchOffer, dispatchWindow, settleReserveDispatch } from "./reserve-dispatch.js";
+import { crisisDelivery, crisisSeverity, distributionOpening, lateDroughtSeverity } from "./food-crisis.js";
+import { dispatchOffer, dispatchWindow, distributionWindow, settleReserveDispatch } from "./reserve-dispatch.js";
 import { acceptBayCharter, bayOpening, bayShippingPlan } from "./bay-shipping.js";
 import { playerMarketId } from "./national-market.js";
 import { sharePondicherryReserves } from "./coromandel.js";
@@ -404,8 +404,13 @@ export const Campaign = (() => {
     return World.key === "central" && game.year === 1957;
   }
 
+  function droughtSeverity(game) {
+    const local = crisisSeverity(game, World.key);
+    return local || (game.journey && game.year === distributionOpening ? lateDroughtSeverity(game, playerMarketId(game, World)) : 0);
+  }
+
   function monsoonWarning(game) {
-    if (centralDrought(game) || crisisSeverity(game, World.key)) return "Dry monsoon";
+    if (centralDrought(game) || droughtSeverity(game)) return "Dry monsoon";
     const forecast = yearlyRoll(game, 17) + (yearlyRoll(game, 382) - 0.5) * 0.34;
     if (forecast < 0.28) return "Severe flood";
     if (forecast > 0.77) return "Dry monsoon";
@@ -413,7 +418,7 @@ export const Campaign = (() => {
   }
 
   function outlook(game) {
-    if (crisisSeverity(game, World.key)) return "Regional drought";
+    if (droughtSeverity(game)) return "Regional drought";
     const warning = monsoonWarning(game);
     return warning === "Severe flood" ? "Flood risk elevated" : warning === "Dry monsoon" ? "Dry-season risk elevated" : "No monsoon warning";
   }
@@ -490,7 +495,7 @@ export const Campaign = (() => {
       (jurisdiction?.centralIntegrated ? 5 : 0) + (jurisdiction?.centralReorganized ? 9 : 0);
     const assamDepartures = (jurisdiction?.assamPartition ? 3 : 0) + (jurisdiction?.assamNagaHills ? 2 : 0) + (jurisdiction?.assamReorganized ? 5 : 0);
     const normalHarvest = hasCouncil ? 25 : expanded ? 24 : economy.harvest + additions - assamDepartures;
-    const severeDry = monsoon === "Dry monsoon" ? crisisSeverity(game, World.key) : 0;
+    const severeDry = monsoon === "Dry monsoon" ? droughtSeverity(game) : 0;
     const weatherLoss = monsoon === "Severe flood" ? (expanded ? 8 : economy.floodLoss)
       : severeDry ? Math.round(normalHarvest * severeDry)
         : monsoon === "Dry monsoon" ? Math.min(economy.dryLoss ?? 5, normalHarvest) : 0;
@@ -573,7 +578,7 @@ export const Campaign = (() => {
     const charter = game.journey?.training ? training(game) : null;
     const operating = charter?.status === "operating" ? charter.options.find(({ selected }) => selected) : null;
     const priority = resolveCabinetPlan(game, finance(game), cabinetContext(game, assets, operating?.upkeep ?? 0));
-    const severeDry = crisisSeverity(game, World.key);
+    const severeDry = droughtSeverity(game);
     const warning = monsoonWarning(game);
     const seasons = [["Typical monsoon", severeDry ? "Typical monsoon reference" : "Typical monsoon"]];
     if (warning) seasons.push([warning, severeDry ? "Drought outlook" : warning === "Severe flood" ? "If flooding occurs" : "If the monsoon is dry"]);
@@ -589,13 +594,14 @@ export const Campaign = (() => {
     });
     const authorization = game.relief?.year === game.year ? game.relief.budget : 0;
     const network = dispatchWindow(game) ? access(state) : null;
-    const dispatch = network ? dispatchOffer(game, demand, reserveFacilities(state, network)) : null;
-    const crisis = severeDry ? droughtDelivery(game, state, { ...scenarios[1], ...network, charterUpkeep: operating?.upkeep ?? 0, priorityCost: priority.report?.spent ?? 0 }) : null;
+    const foodFunded = priority.report?.id === "food" && priority.report.status === "funded";
+    const dispatch = network ? dispatchOffer(game, demand, reserveFacilities(state, network, foodFunded)) : null;
+    const crisis = crisisSeverity(game, World.key) ? droughtDelivery(game, state, { ...scenarios[1], ...network, charterUpkeep: operating?.upkeep ?? 0, priorityCost: priority.report?.spent ?? 0 }) : null;
     return { outlook: outlook(game), demand, reserve: game.reserve, cases,
       cash: Math.max(0, game.cash - (operating?.upkeep ?? 0) - (priority.report?.spent ?? 0)), authorization, crisis, dispatch };
   }
 
-  function reserveFacilities(state, { reached, towns }) {
+  function reserveFacilities(state, { reached, towns }, foodFunded = false) {
     const granaries = active(state, "granary");
     const depots = active(state, "foodDepot");
     const connected = (assets) => assets.filter(({ hex }) => isConnected(reached, hex));
@@ -606,7 +612,8 @@ export const Campaign = (() => {
       return tile.town?.name ?? World.districts[tile.district];
     }))];
     return { capacity: Math.max(0, Math.min(6, towns - 1, localStores.length * 4 + cooperatives.length * 6)),
-      storage: 5 + granaries.length * 10 + depots.length * 18, depotNames };
+      storage: 5 + granaries.length * 10 + depots.length * 18, depotNames,
+      distribution: foodFunded && depots.length > 0 && depotNames.length > 0 };
   }
 
   function unionReserve(game) {
@@ -635,6 +642,26 @@ export const Campaign = (() => {
   }
 
   function advance(game) {
+    return resolveYear(game);
+  }
+
+  function distributionComparison(game, dispatch) {
+    if (!dispatch?.late || !dispatch.limit) return null;
+    const scenario = monsoonWarning(game) ?? "Typical monsoon";
+    const { reserveDispatch, ...planning } = game;
+    const held = resolveYear(planning, scenario);
+    const shared = resolveYear({ ...planning, reserveDispatch: { year: game.year } }, scenario);
+    if (held.year === game.year || shared.year === game.year) return null;
+    function summary({ regional, reserve, shortage, reserveDispatch }) {
+      const contract = regional?.freightContract;
+      return { reserve, shortage, spotLoads: regional?.freightCompetition?.player.loads,
+        ...(contract?.bulk && contract.winner?.id === "player" ? { bulkLoads: contract.loadsDelivered } : {}),
+        ...(reserveDispatch ?? {}) };
+    }
+    return { scenario, held: summary(held.reports.at(-1)), shared: summary(shared.reports.at(-1)) };
+  }
+
+  function resolveYear(game, scenario) {
     if (game.year > campaignEnd(game) || nextDecision(game) || basinFloodDecision(game)) return game;
     const charter = game.journey?.training ? training(game) : null;
     const service = charter?.options.find(({ selected }) => selected);
@@ -649,13 +676,14 @@ export const Campaign = (() => {
     const priorityCost = priority.report?.spent ?? 0;
     const { reached, towns } = access(state);
     const roll = yearlyRoll(game, 17);
-    const severeDry = crisisSeverity(game, World.key);
-    const monsoon = centralDrought(game) || severeDry ? "Dry monsoon" : roll < 0.2 ? "Severe flood" : roll > 0.83 ? "Dry monsoon" : "Typical monsoon";
+    const dry = droughtSeverity(game);
+    const monsoon = centralDrought(game) || dry ? "Dry monsoon"
+      : scenario ?? (roll < 0.2 ? "Severe flood" : roll > 0.83 ? "Dry monsoon" : "Typical monsoon");
     const successor = successorRegion(game);
     const { powerCommitment, allocation, sharedPower, powerIrrigation, industrialPower } = powerEffects(game, state, successor);
     const { harvest, demand, baseline, farms, expanded, extraFood, extensionRecovery, waterRecovery,
       researchFood, waterYield, foodEffects, irrigationSites, earthquakeLoss, bankRepairs, priorityFood, priorityRecovery } = harvestFor(game, state, monsoon, { successor, powerIrrigation, operating, priority: priority.effects });
-    const crisis = severeDry ? droughtDelivery(game, state, { harvest, demand, towns, reached, charterUpkeep, priorityCost }) : null;
+    const crisis = crisisSeverity(game, World.key) ? droughtDelivery(game, state, { harvest, demand, towns, reached, charterUpkeep, priorityCost }) : null;
     const crisisFood = crisis?.delivered ?? 0;
     const crisisCost = crisis?.cost ?? 0;
     const colleges = active(state, "college").length;
@@ -773,8 +801,9 @@ export const Campaign = (() => {
     const maritime = domestic?.report.maritime;
     let dispatch = null;
     if (domestic && reserveDispatch?.year === game.year && dispatchWindow(game)) {
+      const foodFunded = priority.report?.id === "food" && priority.report.status === "funded";
       const result = settleReserveDispatch(domestic, game, World, { stateName: campaignName(game), demand, towns, fromReserve,
-        facilities: reserveFacilities(state, { reached, towns }), foodOnHand: foodOnHand - (maritime?.food ?? 0), shortage });
+        facilities: reserveFacilities(state, { reached, towns }, foodFunded), foodOnHand: foodOnHand - (maritime?.food ?? 0), shortage });
       domestic = result.regional;
       dispatch = result.dispatch;
     }
@@ -829,6 +858,7 @@ export const Campaign = (() => {
       const { ordered, delivered, cost, freightCapacityUsed } = crisis;
       report.foodCrisis = { ordered, delivered, cost, freightCapacityUsed };
     }
+    if (game.year === distributionOpening && dry) report.lateDrought = { loss: Math.round(foodEffects.normalHarvest * dry) };
     if (dispatch) report.reserveDispatch = dispatch;
     const partnership = partnershipRecord(game);
     if (partnership) {
@@ -958,7 +988,7 @@ export const Campaign = (() => {
 
   return {
     saveKey, projects, policies, newGame, active, access, isConnected, cost, buildStatus, build, roadForecast, nextDecision, decide, outlook, finance, localReceipts, earnedReceipts, reportFunding, grantWindow, grantOffers, acceptGrant, advance, score, load, save, compactSaves,
-    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, orderCrisisFood, pledgeReserve, validSave, freightContract, foodPlan, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority, bayShipping, signBayShipping,
+    training, adoptTraining, technicalIntake, acceptTechnicalIntake, workshopSkillBonus, authorizeRelief, orderCrisisFood, pledgeReserve, validSave, freightContract, foodPlan, distributionComparison, unionReserve, acceptUnionReserve, cabinetPriority, chooseCabinetPriority, bayShipping, signBayShipping,
     regionalMandate: (game) => regionalMandate(game, targets(game).output, game.journey?.mandate && {
       food: active(game, "waterNetwork").length,
       education: active(game, "technicalInstitute").length + active(game, "agriculturalInstitute").length,

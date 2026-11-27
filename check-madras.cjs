@@ -3,6 +3,75 @@ const test = require("node:test");
 
 globalThis.location = { search: "?region=madras" };
 
+test("Andhra Pradesh can distribute harvest surplus and replenish distant reserves in the 1982 drought", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { approveProgramme, basinFloodDecision, respondToBasinFlood } = await import("./src/programmes.js");
+  const { decodeSave, encodeSave } = await import("./src/save-codec.js");
+  const { briefContent } = await import("./src/annual-brief.js");
+  const { lateDroughtSeverity } = await import("./src/food-crisis.js");
+  const programme = new Map([[1946, "food"], [1948, "trade"], [1956, "krishna"], [1959, "ap_foodDepot"],
+    [1961, "ap_foodWaterNetwork"], [1967, "ap_nagarjunaCanals"]]);
+  function advance(game) {
+    const next = Campaign.advance(game);
+    assert.equal(next.year, game.year + 1);
+    return next;
+  }
+
+  let game = Campaign.newGame(1946, { end: 1985, preset: "standard" });
+  while (game.year < 1981) {
+    for (let decision; (decision = Campaign.nextDecision(game));) {
+      const choice = ["andhra", ...Object.keys(decision.choices)].find((id) => decision.choices[id] && Campaign.decide(game, id) !== game);
+      assert.ok(choice, decision.title);
+      game = Campaign.decide(game, choice);
+    }
+    if (basinFloodDecision(game)) game = respondToBasinFlood(game, "delay");
+    if (programme.has(game.year)) {
+      const funded = approveProgramme(game, programme.get(game.year));
+      assert.notEqual(funded, game, programme.get(game.year));
+      game = funded;
+    }
+    game = advance(game);
+  }
+  assert.equal(Campaign.foodPlan(game).dispatch, null);
+  const normal = advance(game);
+  const prepared = advance(Campaign.chooseCabinetPriority(game, "food"));
+  assert.equal(Campaign.foodPlan(normal).dispatch.network, false);
+  assert.equal(Campaign.foodPlan(prepared).dispatch.network, true);
+  assert.equal(lateDroughtSeverity(prepared, "orissa"), 0);
+  assert.ok(lateDroughtSeverity(prepared, "madras") > lateDroughtSeverity(prepared, "andhra"));
+  const stored = encodeSave(prepared);
+  const forecast = Campaign.distributionComparison(prepared, Campaign.foodPlan(prepared).dispatch);
+  assert.equal(encodeSave(prepared), stored, "The comparison does not mutate the current year or its partners");
+  const offer = Campaign.pledgeReserve(prepared, true);
+  assert.deepEqual(Campaign.pledgeReserve(offer, false), prepared);
+  const held = advance(prepared);
+  const sent = advance(decodeSave(encodeSave(offer)));
+  const report = sent.reports.at(-1);
+  const dispatch = report.reserveDispatch;
+  const reference = held.reports.at(-1);
+  assert.equal(report.foodCrisis, undefined, "The 1960s Union ordering mechanism does not reopen");
+  assert.ok(report.lateDrought.loss > 0);
+  assert.equal(dispatch.sent, forecast.shared.sent);
+  assert.ok(dispatch.covered > 0 && dispatch.restocked > 0);
+  assert.equal(dispatch.sent, dispatch.covered + dispatch.restocked);
+  assert.equal(report.shortage, reference.shortage);
+  assert.ok(report.reserve >= dispatch.floor);
+  assert.equal(report.reserve, forecast.shared.reserve);
+  assert.ok(report.reserve <= reference.reserve);
+  assert.equal(report.regional.freightCompetition.player.capacity,
+    reference.regional.freightCompetition.player.capacity - dispatch.freightCapacityUsed);
+  for (const delivery of dispatch.deliveries) {
+    const before = held.journey.partners[delivery.id];
+    const after = sent.journey.partners[delivery.id];
+    assert.equal(after.reserve, before.reserve + delivery.restocked);
+    assert.equal(after.shortage, before.shortage - delivery.covered);
+  }
+  const markup = briefContent(report, reference);
+  assert.match(markup, /Public distribution results/);
+  assert.match(markup, /id="brief-distribution-map"/);
+  assert.equal(sent.reserveDispatch, undefined, "The cabinet reviews its offer each year");
+});
+
 test("the Pondicherry compact shares the existing railway and stops charging after the term", async () => {
   const { Campaign } = await import("./src/campaign.js");
   const { World } = await import("./src/scenario.js");
