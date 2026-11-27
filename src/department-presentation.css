@@ -1,6 +1,7 @@
 [data-sector="education"] { --sector-accent: #8acbd5; }
 [data-sector="food"] { --sector-accent: #b9cc79; }
 [data-sector="trade"] { --sector-accent: #f0bf78; }
+.journey-choice[data-sector] { border-block-start: 3px solid var(--sector-accent); }
 
 .department-badge {
   display: inline-flex;

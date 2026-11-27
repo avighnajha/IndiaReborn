@@ -36,4 +36,10 @@ marketFiscalReferences.lakshadweep = [
   plan("Laccadive, Minicoy and Amindivi Islands", 1972, 45, plan1972),
   plan("Lakshadweep", 1978, 244, plan1978), plan("Lakshadweep", 1985, 765, plan1985),
 ];
+marketFiscalReferences.pondicherry = [
+  { ...plan("Pondicherry", 1955, 73.96, "https://pandr.py.gov.in/sites/default/files/Sectoral%20Document%202019-2020.pdf#page=8"), status: "Annual Plan outlay recorded by Pondicherry's Planning Department" },
+  plan("Pondicherry", 1968, 218, "https://www.publicationsdivision.nic.in/journals/Journalarchives/Yojana/Yojana-English/1968/August/Yojana_1968_August_pdf.pdf"),
+  plan("Pondicherry", 1970, 264, "https://www.publicationsdivision.nic.in/journals/Journalarchives/Yojana/Yojana-English/1970/September/Yojana_1970_September_pdf.pdf"),
+  plan("Pondicherry", 1972, 348.48, plan1972), plan("Pondicherry", 1978, 1090, plan1978), plan("Pondicherry", 1985, 3300, plan1985),
+];
 marketFiscalReferences.mizoram.unshift(plan("Mizoram (Union territory)", 1972, 437, plan1972));

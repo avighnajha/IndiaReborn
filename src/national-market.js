@@ -1,10 +1,12 @@
 import { bayOpening, bayPorts, islandMarket } from "./bay-shipping.js";
 import { goaMarket, islandsOpening, westernIslands, westernLinkMarkets, westernLinks, westernShipping } from "./western-shipping.js";
+import { pondicherryMarket, pondicherryRail } from "./coromandel.js";
 
 export const inlandActors = {
   [islandMarket]: { name: "Andaman and Nicobar Islands", harvest: 4, demand: 8, flood: 1, dry: 1, seed: 159 },
   [goaMarket]: { name: "Goa, Daman and Diu", harvest: 5, demand: 8, flood: 2, dry: 2, seed: 212 },
   [westernIslands]: { name: "Laccadive, Minicoy and Amindivi Islands", later: "Lakshadweep", renamed: 1973, harvest: 3, demand: 6, flood: 1, dry: 1, seed: 1029 },
+  [pondicherryMarket]: { name: "Pondicherry", harvest: 8, demand: 8, flood: 3, dry: 2, seed: 219 },
   delhi: { name: "Delhi", harvest: 5, demand: 8, flood: 1, dry: 2, seed: 196 },
   punjab: { name: "Punjab", harvest: 12, demand: 8, flood: 2, dry: 3, seed: 623 },
   haryana: { name: "Haryana", harvest: 10, demand: 8, flood: 2, dry: 4, seed: 726 },
@@ -35,9 +37,14 @@ export const marketHubs = {
   himachal: "Mandi", jammu: "Jammu", sikkim: "Gangtok",
   [islandMarket]: "Port Blair",
   [goaMarket]: "Mormugao", [westernIslands]: "Kavaratti",
+  [pondicherryMarket]: "Pondicherry",
 };
 
 export function marketConnection(id, year) {
+  if (id === pondicherryMarket) {
+    const rail = pondicherryRail(year);
+    return rail ? { routeCapacity: rail.foodCapacity, mode: "rail" } : {};
+  }
   const starts = { manipur: 1950, tripura: 1955, arunachal: 1972, himachal: 1948, jammu: 1949, sikkim: 1975 };
   if (!(year >= starts[id])) return {};
   if (id === "himachal" && year >= 1958) return { routeCapacity: 2, mode: "road" };
@@ -78,7 +85,9 @@ export function domesticLinks(year, western = westernShipping(year)) {
   if (year >= 1949) { const { routeCapacity, mode } = marketConnection("jammu", year); northernMarkets.push(["punjab", "jammu", routeCapacity, mode]); }
   if (year >= 1975) northernMarkets.push(["bengal", "sikkim", 1, "road"]);
   const sea = year >= bayOpening ? Object.entries(bayPorts).map(([port, { capacity }]) => [port, islandMarket, capacity, "sea"]) : [];
-  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets, ...sea, ...westernLinks(year, western)].map(([from, to, capacity, mode]) => {
+  const coromandel = pondicherryRail(year);
+  const enclaveRail = coromandel ? [["madras", pondicherryMarket, coromandel.foodCapacity, "rail"]] : [];
+  return [...corridors, ...west, ...north, ...south, coast, ...assam, ...hyderabad, ...central, ...northernMarkets, ...sea, ...westernLinks(year, western), ...enclaveRail].map(([from, to, capacity, mode]) => {
     const southernPool = year >= 1965 && (from === "andhra" || from === "madras");
     const northernDispatch = year >= 1968 && (from === "punjab" || from === "haryana");
     return [from, to, capacity + Number(!mode && (southernPool || northernDispatch)), ...(mode ? [mode] : [])];
@@ -131,11 +140,11 @@ const marketChapters = {
   1949: "Jammu enters the network through the Pathankot road opened the previous year.",
   1950: "Assam reconnects by rail. Imphal gains a road link, Tripura opens a separate account, and Port Blair enters with two sea routes.",
   1953: "Andhra opens a separate market after the division of Madras.",
-  1955: "The completed Assam–Agartala road connects Tripura’s market. Road freight remains limited.",
+  1955: "Pondicherry joins the market via the Villupuram railway. Tripura’s completed Assam road connects Agartala.",
   1956: "Andhra Pradesh and Kerala open reorganized accounts. The Laccadive, Minicoy and Amindivi Islands become a Union territory.",
   1958: "Calicut opens seasonal island shipping. The Mandi–Kullu transport corporation expands Himachal road access.",
   1960: "Bombay’s markets divide between Maharashtra and Gujarat.",
-  1962: "Goa, Daman and Diu enter the domestic market through Mormugao’s existing inland railway.",
+  1962: "Pondicherry’s legal transfer creates a Union territory. Goa, Daman and Diu enter the domestic market via Mormugao.",
   1963: "Nagaland becomes a state. Calicut’s island service adds a second chartered ship. Panjim links to Bombay by steamer.",
   1964: "The Mormugao Port Trust takes over the existing port. The Union territory keeps a separate public account.",
   1966: "Haryana opens a separate market from Punjab.",
@@ -183,9 +192,10 @@ export function clearNationalMarket(game, partners, actors, localIds, western = 
   const links = domesticLinks(game.year, western).filter(([from, to]) => nodes[from] && nodes[to])
     .map(([from, to, capacity, mode]) => ({ from, to, capacity, units: 0, ...(mode ? { mode } : {}) }));
 
-  const land = links.filter(({ from, to, mode }) => mode !== "sea" && from !== goaMarket && to !== goaMarket);
+  const isEstablishedLand = ({ from, to, mode }) => mode !== "sea" && ![goaMarket, pondicherryMarket].includes(from) && ![goaMarket, pondicherryMarket].includes(to);
+  const land = links.filter(isEstablishedLand);
   const first = (game.year - 1946) % Math.max(1, land.length);
-  const rotation = [...land.slice(first), ...land.slice(0, first), ...links.filter(({ from, to, mode }) => mode === "sea" || from === goaMarket || to === goaMarket)];
+  const rotation = [...land.slice(first), ...land.slice(0, first), ...links.filter((link) => !isEstablishedLand(link))];
   const demand = (node, restock) => restock ? Math.max(0, 5 - node.reserve) : node.shortage;
   for (const restock of [false, true]) {
     // A year-based rotation gives equal claims a changing priority.
@@ -213,6 +223,8 @@ export function clearNationalMarket(game, partners, actors, localIds, western = 
   let localUnits = 0;
   for (const link of links) {
     Object.assign(link, westernLinkMarkets(link.from, link.to));
+    if (link.from === pondicherryMarket) link.toMarket = "Villupuram";
+    if (link.to === pondicherryMarket) link.fromMarket = "Villupuram";
     if (!link.units) continue;
     flows[link.from] ??= { bought: 0, sold: 0 };
     flows[link.to] ??= { bought: 0, sold: 0 };

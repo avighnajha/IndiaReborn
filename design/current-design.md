@@ -140,6 +140,8 @@ The player begins in composite Madras Province and chooses which side to govern 
 
 Each successor can choose an irrigation or industrial power commitment. Madras compares Cauvery drainage and pumped irrigation with Neyveli power for connected workshops. Andhra compares the Krishna and Godavari deltas with repair workshops and power in Rayalaseema. The effect persists once the relevant power connection opens and is attributed in the annual brief. [Madras and Andhra sources](madras-sources.md)
 
+The retained Madras cabinet can negotiate with Pondicherry after the administrative transfer in 1954. Its two-year railway decision trades access to each side's food reserves against receipts from reserving the same line for textile freight. The chronicle distinguishes administrative handover from legal cession. [Pondicherry rail chapter](national-coverage.md#pondicherry-and-the-villupuram-railway)
+
 ### Domestic markets
 
 In Standard politics, linked governments buy food from each other after settling the player's direct trade. Shortages take priority over restocking. Routes and budgets cap shipments, and buyers and sellers carry the resulting cash and reserves into later years. A busy route through a trading partner adds to the following year's freight orders. The player can compete for those orders with connected workshops and terminals. [Interregional model and sources](interregional-model.md)

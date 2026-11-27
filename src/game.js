@@ -24,6 +24,7 @@ import { dispatchWindow } from "./reserve-dispatch.js";
 import { bayDeadline, bayOpening } from "./bay-shipping.js";
 import { bayShippingMarkup } from "./bay-shipping-view.js";
 import { westernExportOpening, westernExportRival } from "./western-shipping.js";
+import { pondicherryCession, pondicherryDecisionId, pondicherryMarket, pondicherryOpening } from "./coromandel.js";
 import { reserveStart, reserveStatus, reserveWindow } from "./union-reserve.js";
 import { unionReserveMarkup } from "./union-reserve-view.js";
 import { intakeDeadline, intakeStatus } from "./technical-intake.js";
@@ -897,7 +898,9 @@ function render() {
   }
   const exposure = ["Low", "Moderate", "High", "Severe"][tile.flood];
   const owner = game.owners[selected];
-  const ownerName = owner === World.key ? `${name} administration` : World.owners[owner];
+  const ownerName = owner === World.key ? `${name} administration` : owner === pondicherryMarket
+    ? (game.year < pondicherryOpening ? "French administration" : game.year < pondicherryCession ? "Pondicherry · Indian administration" : "Pondicherry · Union territory")
+    : World.owners[owner];
   const elevation = ReliefMap.elevation(selected);
   byId("site-details").innerHTML = `<p class="site-location">${World.districts[tile.district]} <span>·</span> ${ownerName}</p>
     <div class="site-facts"><div><small>Terrain</small><b>${terrain.name}</b></div><div><small>Flood risk</small><b>${exposure}</b></div><div><small>Market</small><b>${Campaign.isConnected(reached, selected) ? "In reach" : "Isolated"}</b></div></div>
@@ -1222,8 +1225,9 @@ function showReport(index = game.reports.length - 1) {
   const report = game.reports[index];
   const market = report.regional?.nationalMarket;
   const westernMilestone = market?.western && [1958, 1962, 1970, 1979, 1982].includes(report.year);
+  const coromandelMilestone = market?.coromandel && (market.coromandel.compact || report.year === pondicherryOpening || report.year === pondicherryCession);
   const marketLabel = report.reserveDispatch?.sent ? "View relief routes" : market?.charter ? "View Port Blair route"
-    : market?.western?.rival || westernMilestone ? "View western routes" : "Domestic market";
+    : coromandelMilestone ? "View Pondicherry route" : market?.western?.rival || westernMilestone ? "View western routes" : "Domestic market";
   const latest = index === game.reports.length - 1;
   const done = game.year > campaignEnd(game);
   const decision = latest && !done ? nextBriefDecision(report) : null;
@@ -1269,6 +1273,12 @@ function historyRows(records) {
 async function showChronicle() {
   const { nationalAtlas } = await import("./founding-atlas.js");
   const events = Object.values(game.journey.events);
+  if (World.key === "madras" && game.year >= pondicherryOpening) {
+    events.push({ year: 1954, title: "Transfer of Pondicherry", label: "Indian administration begins", effect: "On 1 November, India takes over administration of Pondicherry, Karaikal, Mahé and Yanam." });
+    if (game.year > pondicherryCession) events.push({ year: pondicherryCession, title: "Legal cession", label: "Pondicherry becomes a Union territory",
+      effect: "On 16 August, the treaty takes effect. Pondicherry keeps its administration, market and works." });
+    events.sort((a, b) => a.year - b.year);
+  }
   const division = game.journey.jurisdiction?.punjabSuccessor;
   const south = game.journey.jurisdiction?.madrasSuccessor;
   const northeast = game.journey.jurisdiction?.assamReorganized ? 1972 : game.journey.jurisdiction?.assamNagaland ? 1963 : 0;
@@ -1437,9 +1447,9 @@ function showResults() {
 }
 
 function showDecisionCards(kicker, title, description, options, choose, source) {
-  const cards = options.map(({ key, label, art, effects, price, transfer }) => `
-    <section class="journey-choice" data-option="${key}">
-      ${art ?? ""}<h3>${label}</h3>
+  const cards = options.map(({ key, label, art, effects, price, transfer, sector }) => `
+    <section class="journey-choice" data-option="${key}"${sector ? ` data-sector="${sector}"` : ""}>
+      ${art ?? ""}${sector ? departmentBadge(sector) : ""}<h3>${label}</h3>
       <p class="decision-cost">${transfer ? "Transfer" : "Treasury cost"} · ${money(price)}</p>
       <ul class="decision-effects">${effects.map((effect) => `<li>${effect}</li>`).join("")}</ul>
     </section>`).join("");
@@ -1482,7 +1492,8 @@ function showDecision(decision) {
     if (key === "gridIndustry" || key === "gridIrrigation") {
       art = `<svg class="decision-art" viewBox="0 0 200 90" aria-hidden="true">${openingArt[key === "gridIndustry" ? "trade" : "food"]}</svg>`;
     }
-    return { key, label, art, effects: decision.details[key], price: decision.priced?.[key] ?? 0, transfer: key === "split" || key === "council" || division };
+    const sector = decision.id === pondicherryDecisionId ? (key === "pondicherryFood" ? "food" : "trade") : undefined;
+    return { key, label, art, sector, effects: decision.details[key], price: decision.priced?.[key] ?? 0, transfer: key === "split" || key === "council" || division };
   });
   showDecisionCards(`${game.year} · ${decision.id ? "Campaign chapter" : "Scenario decision"}`,
     decision.title, decision.description, options, (key) => {

@@ -36,6 +36,7 @@ export function briefHeadline(report, previous) {
   if (report.shortage) return "Food supply fell short";
   if (report.regional?.maritime?.food) return "Your port kept supplies moving to Port Blair";
   if (report.regional?.maritime?.timber) return "Timber freight earned receipts for your port";
+  if (report.regional?.coromandel?.textileLoads) return "Pondicherry cloth moved by rail";
   if (report.attribution?.newlyConnected?.length) return "The market network expanded";
   if (report.completed?.some(({ kind }) => kind === "school")) return "New technical schools opened";
   if (report.completed?.length) return "New works came into service";
@@ -220,6 +221,7 @@ function whyContent(report, previous) {
     ...(competition ? [["Competitive freight receipts", money(competition.player.earnings)]] : []),
     ...(contract?.winner?.id === "player" ? [["Freight contract payment", money(contract.payment)]] : []),
     ...(report.regional?.maritime?.receipt ? [[report.regional.maritime.id === "food" ? "Port Blair food procurement" : "Port Blair timber freight", money(report.regional.maritime.receipt)]] : []),
+    ...(report.regional?.coromandel?.receipt ? [["Pondicherry textile freight", money(report.regional.coromandel.receipt)]] : []),
     ["Works upkeep", money(report.prices?.worksUpkeep ?? (report.maintenance - (report.training?.upkeep ?? 0) - (report.cabinetPriority?.spent ?? 0)))],
     ...(report.training?.upkeep ? [["Training charter upkeep", money(report.training.upkeep)]] : []),
     ...(report.cabinetPriority?.spent ? [["Five-year priority services", money(report.cabinetPriority.spent)]] : []),
@@ -316,6 +318,19 @@ function regionalContext(report) {
 function changeRows(report, previous) {
   const changes = [];
   const add = (sector, title, description, programme) => changes.push({ sector, title, description, programme });
+  const rail = report.regional?.coromandel;
+  if (rail?.compact === "textiles") {
+    const fee = rail.fee ? ` The state paid ${money(rail.fee)} at signing.` : "";
+    add("trade", "Pondicherry textile freight", `${rail.textileLoads} cloth ${rail.textileLoads === 1 ? "load" : "loads"} earned ${money(rail.receipt)}. ${units(rail.foodCapacity)} of food capacity.${fee}`);
+  } else if (rail?.compact === "food") {
+    const { foodBought, foodSold, relief, aidSent } = rail.settlement;
+    const moves = [relief ? `Madras received ${units(relief)} in aid.` : "", aidSent ? `Madras sent ${units(aidSent)} in aid.` : "",
+      foodBought ? `Madras bought ${units(foodBought)}.` : "", foodSold ? `Madras sold ${units(foodSold)}.` : ""].filter(Boolean);
+    const deliveries = moves.join(" ") || (report.shortage ? "Pondicherry's stocks could not cover Madras's remaining shortfall." : "No food moved this year.");
+    add("food", "Pondicherry food railway", `${deliveries} All ${rail.foodCapacity} slots available for food.`);
+  } else if (previous?.regional?.coromandel?.compact) {
+    add("trade", "Pondicherry rail agreement ended", "All three rail slots are available for food at ordinary prices.");
+  }
   const maritime = report.regional?.maritime;
   if (maritime) {
     const fee = maritime.fee ? ` ${money(maritime.fee)} paid at signing.` : "";

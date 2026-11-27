@@ -3,6 +3,90 @@ const test = require("node:test");
 
 globalThis.location = { search: "?region=madras" };
 
+test("the Pondicherry compact shares the existing railway and stops charging after the term", async () => {
+  const { Campaign } = await import("./src/campaign.js");
+  const { World } = await import("./src/scenario.js");
+  const { domesticLinks, nationalMarketActors } = await import("./src/national-market.js");
+  const { marketFunding } = await import("./src/market-finance.js");
+  const { neighborsFor } = await import("./src/interregional.js");
+  const { approveProgramme } = await import("./src/programmes.js");
+
+  function resolve(game, preferred = "madras") {
+    for (let decision; (decision = Campaign.nextDecision(game));) {
+      const choices = [preferred, "roads", "districtRations", "integratePudukkottai", "district", "southernServices", ...Object.keys(decision.choices)];
+      const choice = choices.find((id) => decision.choices[id] && (decision.priced[id] ?? 0) <= game.cash);
+      assert.ok(choice);
+      game = Campaign.decide(game, choice);
+    }
+    const result = Campaign.advance(game);
+    assert.equal(result.year, game.year + 1);
+    return result;
+  }
+
+  function railYear(seed, programmes = {}) {
+    let game = Campaign.newGame(seed, { end: 1965, preset: "standard" });
+    while (game.year < 1955) {
+      if (programmes[game.year]) game = approveProgramme(game, programmes[game.year]);
+      game = resolve(game);
+    }
+    return game;
+  }
+
+  const start = railYear(1946);
+  assert.equal(Campaign.nextDecision(start).id, "madras-pondicherry-rail");
+  assert.ok(!start.reports.at(-1).regional.nationalMarket.nodes.find(({ id }) => id === "pondicherry"));
+  const food = Campaign.decide(start, "pondicherryFood");
+  const trade = Campaign.decide(start, "pondicherryTextiles");
+  assert.equal(food.cash - trade.cash, 10);
+  assert.deepEqual(food.owners, trade.owners);
+  assert.equal(Campaign.nextDecision(trade), null);
+  assert.equal(neighborsFor(World, food).find(({ id }) => id === "pondicherry").routeCapacity, 3);
+  assert.equal(neighborsFor(World, trade).find(({ id }) => id === "pondicherry").routeCapacity, 1);
+
+  let result = trade;
+  for (let year = 1955; year <= 1962; year++) {
+    const current = result;
+    result = resolve(current);
+    const report = result.reports.at(-1);
+    const { regional } = report;
+    const rail = regional.coromandel;
+    assert.equal(rail.foodCapacity + Number(year <= 1956) * 2, rail.railCapacity);
+    assert.equal(rail.fee, year === 1955 ? 10 : 0);
+    assert.equal(rail.textileLoads, year > 1956 ? 0 : report.monsoon === "Severe flood" ? 1 : 2);
+    assert.equal(rail.receipt, rail.textileLoads * 4);
+    assert.equal(rail.phase, year < 1962 ? "transition" : "union");
+    const tradeActivity = rail.settlement.foodBought + rail.settlement.foodSold + rail.settlement.relief;
+    assert.ok(tradeActivity <= rail.foodCapacity);
+    assert.equal(regional.nationalMarket.nodes.filter(({ id }) => id === "pondicherry").length, 1);
+    assert.equal(regional.nationalMarket.links.filter(({ from, to }) => from === "pondicherry" || to === "pondicherry").length, 0);
+    assert.deepEqual(regional.nationalMarket.coromandel, rail);
+    assert.equal(report.income, report.tax + report.funding.transfers + report.sold - report.bought * report.buyPrice +
+      report.regionalCash + (regional.freightCompetition?.player.earnings ?? 0) +
+      (regional.freightContract?.winner?.id === "player" ? regional.freightContract.payment : 0) + rail.receipt);
+  }
+  assert.equal(result.reports.find(({ year }) => year === 1955).regional.nationalMarket.coromandel.fee, 10);
+  assert.equal(marketFunding("pondicherry", 1954).reference, null);
+  assert.equal(marketFunding("pondicherry", 1955).reference.value, 73.96);
+  assert.equal(marketFunding("pondicherry", 1972).reference.value, 348.48);
+  assert.equal(marketFunding("pondicherry", 1985).allocation, 17);
+  assert.ok(domesticLinks(1954).every((link) => !link.includes("pondicherry")));
+  assert.deepEqual(domesticLinks(1955).find((link) => link.includes("pondicherry")), ["madras", "pondicherry", 3, "rail"]);
+  assert.ok(nationalMarketActors({ year: 1955, journey: {} }, { key: "bihar" }).includes("pondicherry"));
+
+  const branch = (state, decision) => resolve(Campaign.decide(state, decision)).reports.at(-1);
+  const exposed = railYear(1948);
+  const assisted = branch(exposed, "pondicherryFood");
+  assert.equal(assisted.regional.coromandel.settlement.relief, 1);
+  assert.equal(assisted.shortage, 0);
+  assert.equal(branch(exposed, "pondicherryTextiles").shortage, 1);
+  const surplus = railYear(1951, { 1946: "trade", 1949: "food" });
+  const donated = branch(surplus, "pondicherryFood");
+  assert.equal(donated.regional.coromandel.settlement.aidSent, 1);
+  const shortage = ({ regional }) => regional.partners.find(({ id }) => id === "pondicherry").shortage;
+  assert.equal(shortage(donated), 0);
+  assert.equal(shortage(branch(surplus, "pondicherryTextiles")), 1);
+});
+
 test("Madras and Andhra retain their works, budgets and water or power commitments", async () => {
   const { Campaign } = await import("./src/campaign.js");
   const { World } = await import("./src/scenario.js");
@@ -14,7 +98,7 @@ test("Madras and Andhra retain their works, budgets and water or power commitmen
   function advance(game) {
     let decision;
     while ((decision = Campaign.nextDecision(game))) {
-      const choice = ["roads", "districtRations", "integratePudukkottai", "district", "southernServices", "extension", "ration"].find((id) => decision.choices[id]);
+      const choice = ["roads", "districtRations", "integratePudukkottai", "district", "pondicherryFood", "southernServices", "extension", "ration"].find((id) => decision.choices[id]);
       assert.ok(choice, decision.title);
       game = Campaign.decide(game, choice);
     }

@@ -36,6 +36,7 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-route[data-mode="rail"] { stroke: #9ed4d5; stroke-dasharray: 8 2 2 2; }
 .market-route[data-mode="sea"] { stroke: #8ed3d7; stroke-dasharray: 5 4; }
 .market-route[data-cargo="ore"] { stroke: var(--market-gold); stroke-dasharray: 3 2; }
+.market-route[data-cargo="textiles"] { stroke: var(--market-gold); stroke-dasharray: 1 2; }
 .market-route[data-cargo="administration-rice"] { stroke: var(--market-relief); stroke-dasharray: 3 2; }
 .market-map marker path { fill: var(--market-gold); }
 .market-route[data-relief="true"] { stroke: var(--market-relief); stroke-dasharray: 6 3; }
@@ -72,23 +73,25 @@ dialog.national-market-dialog { width: min(1000px, calc(100% - 24px)); }
 .market-map-key [data-key="charter"]::before { border-top: 3px dashed var(--sector-accent); }
 .market-map-key [data-key="relief"]::before { border-top: 3px dashed var(--market-relief); }
 .market-map-key [data-key="ore"]::before { border-top: 3px dashed var(--market-gold); }
+.market-map-key [data-key="textiles"]::before { border-top: 3px dotted var(--market-gold); }
 .market-map-key [data-key="administration-rice"]::before { border-top: 3px dotted var(--market-relief); }
 .market-department-key { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; }
 .market-department-key .department-badge { font-size: .68rem; }
 .market-department-key .department-badge::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--sector-accent); }
 .market-department-key .department-badge svg { width: 14px; height: 14px; }
 
-.market-western { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 8px; }
-.market-western section { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-inline-start: 3px solid var(--sector-accent); border-radius: 5px; background: var(--panel-dark); }
-.market-western header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; }
-.market-western h3 { margin: 0; color: #f2e8cd; font: 700 1rem var(--serif); }
-.market-western .department-badge { font-size: .67rem; }
-.market-western .department-badge svg { width: 14px; height: 14px; }
-.market-western dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.market-western dt, .market-western p { margin: 0; color: var(--subtle); font-size: .74rem; line-height: 1.35; }
-.market-western dd { margin: 2px 0 0; color: var(--sector-accent); font-size: .88rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.market-rail-meter { height: 4px; overflow: hidden; border-radius: 2px; background: #9ed4d5; }
-.market-rail-meter span { display: block; height: 100%; background: var(--sector-accent); }
+.market-corridors { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 8px; }
+.market-corridors section { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-inline-start: 3px solid var(--sector-accent); border-radius: 5px; background: var(--panel-dark); }
+.market-corridors header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; }
+.market-corridors h3 { margin: 0; color: #f2e8cd; font: 700 1rem var(--serif); }
+.market-corridors .department-badge { font-size: .67rem; }
+.market-corridors .department-badge svg { width: 14px; height: 14px; }
+.market-corridors dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.market-corridors dt, .market-corridors p { margin: 0; color: var(--subtle); font-size: .74rem; line-height: 1.35; }
+.market-corridors dd { margin: 2px 0 0; color: var(--sector-accent); font-size: .88rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.market-rail-meter { display: flex; height: 4px; overflow: hidden; border-radius: 2px; background: #9ed4d5; }
+.market-rail-meter span { display: block; height: 100%; background: var(--market-gold); }
+.market-rail-meter .market-rail-unused { background: repeating-linear-gradient(110deg, #9e8256 0 3px, #69573f 3px 5px); }
 
 .market-shipments { display: grid; gap: 7px; min-width: 0; }
 .market-shipments h3 { margin: 0; color: #f2e8cd; font: 700 1.2rem var(--serif); }

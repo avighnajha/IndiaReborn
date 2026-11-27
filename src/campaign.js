@@ -17,6 +17,7 @@ import { crisisDelivery, crisisSeverity } from "./food-crisis.js";
 import { dispatchOffer, dispatchWindow, settleReserveDispatch } from "./reserve-dispatch.js";
 import { acceptBayCharter, bayOpening, bayShippingPlan } from "./bay-shipping.js";
 import { playerMarketId } from "./national-market.js";
+import { sharePondicherryReserves } from "./coromandel.js";
 
 const outcomeWindowYears = 5;
 const productiveTarget = 4;
@@ -244,7 +245,8 @@ export const Campaign = (() => {
   function earnedReceipts(report) {
     const { workshops, markets } = report.receipts ?? localReceipts(report.output, report.towns, report.development?.marketReceipts);
     const maritime = report.regional?.maritime;
-    const freight = (report.regionalCash ?? 0) + (report.regional?.freightCompetition?.player.earnings ?? 0) + (maritime?.id === "trade" ? maritime.receipt : 0);
+    const freight = (report.regionalCash ?? 0) + (report.regional?.freightCompetition?.player.earnings ?? 0) +
+      (maritime?.id === "trade" ? maritime.receipt : 0) + (report.regional?.coromandel?.receipt ?? 0);
     const contract = playerContractReceipts(report.regional?.freightContract);
     const sales = report.sold ?? 0;
     const procurement = (report.unionReserve?.proceeds ?? 0) + (maritime?.id === "food" ? maritime.receipt : 0);
@@ -747,12 +749,14 @@ export const Campaign = (() => {
       : marketStock;
     const shortage = foodDeficit - bought;
     const capacity = 5 + active(state, "granary").length * 10 + development.storage;
-    const foodOnHand = foodAfterShipment - sold;
+    const availableAfterTrade = foodAfterShipment - sold;
+    const coastal = sharePondicherryReserves(bilateral, { foodOnHand: availableAfterTrade, demand, shortage });
+    const foodOnHand = availableAfterTrade - (coastal?.report.coromandel?.settlement?.aidSent ?? 0);
     const closingStock = Math.min(capacity, foodOnHand);
     const shipping = game.journey?.bayCharter && game.year <= game.journey.bayCharter.end ? {
       ...portFacilities(state, { reached, towns }), stock: foodOnHand, demand, shortage,
     } : null;
-    let domestic = bilateral && settleNationalTrade(bilateral, game, World, shipping);
+    let domestic = coastal && settleNationalTrade(coastal, game, World, shipping);
     const maritime = domestic?.report.maritime;
     let dispatch = null;
     if (domestic && reserveDispatch?.year === game.year && dispatchWindow(game)) {
@@ -771,7 +775,9 @@ export const Campaign = (() => {
     const maintenance = worksUpkeep + charterUpkeep + priorityCost;
     const competitiveReceipts = regionalSettlement?.report.freightCompetition?.player.earnings ?? 0;
     const contractReceipts = playerContractReceipts(regionalSettlement?.report.freightContract);
-    const income = tax + funding.transfers + sold - bought * buyPrice - crisisCost + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts + (union?.proceeds ?? 0) + (maritime?.receipt ?? 0);
+    const coromandelReceipts = regionalSettlement?.report.coromandel?.receipt ?? 0;
+    const income = tax + funding.transfers + sold - bought * buyPrice - crisisCost + (regional?.cash ?? 0) + competitiveReceipts + contractReceipts +
+      (union?.proceeds ?? 0) + (maritime?.receipt ?? 0) + coromandelReceipts;
     const cash = Math.max(0, game.cash + income - maintenance);
     const previouslyReached = completed.some((asset) => asset.kind === "road") ? access(game).reached : reached;
     const newlyConnected = [...reached].filter((id) => !previouslyReached.has(id) && World.tiles[id].town).map((id) => World.tiles[id].town.name);

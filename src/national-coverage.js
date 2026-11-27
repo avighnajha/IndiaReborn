@@ -1,4 +1,5 @@
 import { inlandActors, marketHubs, nationalMarketActors } from "./national-market.js";
+import { pondicherryMarket, pondicherryOpening } from "./coromandel.js";
 import "./national-coverage.css";
 
 const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -29,7 +30,7 @@ function outsideMarkets(year, markets, standard) {
     ...(!active.has("sikkim") ? [year < 1975 ? "Sikkim kingdom" : "Sikkim"] : []),
     ...(!active.has("goa") ? [year < 1962 ? "Portuguese coastal enclaves" : "Goa, Daman and Diu"] : []),
     year < 1954 ? "Dadra and Nagar Haveli under Portuguese rule" : "Dadra and Nagar Haveli",
-    year < 1954 ? "French coastal enclaves" : "Pondicherry and associated enclaves",
+    ...(!active.has(pondicherryMarket) && (standard || year < pondicherryOpening) ? [year < 1954 ? "French coastal enclaves" : "Pondicherry and associated enclaves"] : []),
     ...(!active.has("andamans") && (standard || year < 1950) ? ["Andaman and Nicobar Islands"] : []),
     ...(!active.has("lakshadweep") ? [year < 1973 ? "Laccadive, Minicoy and Amindivi Islands" : "Lakshadweep"] : []),
     ...(year < 1950 ? ["Manipur", "Tripura"] : []),
@@ -51,11 +52,11 @@ export function nationalCoverageMarkup({ year = 1946, preset = "standard", nodes
   return `<details class="national-coverage" data-coverage-year="${year}" data-coverage-snapshot="${fixedSnapshot}">
     <summary><span>Beyond your borders</span><span class="coverage-summary"><b>${starts.length} starts</b><b>${standard ? `${markets.length} ${fixedSnapshot ? "other accounts" : "market areas"} · ${year}` : "Local neighbors · Light"}</b></span></summary>
     <div class="coverage-body">
-      ${!fixedSnapshot ? `<label class="coverage-year">Market preview<select data-coverage-period aria-label="Preview national market year">${[1946, 1948, 1949, 1950, 1955, 1956, 1958, 1962, 1966, 1970, 1972, 1973, 1975, 1979, 1982, 1985].map((period) => `<option value="${period}"${period === year ? " selected" : ""}>${period}</option>`).join("")}</select></label>` : ""}
+      ${!fixedSnapshot ? `<label class="coverage-year">Market preview<select data-coverage-period aria-label="Preview national market year">${[1946, 1948, 1949, 1950, 1954, 1955, 1956, 1958, 1962, 1966, 1970, 1972, 1973, 1975, 1979, 1982, 1985].map((period) => `<option value="${period}"${period === year ? " selected" : ""}>${period}</option>`).join("")}</select></label>` : ""}
       <div class="coverage-cards">
         <section class="coverage-card" data-coverage-status="playable"><h3><span aria-hidden="true">⚑</span> Playable starts</h3><p>Choose a government in 1946.</p>${chips(starts, "starts")}<small>Successor states follow your campaign decisions.</small></section>
         <section class="coverage-card" data-coverage-status="simulated"><h3><span aria-hidden="true">↔</span> ${standard ? "Market governments" : "Local neighbors"}</h3><p>${standard ? "Own harvests, reserves, treasuries and investments." : "Nearby trade and agreements remain active."}</p>
-          ${standard ? chips(marketNames, "markets") : `<small>${year >= 1950 ? "West Bengal and Madras can also deal with Port Blair. " : ""}Choose Standard for the wider domestic market.</small>`}
+          ${standard ? chips(marketNames, "markets") : `<small>${year >= 1950 ? "West Bengal and Madras can also deal with Port Blair. " : ""}${year >= pondicherryOpening ? "Madras can trade with Pondicherry by rail. " : ""}Choose Standard for the wider domestic market.</small>`}
           ${standard ? `<small>${fixedSnapshot ? "Other administrations recorded in this annual report." : "National market preview. Your government uses the full campaign model."} Nearby agreements appear in Neighbors.</small>` : ""}</section>
         <section class="coverage-card" data-coverage-status="context"><h3><span aria-hidden="true">◇</span> Outside the market model</h3><p>No independent treasury or annual turn.</p>${chips(outsideMarkets(year, markets, standard), "context")}<small>Some smaller territories share a larger regional market. International trade follows campaign-specific agreements.</small></section>
       </div>

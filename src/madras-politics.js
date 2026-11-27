@@ -1,4 +1,5 @@
 import { Fiscal } from "./fiscal.js";
+import { pondicherryDecision } from "./coromandel.js";
 
 const sources = {
   transition: "https://www.legislation.gov.uk/ukpga/Geo6/10-11/30/section/1/enacted",
@@ -110,5 +111,5 @@ export function madrasDecision(game, world) {
   if (game.year === 1948 && !events["madras-pudukkottai"]) return pudukkottaiDecision(game, world);
   if (game.year === 1953 && !events["madras-division"]) return divisionDecision(game, world);
   if (game.year === 1956 && !events["madras-reorganization"]) return reorganizationDecision(game, world);
-  return null;
+  return pondicherryDecision(game);
 }

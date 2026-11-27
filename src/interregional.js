@@ -5,6 +5,7 @@ import { openingPriceYear, periodAmount } from "./period-prices.js";
 import { marketDroughtLoss } from "./food-crisis.js";
 import { bayOpening, bayPorts, islandMarket, settleBayCharter } from "./bay-shipping.js";
 import { goaMarket, westernExportRival, westernIslands, westernShipping } from "./western-shipping.js";
+import { pondicherryMarket, pondicherryOpening, pondicherryRail, pondicherryShipment, pondicherryTerms } from "./coromandel.js";
 
 const actors = {
   ...inlandActors,
@@ -72,7 +73,9 @@ function activeActors(world, game) {
     const jurisdiction = game.journey?.jurisdiction;
     if (jurisdiction?.madrasSuccessor === "andhra") return jurisdiction.madrasReorganized
       ? ["madras", "orissa", "central", "mysore"] : ["madras", "orissa", "hyderabad"];
-    if (jurisdiction?.madrasSuccessor === "madras") return ["andhra", "mysore", jurisdiction.madrasReorganized ? "kerala" : "travancore"];
+    if (jurisdiction?.madrasSuccessor === "madras") return [
+      ...(game.year >= pondicherryOpening ? [pondicherryMarket] : []), "andhra", "mysore", jurisdiction.madrasReorganized ? "kerala" : "travancore",
+    ];
     return ["hyderabad", "mysore", "travancore"];
   }
   if (world.key === "assam") {
@@ -110,6 +113,7 @@ function marketRoadConnection(game, id) {
 }
 
 function roadConnection(world, game, id) {
+  if (id === pondicherryMarket) return { routeCapacity: pondicherryRail(game.year, pondicherryTerms(game)).foodCapacity, mode: "rail" };
   return ["assam", "punjab", "west-bengal"].includes(world.key) ? marketRoadConnection(game, id) : {};
 }
 
@@ -397,6 +401,8 @@ export function settleNationalTrade(regional, game, world, shipping) {
     ...(maritime ? { maritime: { ...maritime, islandShortage: partners[islandMarket].shortage, islandReserve: partners[islandMarket].reserve } } : {}),
   } };
   const { market, flows } = clearNationalMarket(game, partners, marketActors, localIds, western);
+  const coromandel = regional.report.coromandel ?? pondicherryRail(game.year);
+  if (coromandel && partners[pondicherryMarket]) market.coromandel = coromandel;
   for (const node of market.nodes) {
     const partner = partners[node.id];
     node.works = Object.keys(workPlans).filter((kind) => partner.works?.[kind]).map((kind) => workSummary(kind, partner.works[kind], partner.routeCapacity, partner.mode));
@@ -493,6 +499,9 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
   if (!game.journey) return { partners, report, marketStockAdjustment: 0, marketCapacity: 0, migration: 0, cash: 0, emergencyFood: 0 };
   const standard = game.journey.preset === "standard";
   const localBalance = harvest + game.reserve - demand;
+  const coromandel = world.key === "madras" && game.journey.jurisdiction?.madrasSuccessor === "madras" && game.year >= pondicherryOpening
+    ? pondicherryShipment(game, monsoon) : null;
+  if (coromandel) report.coromandel = coromandel;
   const freightRivals = [];
   let marketStockAdjustment = 0;
   let marketCapacity = 0;
@@ -502,7 +511,10 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const inherited = inheritedSuccessorWorks(game, world, id);
     const roll = yearlyRoll(game, actor.seed);
     const harvest = actor.harvest + Math.floor(roll * 6) - 2;
-    const shock = marketDroughtLoss(game, id, harvest, monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0);
+    const deltaWeather = id === pondicherryMarket ? yearlyRoll(game, actor.seed + 1925) : null;
+    const seasonalLoss = deltaWeather === null ? (monsoon === "Severe flood" ? actor.flood : monsoon === "Dry monsoon" ? actor.dry : 0)
+      : deltaWeather < 0.16 ? actor.flood : deltaWeather > 0.75 ? actor.dry : 0;
+    const shock = marketDroughtLoss(game, id, harvest, seasonalLoss);
     const development = developmentEffects(prior, game.year, shock);
     const supply = harvest - shock + development.harvestSaved + (inherited?.irrigation ?? 0);
     const priorPopulation = prior?.population ?? actor.demand;
@@ -513,6 +525,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const disrupted = world.key === "assam" && id === "eastBengal" && game.year >= 1947 && game.year < 1950;
     const transit = id === "bihar" && !restricted && game.journey?.jurisdiction?.bengalTransfer === "transitCompact";
     const priority = agreement?.kind === "supply" && localBalance < 0;
+    const foodRailPriority = id === pondicherryMarket && coromandel?.compact === "food" && localBalance < 0;
     const corridor = agreement?.kind === "corridor" && !restricted && !disrupted;
     const { works, openingCash, developmentSpend, changed } = developNeighbor(game, actor, prior, {
       shortage, balance, towns, agreement, standard, nearbyId: id, routeCapacity, allocation: funding.allocation,
@@ -524,11 +537,13 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     const jointFreight = jointProjectOpen && jointProject.kind === "freight" && corridor;
     const reserveCapacity = reserveLimit + (depotOpen ? 6 : 0) + (sharedReserve ? 6 : 0) + (inherited?.storage ?? 0) * 3;
     const reserveBeforeRelease = clamp(balance, 0, reserveCapacity);
-    const emergencyFood = sharedReserve && priority && !restricted
-      ? Math.min(2, routeCapacity ?? 2, Math.max(0, -localBalance - report.emergencyFood), Math.max(0, reserveBeforeRelease - 3)) : 0;
+    const emergencyLimit = foodRailPriority ? routeCapacity : sharedReserve && priority ? 2 : 0;
+    const emergencyFloor = foodRailPriority ? Math.ceil(actorDemand / 2) : 3;
+    const emergencyFood = emergencyLimit && !restricted
+      ? Math.min(emergencyLimit, routeCapacity ?? emergencyLimit, Math.max(0, -localBalance - report.emergencyFood), Math.max(0, reserveBeforeRelease - emergencyFloor)) : 0;
     const remainingRoadCapacity = (routeCapacity ?? Infinity) - emergencyFood;
     const reserve = reserveBeforeRelease - emergencyFood;
-    const reserveTarget = priority ? 1 : standard ? 4 : 3;
+    const reserveTarget = foodRailPriority ? emergencyFloor : priority ? 1 : standard ? 4 : 3;
     const hasFreightFacility = exchangeOpen || Boolean(inherited?.terminals);
     const localExchange = hasFreightFacility && (towns >= 3 || corridor);
     if (standard && game.year >= freightCompetitionOpening) {
@@ -541,7 +556,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     }
     const extraHandling = jointFreight ? 1 : 0;
     const baselineCapacity = Math.min(remainingRoadCapacity, disrupted ? 1 : (towns >= 3 ? 2 : 1) + (localExchange ? 1 : 0) + extraHandling + (transit ? 1 : 0));
-    const compactCapacity = priority ? 3 + (depotOpen ? 1 : 0) : corridor ? 1 : 0;
+    const compactCapacity = priority ? 3 + (depotOpen ? 1 : 0) : corridor || foodRailPriority ? 1 : 0;
     const offer = restricted ? 0 : clamp(reserve - reserveTarget, 0, Math.min(remainingRoadCapacity, baselineCapacity + compactCapacity));
     const jointFreightCash = jointFreight ? 2 : 0;
     const freight = corridor ? (towns >= 5 ? 2 : 1) + (exchangeOpen ? 1 : 0) + jointFreightCash : 0;
@@ -559,7 +574,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     if (migration > 0) migration = Math.min(migration, Math.max(0, priorPopulation - 1));
     const population = populationUnits(priorPopulation - migration);
     const status = shortage ? "Buying" : offer ? "Food available" : "Holding stocks";
-    const access = restricted ? "Restricted" : disrupted ? "Limited river trade" : corridor ? "Open corridor" : priority && offer ? "Priority supply" : "Local trade";
+    const access = restricted ? "Restricted" : disrupted ? "Limited river trade" : corridor ? "Open corridor" : (priority || foodRailPriority) && offer ? "Priority supply" : "Local trade";
     partners[id] = { status, access, offer, request, reserve, cash, population, shortage, works, development, funding,
       ...(routeCapacity ? { routeCapacity, mode } : {}),
       ...(inherited ? { inherited: { ...inherited, receipts: inheritedReceipts, upkeepPaid: inheritedUpkeep } } : {}) };
@@ -577,7 +592,7 @@ export function resolveNeighbors(game, world, { harvest, demand, towns, monsoon,
     report.jointFreightCash += jointFreightCash;
     if (agreement) report.agreements.push(`${name} · ${agreement.title}`);
     marketStockAdjustment += offer - request;
-    if (priority) marketCapacity += Math.max(0, offer - baselineCapacity);
+    if (priority || foodRailPriority) marketCapacity += Math.max(0, offer - baselineCapacity);
     if (jointFreight && offer > 0 && !routeCapacity) marketCapacity += extraHandling;
     if (transit && offer > 0) marketCapacity += 1;
   }
@@ -609,8 +624,12 @@ export function settleNeighborTrade(regional, { bought, sold, buyPrice }) {
     partners[row.id] = { ...partners[row.id], reserve, cash, shortage };
     return { ...row, reserve, cash, shortage, bought: toPartner, sold: fromPartner };
   });
+  const pondicherry = rows.find(({ id }) => id === pondicherryMarket);
+  const coromandel = regional.report.coromandel && pondicherry ? {
+    ...regional.report.coromandel, settlement: { foodBought: pondicherry.sold, foodSold: pondicherry.bought, relief: pondicherry.emergencyFood },
+  } : null;
   return {
     ...regional, partners,
-    report: { ...regional.report, partners: rows, importUnits: bought - imports, exportUnits: sold - exports },
+    report: { ...regional.report, partners: rows, importUnits: bought - imports, exportUnits: sold - exports, ...(coromandel ? { coromandel } : {}) },
   };
 }
