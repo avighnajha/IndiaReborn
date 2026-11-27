@@ -275,22 +275,34 @@ export const Campaign = (() => {
     if (!activeContract && !upcoming) return null;
     if (!upcoming) return { year: game.year, active: activeContract, upcoming: null, canDevelop: false };
 
-    function bid(state) {
-      const { reached, towns } = access(state);
-      const linked = (kind) => active(state, kind).filter(({ hex }) => isConnected(reached, hex)).length;
-      return contractPlayerBid({ towns, workshops: linked("mill"), terminals: linked("freightTerminal") }).capacity;
-    }
     const yearsRemaining = upcoming.start - game.year + 1;
     const projected = {
       ...game, year: upcoming.start,
       assets: game.assets.map((asset) => asset.remaining && asset.remaining <= yearsRemaining ? { ...asset, remaining: 0 } : asset),
     };
+    function bid(state, assumeFunding = false) {
+      const { reached, towns } = access(state);
+      const linked = (kind) => active(state, kind).filter(({ hex }) => isConnected(reached, hex)).length;
+      const plan = upcoming.bulk ? cabinetPlan(state, finance(state), cabinetContext(state)) : null;
+      const tradeFunded = assumeFunding || (plan?.current?.id === "trade" && plan.current.status === "funded");
+      const bid = contractPlayerBid({ towns, workshops: linked("mill"), terminals: linked("freightTerminal"),
+        parks: upcoming.bulk ? linked("industrialPark") : 0, tradeFunded }, upcoming.bulk);
+      if (!assumeFunding && plan?.current && plan.current.id !== "trade") {
+        return { ...bid, reason: `${plan.current.label} committed through ${plan.current.ends}.` };
+      }
+      return bid;
+    }
+    const currentBid = bid(game);
+    const projectedBid = bid(projected);
+    const fundedBid = upcoming.bulk ? bid(projected, true) : null;
     const candidates = new Set(neighborsFor(World, game).map(({ id }) => id));
-    const rivals = (last?.partners ?? []).filter(({ id }) => candidates.has(id)).map((row) => contractRivalBid(row, upcoming.start));
+    const rivals = (last?.partners ?? []).filter(({ id }) => candidates.has(id)).map((row) => contractRivalBid(row, upcoming.start, upcoming.bulk));
     const leader = rivals.sort((a, b) => b.capacity - a.capacity)[0];
     const rival = leader?.capacity ? { name: leader.name, capacity: leader.capacity } : null;
     return { year: game.year, active: activeContract, canDevelop: true, upcoming: {
-      ...upcoming, playerCapacity: bid(game), projectedCapacity: bid(projected), rival,
+      ...upcoming, playerCapacity: currentBid.capacity, projectedCapacity: projectedBid.capacity, rival,
+      ...(fundedBid ? { playerReason: currentBid.reason, projectedReason: projectedBid.reason,
+        projectedWithPriority: fundedBid.capacity, projectedWithPriorityReason: fundedBid.reason } : {}),
     } };
   }
 
@@ -654,7 +666,8 @@ export const Campaign = (() => {
     const water = active(state, "waterNetwork").length;
     const freightTerminals = active(state, "freightTerminal");
     const terminals = freightTerminals.length;
-    const parks = active(state, "industrialPark").length;
+    const industrialParks = active(state, "industrialPark");
+    const parks = industrialParks.length;
     const terminalActivity = terminals * Math.min(8, Math.max(0, towns - 2));
     const development = {
       skills: colleges * 6 + universities * 8 + (technical + agricultural) * 4,
@@ -766,7 +779,11 @@ export const Campaign = (() => {
       dispatch = result.dispatch;
     }
     const reserve = dispatch?.reserve ?? Math.min(closingStock, foodOnHand - (maritime?.food ?? 0));
-    const regionalSettlement = domestic && settleFreight(domestic, game, (crisis?.freightCapacityUsed ?? 0) + (dispatch?.freightCapacityUsed ?? 0));
+    const regionalSettlement = domestic && settleFreight(domestic, game,
+      (crisis?.freightCapacityUsed ?? 0) + (dispatch?.freightCapacityUsed ?? 0), {
+        parks: industrialParks.filter(({ hex }) => isConnected(reached, hex)).length,
+        tradeFunded: priority.report?.id === "trade" && priority.report.status === "funded",
+      });
     const funding = finance(game);
     const receipts = localReceipts(output, towns, development.marketReceipts, priceYear);
     const tax = funding.local + receipts.markets + receipts.workshops;

@@ -41,11 +41,13 @@ An inland administration can enter the same contest when its own exchange is ope
 
 ### Regional freight contracts
 
-Standard politics announces the first contract in 1957, for the five years from 1961 through 1965. Further full terms begin in 1966, 1971, 1976 and 1981 if the campaign runs long enough. The forecast compares the player's current works, works due by the award, and the best known neighboring bid. Works must be operating when the award year closes. The domestic award goes to the highest qualified bid, with a minimum of five and rotating tie priority.
+Standard politics announces the first contract in 1957, for the five years from 1961 through 1965. Further terms on the same rules begin in 1966, 1971 and 1976 if the campaign runs long enough. The forecast compares the player's current works, works due by the award, and the best known neighboring bid. Works must be operating when the award year closes. The domestic award goes to the highest qualified bid, with a minimum of five and rotating tie priority.
 
 The player needs three linked towns and a linked workshop. Each linked workshop adds one bid point, each linked terminal adds three, and towns beyond the first two add up to two points. A neighboring exchange bids three points, with another three from a loading yard and additional capacity from inherited works. The bid scale caps at fourteen. A rival can invest using its own budget and reserves even if the player's food supply is short. The region remains eligible when its operating works meet those conditions after a transfer. Payments pause whenever the winner falls below the minimum or loses access.
 
 The ₹6 lakh yearly fee is a modeled payment for keeping capacity available. The award runs alongside shipments, existing corridor payments and workshop receipts. Fees post to the winner's cash ledger when each year closes. Archived reports keep their original results. An older save already past an award year joins at the next eligible round.
+
+The 1981–85 term instead pays for six actual bulk loads. Open a linked freight terminal and fund Trade & Industry to bid. The winner must maintain eligibility and six free slots to earn a payment. The same slots cannot serve spot freight. The tender forecast appears in 1978, and saved terms from earlier builds retain their original rules. [Bulk freight terms and matched comparison](late-campaign-balance.md#the-1981-bulk-freight-award)
 
 ## Domestic food market
 

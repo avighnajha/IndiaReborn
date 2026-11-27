@@ -40,8 +40,61 @@
 }
 .freight-contract-capacity dt { color: var(--subtle); font-size: .78rem; }
 .freight-contract-capacity dd { display: grid; gap: 4px; margin: 0; color: var(--sector-accent); font-size: 1.1rem; }
+.freight-contract-capacity .freight-bid-reason { color: var(--subtle); font-size: .78rem; }
 .freight-contract-capacity progress { width: 100%; height: 6px; accent-color: var(--sector-accent); }
 .freight-contract-rules { margin-top: 6px; color: var(--subtle); font-size: .81rem; }
 .freight-contract-rules summary { cursor: pointer; }
 .freight-contract-rules p { margin-top: 4px; }
 .freight-contract button { margin-top: 8px; color: var(--sector-accent); font-size: .83rem; }
+.freight-contract-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.freight-bulk-rules { display: grid; gap: 3px; padding-inline-start: 1.2em; color: var(--subtle); font-size: .82rem; }
+.bulk-freight-result {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin-block: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--sector-accent);
+  border-radius: 6px;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--sector-accent) 11%, transparent), transparent 75%), var(--panel-dark);
+}
+.bulk-freight-result-header, .bulk-freight-holder {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin: 0;
+}
+.bulk-freight-result-header > b {
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--subtle);
+  font-size: .78rem;
+}
+.bulk-freight-result[data-state="delivered"] .bulk-freight-result-header > b { color: var(--sector-accent); border-color: var(--sector-accent); }
+.bulk-freight-holder { font-size: .84rem; }
+.bulk-freight-holder span, .bulk-freight-result p.freight-note { color: var(--subtle); font-size: .8rem; }
+.bulk-freight-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(145px, 100%), 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.bulk-freight-metrics > div {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-dark);
+}
+.bulk-freight-metrics dt { color: var(--subtle); font-size: .77rem; }
+.bulk-freight-metrics dd { margin: 0; color: var(--sector-accent); font-size: 1.16rem; font-variant-numeric: tabular-nums; }
+.bulk-freight-metrics dd span { color: var(--subtle); font-size: .82rem; }
+.bulk-freight-metrics progress { width: 100%; height: 6px; accent-color: var(--sector-accent); }
+.bulk-freight-result button { justify-self: start; }

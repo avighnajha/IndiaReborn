@@ -30,7 +30,8 @@ import { unionReserveMarkup } from "./union-reserve-view.js";
 import { intakeDeadline, intakeStatus } from "./technical-intake.js";
 import { technicalIntakeMarkup } from "./technical-intake-view.js";
 import { economyRoles, economySites, siteResults } from "./site-economy.js";
-import { freightBoardMarkup, freightContractMarkup } from "./freight-view.js";
+import { bulkFreightResultMarkup, freightBoardMarkup, freightContractMarkup } from "./freight-view.js";
+import "./freight-view.css";
 import { upcomingFreightContract } from "./neighbor-competition.js";
 import { campaignCapital, campaignEnd, campaignLengths, campaignName, foundingSaveKey, journeySettings, polityPhase, southernName, successorKey, targets } from "./journey.js";
 import { boundaryPreview } from "./journey-map";
@@ -583,6 +584,7 @@ function showDevelopmentTrees(focusDepartment = false, focusNode = null) {
   showModal(`${Math.min(game.year, campaignEnd(game))} · Cabinet planning`, "Development trees",
     departmentTreeMarkup(developmentTrees(game), selectedDepartment, overview), [
     ...(Campaign.cabinetPriority(game).available ? [choiceButton("Five-year priority", showCabinetPriority)] : []),
+    ...(selectedDepartment === "trade" && upcomingFreightContract(game)?.bulk ? [choiceButton("1981 bulk freight bid", showNeighbors)] : []),
     ...(selectedDepartment === "food" && reserveWindow(game) ? [choiceButton("Union food reserve", () => showUnionReserve(showDevelopmentTrees, "Back to Food & Water"))] : []),
     choiceButton("Regional programmes →", () => {
       modal.close();
@@ -718,6 +720,7 @@ function showUnionReserve(back = null, label = "Return to map") {
 function showCabinetPriority() {
   const model = Campaign.cabinetPriority(game);
   showModal(`${game.year} · Cabinet planning`, "Five-year priority", cabinetPlanMarkup(model), [
+    ...(upcomingFreightContract(game)?.bulk ? [choiceButton("1981 bulk freight bid", showNeighbors)] : []),
     choiceButton("Development trees", () => showDevelopmentTrees()),
     choiceButton("Economy map", () => showPriorityMap()),
     choiceButton("Return to map", returnToMap, true),
@@ -824,7 +827,7 @@ function render() {
   byId("chronicle").hidden = !game.journey;
   byId("neighbors").hidden = !game.journey;
   const contract = upcomingFreightContract(game);
-  byId("neighbors").textContent = contract ? `Neighbors · ${contract.start} bid` : "Neighbors";
+  byId("neighbors").textContent = contract?.bulk ? "Neighbors · Bulk freight bid" : contract ? `Neighbors · ${contract.start} bid` : "Neighbors";
   byId("neighbors").classList.toggle("funding-open", Boolean(contract));
   byId("progress").max = end - World.start + 1;
   byId("progress").value = game.reports.length;
@@ -1144,6 +1147,13 @@ function nextBriefDecision(report) {
   if (mandate.available && [mandate.opens, mandate.closes].includes(game.year)) {
     return { advice: "Choose the outcome that will define this administration in 1985.", label: "Compare regional mandates", open: () => showRegionalMandate() };
   }
+  const tender = upcomingFreightContract(game);
+  if (tender?.bulk && [tender.noticeYear, tender.start].includes(game.year)) return {
+    advice: game.year === tender.start ? "Bulk freight is awarded this year. Review your linked terminal and Trade & Industry funding."
+      : `A five-year bulk freight award opens in ${tender.start}. Plan a linked terminal and keep the Trade priority available.`,
+    label: "Review bulk freight",
+    open: showNeighbors,
+  };
   if (game.journey && [1950, 1954, intakeDeadline].includes(game.year) && intakeStatus(game) !== "signed") return {
     advice: game.year === intakeDeadline ? "Fund the technical training intake this year using established schools and market-linked workshops."
       : `Open a technical school by the end of ${intakeDeadline - 2} to qualify for equipment funding.`,
@@ -1177,7 +1187,6 @@ function nextBriefDecision(report) {
     label: "Review domestic supply",
     open: () => reviewProgramme("juteSupply", true),
   };
-  const tender = upcomingFreightContract(game);
   if (tender && (tender.noticeYear === game.year || tender.start === game.year)) return {
     advice: `The ${tender.start} freight contract compares operating workshops and terminals at year end.`,
     label: "Review freight bids",
@@ -1248,7 +1257,11 @@ function showReport(index = game.reports.length - 1) {
   ]);
   modal.classList.add("brief-dialog");
   byId("brief-freight")?.addEventListener("click", () => {
-    showModal(`${report.year} · Trade & Industry`, "Freight results", freightBoardMarkup(report.regional.freightCompetition, report.year, game.journey.preset), [
+    const { freightCompetition, freightContract } = report.regional;
+    const reached = latest && freightContract?.bulk && Campaign.access(game).reached;
+    const terminal = reached && Campaign.active(game, "freightTerminal").find(({ hex }) => Campaign.isConnected(reached, hex));
+    showModal(`${report.year} · Trade & Industry`, "Freight results", `${bulkFreightResultMarkup(freightContract, { year: report.year })}${freightBoardMarkup(freightCompetition, report.year, game.journey.preset)}`, [
+      ...(terminal ? [choiceButton("Locate freight terminal", () => focusEconomySite(terminal.hex))] : []),
       choiceButton("Back to annual brief", () => showReport(index), true),
     ]);
     modal.classList.add("opening-dialog");
@@ -1344,6 +1357,7 @@ function showNeighbors() {
   ]);
   modal.classList.add("opening-dialog");
   byId("modal-content").querySelector("[data-freight-contract-trees]")?.addEventListener("click", openTradeTree);
+  byId("modal-content").querySelector("[data-freight-priority]")?.addEventListener("click", showCabinetPriority);
   for (const offer of offers) {
     const slot = byId("modal-content").querySelector(`[data-partner="${offer.partner}"]`);
     if (!slot) continue;

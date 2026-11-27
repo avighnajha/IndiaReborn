@@ -1,4 +1,4 @@
-import { competitiveFreight, contractPlayerBid, contractRivalBid, domesticContractRival, freightCompetitionOpening, maxFreightCapacity, resolveFreightContract, upcomingFreightContract } from "./neighbor-competition.js";
+import { bulkFreightOnTurn, competitiveFreight, contractPlayerBid, contractRivalBid, domesticContractRival, freightCompetitionOpening, maxFreightCapacity, resolveFreightContract, upcomingFreightContract } from "./neighbor-competition.js";
 import { clearNationalMarket, inlandActors, marketConnection, marketHubs, nationalMarketActive, nationalMarketActors, playerMarketId, seedBombayDivision, seedPunjabDivision, seedSouthernTransitions } from "./national-market.js";
 import { marketFunding } from "./market-finance.js";
 import { openingPriceYear, periodAmount } from "./period-prices.js";
@@ -454,12 +454,16 @@ function inlandCarriers(market, partners, nearby) {
   return [...carriers.values()];
 }
 
-export function settleFreight(regional, game, reliefLoads = 0) {
+export function settleFreight(regional, game, reliefLoads = 0, bulkService = {}) {
   const { freight, report } = regional;
   if (!freight) return regional;
   const inland = inlandCarriers(report.nationalMarket, regional.partners, freight.partners);
-  const competition = competitiveFreight(game, { ...freight, inland, reliefLoads });
-  const contract = resolveFreightContract(game, contractPlayerBid(freight), report.partners.map((row) => contractRivalBid(row)));
+  const bulk = bulkFreightOnTurn(game);
+  const capacity = bulk ? new Map(freight.partners.map(({ id, capacity }) => [id, capacity])) : null;
+  const bids = report.partners.map((row) => contractRivalBid(row, 0, bulk, capacity ? capacity.get(row.id) ?? 0 : undefined));
+  const player = contractPlayerBid({ ...freight, ...bulkService, reliefLoads }, bulk);
+  const contract = resolveFreightContract(game, player, bids);
+  const competition = competitiveFreight(game, { ...freight, inland, reliefLoads, contract });
   if (!competition && !contract) return regional;
 
   const partners = { ...regional.partners };

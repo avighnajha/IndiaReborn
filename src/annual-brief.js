@@ -2,6 +2,7 @@ import { Campaign } from "./campaign.js";
 import { departmentBadge, programmeDepartment } from "./department-presentation.js";
 import { Fiscal } from "./fiscal.js";
 import { fundingReferenceMarkup, priceReferenceMarkup } from "./fiscal-view.js";
+import { bulkFreightResultMarkup } from "./freight-view.js";
 import { basinAgreementsFor, basinNameFor, programmes } from "./programmes.js";
 import { World } from "./scenario.js";
 import { mandateProgressMarkup } from "./regional-mandate-view.js";
@@ -34,6 +35,8 @@ export function briefHeadline(report, previous) {
   if (report.monsoon === "Severe flood") return report.shortage ? "Floods left a food shortfall" : "Food needs were met through flooding";
   if (report.monsoon === "Dry monsoon") return report.shortage ? "A dry monsoon left food in short supply" : "Food needs were met through a dry monsoon";
   if (report.shortage) return "Food supply fell short";
+  if (report.regional?.freightContract?.bulk && report.regional.freightContract.awarded &&
+      report.regional.freightContract.winner?.id === "player") return "Your administration won the bulk freight contract";
   if (report.regional?.maritime?.food) return "Your port kept supplies moving to Port Blair";
   if (report.regional?.maritime?.timber) return "Timber freight earned receipts for your port";
   if (report.regional?.coromandel?.textileLoads) return "Pondicherry cloth moved by rail";
@@ -219,7 +222,7 @@ function whyContent(report, previous) {
     ...(report.regionalCash ? [["Freight agreements", money(report.regionalCash - (report.regional?.jointFreightCash ?? 0))]] : []),
     ...(report.regional?.jointFreightCash ? [["Joint freight projects", money(report.regional.jointFreightCash)]] : []),
     ...(competition ? [["Competitive freight receipts", money(competition.player.earnings)]] : []),
-    ...(contract?.winner?.id === "player" ? [["Freight contract payment", money(contract.payment)]] : []),
+    ...(contract?.winner?.id === "player" ? [[contract.bulk ? "Bulk freight payment" : "Freight contract payment", money(contract.payment)]] : []),
     ...(report.regional?.maritime?.receipt ? [[report.regional.maritime.id === "food" ? "Port Blair food procurement" : "Port Blair timber freight", money(report.regional.maritime.receipt)]] : []),
     ...(report.regional?.coromandel?.receipt ? [["Pondicherry textile freight", money(report.regional.coromandel.receipt)]] : []),
     ["Works upkeep", money(report.prices?.worksUpkeep ?? (report.maintenance - (report.training?.upkeep ?? 0) - (report.cabinetPriority?.spent ?? 0)))],
@@ -265,7 +268,7 @@ function regionalLedger(report) {
   const freight = report.regional.freightCompetition;
   const contract = report.regional.freightContract;
   const carrierRows = freight ? [
-    ["Regional freight demand", freight.demand],
+    [contract?.bulk ? "Spot freight demand" : "Regional freight demand", freight.demand],
     ...(freight.linkedDemand ? [["Orders from last year’s domestic shipments", freight.linkedDemand]] : []),
     ["Unserved loads", freight.unserved],
     ["Your freight", `${freight.player.loads} / ${freight.player.capacity} capacity · ${money(freight.player.earnings)}`],
@@ -274,8 +277,9 @@ function regionalLedger(report) {
     ...(freight.exportRival ? [[freight.exportRival.name, `${freight.exportRival.loads} / ${freight.exportRival.capacity} capacity`]] : []),
   ] : [];
   if (contract) {
-    carrierRows.push([`Freight contract · ${contract.start}–${contract.end}`, contract.winner
-      ? `${contract.winner.name} · ${money(contract.payment)} paid · Capacity ${contract.capacity}`
+    const detail = contract.bulk ? `${contract.loadsDelivered} / ${contract.loadsRequired} loads delivered` : `Capacity ${contract.capacity}`;
+    carrierRows.push([`${contract.bulk ? "Bulk freight" : "Freight contract"} · ${contract.start}–${contract.end}`, contract.winner
+      ? `${contract.winner.name} · ${money(contract.payment)} paid · ${detail}`
       : `No award · Minimum capacity ${contract.minimumCapacity}`]);
     if (contract.reason) carrierRows.push(["Contract status", contract.reason]);
   }
@@ -388,12 +392,12 @@ function changeRows(report, previous) {
     add("food", "Union food reserve", `${result} ${units(union.reserve)} remain in state reserves.`);
   }
   const contract = report.regional?.freightContract;
-  if (contract?.awarded) {
+  if (contract?.awarded && !contract.bulk) {
     const { winner, start, end, fee, minimumCapacity, playerCapacity } = contract;
     add("trade", "Freight contract", winner
       ? `${winner.id === "player" ? "Your administration" : winner.name} won with bid capacity ${winner.capacity}.${winner.id === "player" ? "" : ` Your bid was ${playerCapacity}.`} ${money(fee)} per year through ${end} while eligible.`
       : `No award for ${start}–${end}. No bidder reached capacity ${minimumCapacity}.`);
-  } else if (contract?.winner?.id === "player" && previous?.regional?.freightContract?.start === contract.start &&
+  } else if (contract?.winner?.id === "player" && !contract.bulk && previous?.regional?.freightContract?.start === contract.start &&
       previous.regional.freightContract.payment !== contract.payment) {
     add("trade", "Freight contract", contract.payment
       ? `Payments resumed. Your administration earned ${money(contract.payment)} this year.`
@@ -519,7 +523,7 @@ function changeRows(report, previous) {
     : `${money(report.relief.budget)} authorized. No emergency purchases were made.`);
   if (freight) {
     const inland = freight.inland?.reduce((total, row) => total + row.loads, 0) ?? 0;
-    add("trade", "Freight competition",
+    add("trade", contract?.bulk ? "Spot freight" : "Freight competition",
       `You carried ${freight.player.loads} of ${freight.demand} loads and earned ${money(freight.player.earnings)}.${freight.exportRival?.loads ? ` Mormugao carried ${freight.exportRival.loads}.` : ""}${inland ? ` Inland rivals carried ${inland}.` : ""}${freight.unserved ? ` ${freight.unserved} went unserved.` : ""}`);
   }
   if (!changes.length && completed.length) add(null, "Works opened", `${completed.length} completed. See the investment ledger for their locations.`);
@@ -558,16 +562,18 @@ function priorityCard(report, allowMap) {
 
 export function briefContent(report, previous, nextDecision, latest = true) {
   const changes = changeRows(report, previous);
+  const contract = report.regional?.freightContract;
   return `<div class="brief-outcomes">
     ${foodCoverage(report)}
     <div class="brief-year-facts">${weatherCard(report)}${treasuryCard(report, previous)}</div>
   </div>
   ${metricStrip(report, previous)}
+  ${bulkFreightResultMarkup(contract, { year: report.year, more: true })}
   ${report.regionalMandate ? mandateProgressMarkup(report.regionalMandate, { compact: true, review: latest }) : ""}
   ${priorityCard(report, latest)}
   ${changes.length ? `<section class="brief-investment"><h3>What changed</h3>${changeList(changes.slice(0, 4))}
     ${changes.length > 4 ? `<details class="brief-more"><summary>${changes.length - 4} more ${changes.length === 5 ? "change" : "changes"}</summary>${changeList(changes.slice(4))}</details>` : ""}</section>` : ""}
-  ${report.regional?.freightCompetition ? '<button type="button" class="brief-programme-link" id="brief-freight">View freight results <span aria-hidden="true">↗</span></button>' : ""}
+  ${!contract?.bulk && report.regional?.freightCompetition ? '<button type="button" class="brief-programme-link" id="brief-freight">View freight results <span aria-hidden="true">↗</span></button>' : ""}
   ${nextDecision ? `<aside class="brief-decision"><div><h3>Next decision</h3><p>${escapeText(nextDecision)}</p></div><div id="brief-action"></div></aside>` : ""}
   ${regionalContext(report)}
   ${whyContent(report, previous)}`;

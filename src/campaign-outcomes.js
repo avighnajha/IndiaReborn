@@ -1,4 +1,5 @@
 import { departmentBadge } from "./department-presentation.js";
+import { Fiscal } from "./fiscal.js";
 
 function average(reports, measure) {
   return reports.reduce((total, report) => total + measure(report), 0) / reports.length;
@@ -32,6 +33,8 @@ export function campaignOutcomes(reports, recent) {
     linkedWorkshops: latest.siteEconomy?.workshops?.filter(({ market }) => market > 0).length,
     freightTerms: new Set(servicedContracts.map(({ start }) => start)).size,
     freightYears: servicedContracts.length,
+    bulkLoads: servicedContracts.reduce((sum, contract) => sum + (contract.loadsDelivered ?? 0), 0),
+    bulkReceipts: servicedContracts.reduce((sum, contract) => sum + (contract.bulk ? contract.payment : 0), 0),
   };
 }
 
@@ -40,7 +43,8 @@ const count = (value, singular, plural = `${singular}s`) => `${value} ${value ==
 
 export function campaignOutcomesMarkup(reports, recent, secureYears) {
   const outcome = campaignOutcomes(reports, recent);
-  const { opening, closing, unionShipments, droughtReliefSent, islandFood, timberLoads, droughtYears, droughtYearsCovered, cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears } = outcome;
+  const { opening, closing, unionShipments, droughtReliefSent, islandFood, timberLoads, droughtYears, droughtYearsCovered,
+    cohorts, researchOutput, linkedWorkshops, freightTerms, freightYears, bulkLoads, bulkReceipts } = outcome;
   const latest = recent.at(-1);
   const card = (sector, metric, label, facts) => {
     const max = Math.max(1, opening[metric], closing[metric]);
@@ -68,6 +72,7 @@ export function campaignOutcomesMarkup(reports, recent, secureYears) {
       ${card("trade", "output", "Annual workshop output", [
         linkedWorkshops !== undefined ? `${count(linkedWorkshops, "linked workshop")} in ${latest.year}` : `${count(latest.towns, "market town")} in ${latest.year}`,
         freightTerms && `${count(freightTerms, "Union freight term")} served over ${count(freightYears, "year")}`,
+        bulkLoads && `${count(bulkLoads, "bulk load")} carried for ${Fiscal.lakh(bulkReceipts)}`,
         timberLoads && `${count(timberLoads, "timber load")} carried from Port Blair`,
       ])}
     </div>

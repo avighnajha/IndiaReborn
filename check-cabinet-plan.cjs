@@ -1,6 +1,54 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
+test("bulk freight awards reserve capacity, require annual funding and preserve older terms", async () => {
+  const { bulkFreightOnTurn, competitiveFreight, contractPlayerBid, contractRivalBid, resolveFreightContract,
+    upcomingFreightContract } = await import("./src/neighbor-competition.js");
+  const turn = (year, contract) => ({ year, journey: { preset: "standard", end: 1985 },
+    reports: contract ? [{ regional: { freightContract: contract } }] : [] });
+  assert.equal(upcomingFreightContract(turn(1977)), null);
+  assert.equal(upcomingFreightContract(turn(1978)).start, 1981);
+  assert.equal(upcomingFreightContract(turn(1978)).fee, 150);
+  const position = turn(1981);
+  const freight = { towns: 5, workshops: 3, terminals: 1, parks: 1, tradeFunded: true, monsoon: "Typical monsoon" };
+  const opponent = { id: "orissa", name: "Orissa", access: "Local trade", year: 1981,
+    works: { freight: { opened: 1970 }, loadingYard: { opened: 1974 }, processing: { opened: 1968 }, trainingSchool: { opened: 1965 } } };
+  const rival = contractRivalBid(opponent, 0, true, 8);
+  assert.equal(rival.capacity, 8);
+  assert.equal(contractRivalBid(opponent, 0, true, 5).capacity, 5);
+  assert.equal(contractRivalBid({ ...opponent, works: { freight: { opened: 1970 } } }, 0, true).capacity, 0);
+  assert.equal(contractPlayerBid({ ...freight, terminals: 0 }, true).capacity, 0);
+
+  const resolve = (game, input) => resolveFreightContract(game, contractPlayerBid(input, true), [rival]);
+  assert.equal(resolve(position, { ...freight, parks: 0 }).winner.id, "orissa");
+  const contract = resolve(position, freight);
+  assert.equal(contract.winner.id, "player", "A linked industrial park improves the funded bid within physical capacity");
+  assert.equal(contract.loadsDelivered, 6);
+  const spot = competitiveFreight(position, { ...freight, partners: [rival], contract });
+  assert.equal(spot.player.capacity + spot.player.contractLoads, 9);
+  assert.equal(spot.player.contractLoads, 6);
+  const unfunded = resolve(position, { ...freight, tradeFunded: false });
+  assert.equal(unfunded.winner.id, "orissa");
+  const rivalSpot = competitiveFreight(position, { ...freight, partners: [rival], contract: unfunded });
+  assert.equal(rivalSpot.player.capacity, 9);
+  assert.equal(rivalSpot.partners[0].capacity + rivalSpot.partners[0].contractLoads, 8);
+
+  const paused = resolve(turn(1982, contract), { ...freight, reliefLoads: 4 });
+  assert.equal(paused.winner.id, "player", "A short year suspends the payment without transferring the award");
+  assert.equal(paused.payment, 0);
+  assert.equal(paused.loadsDelivered, 0);
+  const interrupted = competitiveFreight(turn(1982, contract), { ...freight, reliefLoads: 4, partners: [rival], contract: paused });
+  assert.equal(interrupted.player.capacity, 5);
+  assert.equal(resolve(turn(1983, paused), freight).payment, 150);
+
+  const legacy = { start: 1981, end: 1985, fee: 6, minimumCapacity: 5, winner: { id: "player", name: "Your administration" } };
+  const loaded = turn(1982, legacy);
+  assert.equal(bulkFreightOnTurn(loaded), false);
+  const oldYear = resolveFreightContract(loaded, contractPlayerBid(freight), [rival]);
+  assert.equal(oldYear.payment, 6);
+  assert.equal(oldYear.bulk, undefined);
+});
+
 test("matched public-action priorities have different timing, recorded costs and resumable results", async () => {
   const { Campaign } = await import("./src/campaign.js");
   const { approveProgramme, programmeQuote } = await import("./src/programmes.js");

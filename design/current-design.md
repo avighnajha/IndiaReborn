@@ -148,6 +148,8 @@ In Standard politics, linked governments buy food from each other after settling
 
 In 1957, the first freight contract forecast puts a deadline on the choice to prioritize Trade & Industry. The Neighbors board compares the bid from approved works with the strongest known rival bid. Award results and earned fees appear in the annual brief. In matched Madhya Pradesh runs, building engineering workshops and Itarsi first wins the 1961 contract. Prioritizing the Chambal agreement instead delivers industrial power while Maharashtra wins the contract. [Contract rules](interregional-model.md#regional-freight-contracts)
 
+The final Standard campaign freight award tests whether your connected industries can support five years of bulk deliveries. A linked freight terminal and funded Trade priority qualify the bid in 1981. The winner fills six slots with booked loads when it can deliver and earns a fixed payment. Each paid delivery leaves fewer slots for spot freight. The annual brief and ending show the loads and receipts. [Late campaign comparison](late-campaign-balance.md#the-1981-bulk-freight-award)
+
 The western network puts shipping and railway capacity into the annual economy. The islands' pre-1970 monsoon interruptions change how much administration rice arrives from Calicut. After 1973, Maharashtra faces a second export gateway for nearby sugar and oilcake orders. Mormugao's rail slots for ore and food appear alongside the actual shipments. The annual brief points to each route when it changes. [Western shipping design and sources](national-coverage.md#western-coast-shipping)
 
 ### Bombay

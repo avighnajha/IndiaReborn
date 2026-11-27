@@ -1,5 +1,10 @@
+import { openingPriceYear, periodAmount } from "./period-prices.js";
+
 export const freightCompetitionOpening = 1957;
 export const maxFreightCapacity = 14;
+export const bulkFreightAwardYear = 1981;
+const bulkLoads = 6;
+const bulkLoadRate = 4;
 const firstContract = 1961;
 const contractYears = 5;
 const minimumCapacity = 5;
@@ -13,14 +18,20 @@ function playerFreight({ towns, workshops, terminals }) {
   };
 }
 
-export function contractPlayerBid(freight) {
-  const { name, reason, towns, workshops, terminals } = playerFreight(freight);
-  return { name, reason, capacity: reason ? 0 : Math.min(maxFreightCapacity, Math.min(2, towns - 2) + workshops + terminals * 3) };
+export function contractPlayerBid(freight, bulk = false) {
+  const { name, reason, towns, workshops, terminals, capacity: handling } = playerFreight(freight);
+  const capacity = Math.min(2, towns - 2) + workshops + terminals * 3;
+  if (!bulk) return { name, reason, capacity: reason ? 0 : Math.min(maxFreightCapacity, capacity) };
+  const bulkReason = reason ?? (!terminals ? "Connect a freight terminal."
+    : !freight.tradeFunded ? "Fund the Trade & Industry priority." : null);
+  const available = Math.max(0, handling - (freight.reliefLoads ?? 0));
+  const bid = bulkReason ? 0 : Math.min(available, capacity + 2 * (freight.parks ?? 0));
+  return { name, capacity: bid, reason: bulkReason ?? (bid < bulkLoads ? "Fewer than six freight slots available." : null) };
 }
 
 export const domesticContractRival = (id) => id !== "eastBengal" && id !== "westPunjab";
 
-export function contractRivalBid(row, byYear = 0) {
+export function contractRivalBid(row, byYear = 0, bulk = false, available = maxFreightCapacity) {
   const { id, name, access, works, inherited } = row;
   const willOperate = (kind) => works?.[kind]?.opened || (byYear && works?.[kind]?.completionYear <= byYear);
   const year = byYear || row.year || 0;
@@ -29,8 +40,10 @@ export function contractRivalBid(row, byYear = 0) {
   const workforce = trained ? 1 + Number(Boolean(willOperate("processing"))) : 0;
   const reason = !domesticContractRival(id) ? "Outside the domestic contract area."
     : access === "Restricted" ? "Route restricted after a shortfall."
-      : !(willOperate("freight") || inherited?.terminals) ? "Freight exchange has yet to open." : null;
-  const capacity = reason ? 0 : Math.min(maxFreightCapacity, row.routeCapacity ?? maxFreightCapacity, 3 + (willOperate("loadingYard") ? 3 : 0) +
+      : !(willOperate("freight") || inherited?.terminals) ? "Freight exchange has yet to open."
+        : bulk && !(willOperate("loadingYard") && (willOperate("processing") || inherited?.workshops))
+          ? "Needs a loading yard and operating industry." : null;
+  const capacity = reason ? 0 : Math.min(available, maxFreightCapacity, row.routeCapacity ?? maxFreightCapacity, 3 + (willOperate("loadingYard") ? 3 : 0) +
     (inherited?.workshops ?? 0) + (inherited?.terminals ?? 0) * 3 + workforce);
   return { id, name, capacity, reason, ...(row.routeCapacity ? { routeCapacity: row.routeCapacity, mode: row.mode } : {}) };
 }
@@ -41,7 +54,16 @@ export function upcomingFreightContract(game) {
   const start = firstContract + round * contractYears;
   const end = start + contractYears - 1;
   const noticeYear = start - (start === firstContract ? 4 : 3);
-  return game.year >= noticeYear && end <= game.journey.end ? { noticeYear, start, end, fee, minimumCapacity } : null;
+  if (game.year < noticeYear || end > game.journey.end) return null;
+  return start === bulkFreightAwardYear
+    ? { noticeYear, start, end, bulk: true, loadsRequired: bulkLoads, fee: bulkLoads * periodAmount(bulkLoadRate, openingPriceYear, start), minimumCapacity: bulkLoads }
+    : { noticeYear, start, end, fee, minimumCapacity };
+}
+
+export function bulkFreightOnTurn(game) {
+  const previous = game.reports?.at(-1)?.regional?.freightContract;
+  return (game.year === bulkFreightAwardYear && Boolean(upcomingFreightContract(game)?.bulk)) ||
+    Boolean(previous?.bulk && game.year <= previous.end);
 }
 
 export function resolveFreightContract(game, player, rivals) {
@@ -67,21 +89,28 @@ export function resolveFreightContract(game, player, rivals) {
   const reason = !winner ? "No administration met the minimum capacity at the award."
     : !holder ? "The holder no longer has access to this market."
       : !payment ? holder.reason ?? "The holder’s operating capacity fell below the minimum." : null;
-  return { start, end, fee, minimumCapacity, winner, capacity, payment, reason, awarded, playerCapacity: player.capacity };
+  return { start, end, fee, minimumCapacity, winner, capacity, payment, reason, awarded, playerCapacity: player.capacity,
+    ...(terms.bulk ? { bulk: true, loadsRequired: terms.loadsRequired, loadsDelivered: payment ? terms.loadsRequired : 0,
+      playerReason: player.reason } : {}) };
 }
 
-export function competitiveFreight(game, { towns, workshops, terminals, monsoon, partners, inland = [], linkedLoads = 0, reliefLoads = 0, exportRival }) {
+export function competitiveFreight(game, { towns, workshops, terminals, monsoon, partners, inland = [], linkedLoads = 0, reliefLoads = 0, contract, exportRival }) {
   const extra = exportRival ? [exportRival] : [];
   if (game.journey?.preset !== "standard" || game.year < freightCompetitionOpening || ![...partners, ...inland, ...extra].some(({ capacity }) => capacity)) return null;
 
   const player = playerFreight({ towns, workshops, terminals });
-  player.capacity = Math.max(0, player.capacity - reliefLoads);
+  const dedicated = contract?.loadsDelivered ?? 0;
+  const holder = dedicated ? contract.winner.id : null;
+  const playerContract = holder === "player" ? dedicated : 0;
+  player.capacity = Math.max(0, player.capacity - reliefLoads - playerContract);
+  if (playerContract) player.contractLoads = playerContract;
   const linkedDemand = Math.min(3, linkedLoads);
   const demand = 6 + partners.length + (game.year >= 1970 ? 2 : 0) - (monsoon === "Severe flood" ? 2 : 0) + linkedDemand;
-  const competitors = [player, ...partners, ...inland, ...extra];
+  const competitors = [player, ...partners.map((row) => row.id === holder
+    ? { ...row, capacity: row.capacity - dedicated, contractLoads: dedicated } : row), ...inland, ...extra];
   const capacity = competitors.reduce((total, row) => total + row.capacity, 0);
   const served = Math.min(demand, capacity);
-  const rows = competitors.map((row) => ({ ...row, loads: Math.floor(served * row.capacity / capacity) }));
+  const rows = competitors.map((row) => ({ ...row, loads: capacity ? Math.floor(served * row.capacity / capacity) : 0 }));
   let remaining = served - rows.reduce((total, row) => total + row.loads, 0);
   const first = (game.year - freightCompetitionOpening) % rows.length;
   // Allocate indivisible loads by largest remainder, rotating equal claims by year.

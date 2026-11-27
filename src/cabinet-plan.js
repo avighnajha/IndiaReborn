@@ -1,4 +1,5 @@
 import { campaignEnd } from "./journey.js";
+import { bulkFreightOnTurn, upcomingFreightContract } from "./neighbor-competition.js";
 
 export const cabinetPlanOpening = 1951;
 export const cabinetPlanRate = .30;
@@ -42,10 +43,12 @@ function fundingStatus(game, term, finance, sites, context) {
   return { annualCost: due, spent: due, status: "funded", message: "This year’s appropriation is reserved before emergency food purchases." };
 }
 
-function effectsFor(id, sites) {
+function effectsFor(id, sites, bulk) {
   if (id === "education") return ["5 funded years → +2 lasting Skills per campus.", "+1 linked-workshop output per cohort, from the next year."];
   if (id === "food") return [`+${sites.food.length} food a year from irrigated areas.`, "Recover up to 2 remaining weather losses per area."];
-  if (id === "trade") return ["+3 output per linked workshop while funded.", "Extra production earns recurring workshop receipts."];
+  if (id === "trade") return ["+3 output per linked workshop while funded.", bulk
+    ? "Fund Trade in 1981 to bid for bulk freight, then each year to carry it."
+    : "Extra production earns recurring workshop receipts."];
   return ["Existing works keep their normal services.", "Keep funds available for construction and food."];
 }
 
@@ -62,6 +65,7 @@ export function cabinetPlan(game, finance, context = {}) {
       : game.year < cabinetPlanOpening ? `Priorities open in ${cabinetPlanOpening}.` : null;
   const lockReason = term ? `Committed through ${term.ends}.` : null;
   const cost = annualCost(finance);
+  const bulk = upcomingFreightContract(game)?.bulk || bulkFreightOnTurn(game);
   const options = Object.entries(labels).map(([id, label]) => {
     const selected = term ? term.id === id : id === "services";
     let reason = timingReason ?? lockReason;
@@ -77,7 +81,7 @@ export function cabinetPlan(game, finance, context = {}) {
       }
     }
     return { id, label, annualCost: id === "services" ? 0 : selected && term ? annualCost(finance, term.rate ?? cabinetPlanRate) : cost,
-      ends: term?.ends ?? ends, effects: effectsFor(id, sites), reason, selected,
+      ends: term?.ends ?? ends, effects: effectsFor(id, sites, bulk), reason, selected,
       actionLabel: id === "services" ? "Keep normal services" : selected ? "Committed" : `Commit ${termYears} ${termYears === 1 ? "year" : "years"}` };
   });
   const status = term ? fundingStatus(game, term, finance, sites, context) : null;
